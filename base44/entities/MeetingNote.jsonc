@@ -1,0 +1,64 @@
+{
+  "name": "MeetingNote",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data da reuni\u00e3o"
+    },
+    "program": {
+      "type": "string",
+      "enum": [
+        "FRC",
+        "FTC",
+        "FLL",
+        "Geral"
+      ],
+      "description": "Programa relacionado"
+    },
+    "participants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Participantes"
+    },
+    "agenda": {
+      "type": "string",
+      "description": "Pauta da reuni\u00e3o"
+    },
+    "technical_discussions": {
+      "type": "string",
+      "description": "Discuss\u00f5es t\u00e9cnicas"
+    },
+    "final_decisions": {
+      "type": "string",
+      "description": "Decis\u00f5es finais"
+    },
+    "pending_items": {
+      "type": "string",
+      "description": "Pend\u00eancias"
+    },
+    "responsible_deadlines": {
+      "type": "string",
+      "description": "Respons\u00e1veis e prazos"
+    },
+    "video_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Links de v\u00eddeos (YouTube, Drive, etc)"
+    },
+    "season_tag": {
+      "type": "string",
+      "description": "Tag da temporada arquivada (ex: FTC-DECODE-2025). Vazio = temporada ativa."
+    }
+  },
+  "required": [
+    "date",
+    "program",
+    "agenda"
+  ]
+}

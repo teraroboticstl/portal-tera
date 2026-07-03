@@ -1,0 +1,49 @@
+{
+  "name": "ESGInitiative",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo da iniciativa"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o"
+    },
+    "theme": {
+      "type": "string",
+      "enum": [
+        "Res\u00edduos",
+        "Energia",
+        "Consumo",
+        "Pessoas",
+        "Governan\u00e7a"
+      ],
+      "description": "Tema ESG"
+    },
+    "effort": {
+      "type": "string",
+      "enum": [
+        "alto",
+        "m\u00e9dio",
+        "baixo"
+      ],
+      "description": "N\u00edvel de esfor\u00e7o"
+    },
+    "horizon": {
+      "type": "string",
+      "enum": [
+        "curto prazo",
+        "m\u00e9dio prazo",
+        "longo prazo"
+      ],
+      "description": "Horizonte de prazo"
+    }
+  },
+  "required": [
+    "title",
+    "theme",
+    "effort",
+    "horizon"
+  ]
+}

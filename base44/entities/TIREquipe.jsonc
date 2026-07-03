@@ -1,0 +1,32 @@
+{
+  "name": "TIREquipe",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome da equipe (ex: Iron Tech)"
+    },
+    "ano": {
+      "type": "string",
+      "description": "Ano escolar (ex: 6\u00ba Ano)"
+    },
+    "sala": {
+      "type": "string",
+      "description": "Sala (ex: A)"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL do logo da equipe"
+    },
+    "ordem": {
+      "type": "number",
+      "default": 0,
+      "description": "Ordem de exibi\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "nome",
+    "ano",
+    "sala"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "OnshapeConfig",
+  "type": "object",
+  "properties": {
+    "access_key": {
+      "type": "string",
+      "description": "Onshape Access Key"
+    },
+    "secret_key": {
+      "type": "string",
+      "description": "Onshape Secret Key"
+    },
+    "label": {
+      "type": "string",
+      "default": "default",
+      "description": "Identificador da config (sempre 'default')"
+    }
+  },
+  "required": [
+    "access_key",
+    "secret_key"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "FLLCoreValues",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data da atividade"
+    },
+    "value": {
+      "type": "string",
+      "enum": [
+        "Descoberta",
+        "Inova\u00e7\u00e3o",
+        "Impacto",
+        "Inclus\u00e3o",
+        "Trabalho em Equipe",
+        "Divers\u00e3o"
+      ],
+      "description": "Core Value trabalhado"
+    },
+    "activity": {
+      "type": "string",
+      "description": "Atividade realizada"
+    },
+    "reflection": {
+      "type": "string",
+      "description": "Reflex\u00e3o do grupo"
+    },
+    "participants": {
+      "type": "string",
+      "description": "Participantes"
+    }
+  },
+  "required": [
+    "date",
+    "value",
+    "activity"
+  ]
+}

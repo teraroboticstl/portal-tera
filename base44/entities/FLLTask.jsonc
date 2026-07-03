@@ -1,0 +1,49 @@
+{
+  "name": "FLLTask",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo da tarefa"
+    },
+    "responsible": {
+      "type": "string",
+      "description": "Respons\u00e1vel"
+    },
+    "deadline": {
+      "type": "string",
+      "format": "date",
+      "description": "Prazo"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "em_andamento",
+        "concluida"
+      ],
+      "default": "pendente",
+      "description": "Status"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "baixa",
+        "media",
+        "alta",
+        "urgente"
+      ],
+      "default": "media",
+      "description": "Prioridade"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "title",
+    "status",
+    "priority"
+  ]
+}

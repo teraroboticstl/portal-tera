@@ -1,0 +1,36 @@
+{
+  "name": "FLLJudgePrep",
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string",
+      "enum": [
+        "Robot Game",
+        "Innovation Project",
+        "Core Values"
+      ],
+      "description": "Categoria dos ju\u00edzes"
+    },
+    "question": {
+      "type": "string",
+      "description": "Pergunta poss\u00edvel dos ju\u00edzes"
+    },
+    "answer": {
+      "type": "string",
+      "description": "Resposta preparada"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas e observa\u00e7\u00f5es"
+    },
+    "ready": {
+      "type": "boolean",
+      "default": false,
+      "description": "Resposta pronta"
+    }
+  },
+  "required": [
+    "category",
+    "question"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "name": "FLLMission",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome da miss\u00e3o"
+    },
+    "max_score": {
+      "type": "number",
+      "default": 0,
+      "description": "Pontua\u00e7\u00e3o m\u00e1xima poss\u00edvel"
+    },
+    "best_score": {
+      "type": "number",
+      "default": 0,
+      "description": "Melhor resultado obtido"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "em_teste",
+        "concluida",
+        "descartada"
+      ],
+      "default": "em_teste",
+      "description": "Status da miss\u00e3o"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es sobre a miss\u00e3o"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Ordem de exibi\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "name",
+    "max_score"
+  ]
+}

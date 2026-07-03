@@ -1,0 +1,90 @@
+{
+  "name": "DailyLog",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do log"
+    },
+    "program": {
+      "type": "string",
+      "enum": [
+        "FRC",
+        "FTC",
+        "FLL"
+      ],
+      "description": "Programa relacionado"
+    },
+    "log_type": {
+      "type": "string",
+      "enum": [
+        "Reuni\u00e3o",
+        "Build",
+        "CAD",
+        "Programa\u00e7\u00e3o",
+        "Teste",
+        "Divulga\u00e7\u00e3o"
+      ],
+      "description": "Tipo de atividade"
+    },
+    "participants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Participantes"
+    },
+    "what_was_done": {
+      "type": "string",
+      "description": "O que foi feito"
+    },
+    "decisions_made": {
+      "type": "string",
+      "description": "Decis\u00f5es tomadas"
+    },
+    "problems_found": {
+      "type": "string",
+      "description": "Problemas encontrados"
+    },
+    "solutions": {
+      "type": "string",
+      "description": "Solu\u00e7\u00f5es aplicadas"
+    },
+    "next_steps": {
+      "type": "string",
+      "description": "Pr\u00f3ximos passos"
+    },
+    "evidence_links": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Links de evid\u00eancias"
+    },
+    "evidence_images": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs das imagens de evid\u00eancia"
+    },
+    "video_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Links de v\u00eddeos (YouTube, Drive, etc)"
+    },
+    "season_tag": {
+      "type": "string",
+      "description": "Tag da temporada arquivada (ex: FTC-DECODE-2025). Vazio = temporada ativa."
+    }
+  },
+  "required": [
+    "date",
+    "program",
+    "log_type",
+    "what_was_done"
+  ]
+}

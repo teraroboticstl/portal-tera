@@ -1,0 +1,43 @@
+{
+  "name": "Priority",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo da prioridade"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "PRECISAMOS",
+        "QUEREMOS",
+        "SERIA BOM",
+        "IGNORAR"
+      ],
+      "description": "Categoria da prioridade"
+    },
+    "program": {
+      "type": "string",
+      "enum": [
+        "FRC",
+        "FTC",
+        "FLL"
+      ],
+      "description": "Programa relacionado"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Ordem de exibi\u00e7\u00e3o"
+    },
+    "season_tag": {
+      "type": "string",
+      "description": "Tag da temporada arquivada (ex: FTC-DECODE-2025). Vazio = temporada ativa."
+    }
+  },
+  "required": [
+    "title",
+    "category",
+    "program"
+  ]
+}

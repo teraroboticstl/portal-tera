@@ -1,0 +1,33 @@
+{
+  "name": "TIRMensagem",
+  "type": "object",
+  "properties": {
+    "mentor_id": {
+      "type": "string",
+      "description": "Identificador do mentor (ex: 'bertoloto')"
+    },
+    "autor_nome": {
+      "type": "string",
+      "description": "Nome de quem enviou a mensagem"
+    },
+    "autor_email": {
+      "type": "string",
+      "description": "Email de quem enviou"
+    },
+    "is_mentor": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a mensagem foi enviada pelo mentor"
+    },
+    "texto": {
+      "type": "string",
+      "description": "Conte\u00fado da mensagem"
+    }
+  },
+  "required": [
+    "mentor_id",
+    "autor_nome",
+    "autor_email",
+    "texto"
+  ]
+}

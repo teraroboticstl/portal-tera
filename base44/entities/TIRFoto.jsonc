@@ -1,0 +1,31 @@
+{
+  "name": "TIRFoto",
+  "type": "object",
+  "properties": {
+    "foto_url": {
+      "type": "string",
+      "description": "URL da foto"
+    },
+    "equipes_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs das equipes relacionadas \u00e0 foto"
+    },
+    "equipes_nomes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Nomes das equipes (para busca f\u00e1cil)"
+    },
+    "legenda": {
+      "type": "string",
+      "description": "Legenda da foto (opcional)"
+    }
+  },
+  "required": [
+    "foto_url"
+  ]
+}

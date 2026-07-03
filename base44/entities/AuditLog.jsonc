@@ -1,0 +1,48 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "CREATE",
+        "UPDATE",
+        "DELETE",
+        "UPLOAD",
+        "LOGIN",
+        "CONFIG"
+      ],
+      "description": "Tipo de a\u00e7\u00e3o"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o detalhada da a\u00e7\u00e3o"
+    },
+    "entity_name": {
+      "type": "string",
+      "description": "Entidade afetada (ex: DailyLog, Robot)"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "Navegador/dispositivo do usu\u00e1rio"
+    }
+  },
+  "required": [
+    "user_name",
+    "user_email",
+    "action_type",
+    "description"
+  ]
+}

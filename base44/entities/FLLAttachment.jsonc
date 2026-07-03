@@ -1,0 +1,40 @@
+{
+  "name": "FLLAttachment",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo do arquivo"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL do arquivo"
+    },
+    "file_type": {
+      "type": "string",
+      "enum": [
+        "foto",
+        "video",
+        "documento",
+        "planilha",
+        "outro"
+      ],
+      "default": "documento",
+      "description": "Tipo do arquivo"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do upload"
+    }
+  },
+  "required": [
+    "title",
+    "file_url",
+    "date"
+  ]
+}
