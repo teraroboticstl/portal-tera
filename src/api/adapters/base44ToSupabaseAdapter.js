@@ -123,10 +123,16 @@ export const createEntityAdapter = (entityName, tableName = '') => {
     async create(payload) {
       console.log(`[Supabase Adapter] Criando registro em ${entityName} no Supabase...`, payload);
       
-      // Sanitizar payload para remover campos virtuais ou vazios do NoSQL
       const sanitized = { ...payload };
       delete sanitized.id;
       delete sanitized.created_date;
+
+      // Tratar strings vazias em UUIDs/Foreign Keys para null
+      for (const key of Object.keys(sanitized)) {
+        if ((key.endsWith('_id') || key === 'user_id') && sanitized[key] === '') {
+          sanitized[key] = null;
+        }
+      }
 
       const { data, error } = await supabase
         .from(actualTableName)
@@ -150,6 +156,12 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       const sanitized = { ...payload };
       delete sanitized.id;
       delete sanitized.created_date;
+
+      for (const key of Object.keys(sanitized)) {
+        if ((key.endsWith('_id') || key === 'user_id') && sanitized[key] === '') {
+          sanitized[key] = null;
+        }
+      }
 
       const { data, error } = await supabase
         .from(actualTableName)
@@ -187,9 +199,10 @@ export const createEntityAdapter = (entityName, tableName = '') => {
 /**
  * Mapeamento customizado de nomes de tabela para entidades que não seguem o padrão estrito.
  */
-export const adaptedEntities = {
+const rawEntities = {
   // Entidades básicas e comuns de Usuário
   User: createEntityAdapter('User', 'profiles'),
+  UserPresence: createEntityAdapter('UserPresence', 'user_presences'),
   DailyLog: createEntityAdapter('DailyLog', 'daily_logs'),
   MeetingNote: createEntityAdapter('MeetingNote', 'meeting_notes'),
   FLLTask: createEntityAdapter('FLLTask', 'fll_tasks'),
@@ -227,4 +240,17 @@ export const adaptedEntities = {
   TeamLog: createEntityAdapter('TeamLog', 'team_logs'),
   EventGallery: createEntityAdapter('EventGallery', 'event_galleries'),
   EventMedia: createEntityAdapter('EventMedia', 'event_medias'),
+  ContactMessage: createEntityAdapter('ContactMessage', 'contact_messages'),
+  TournamentConfig: createEntityAdapter('TournamentConfig', 'tournament_configs'),
+  TournamentMemorial: createEntityAdapter('TournamentMemorial', 'tournament_memorials'),
+  TeamKnowledgeBase: createEntityAdapter('TeamKnowledgeBase', 'team_knowledge_bases'),
 };
+
+export const adaptedEntities = new Proxy(rawEntities, {
+  get(target, prop) {
+    if (typeof prop === 'string' && !(prop in target)) {
+      target[prop] = createEntityAdapter(prop);
+    }
+    return target[prop];
+  }
+});

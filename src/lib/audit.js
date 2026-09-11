@@ -11,7 +11,7 @@ export async function logAudit(user, actionType, description, entityName = '') {
   if (!user) return;
   try {
     await base44.entities.AuditLog.create({
-      user_id: user.id || '',
+      user_id: user.id || null,
       user_name: user.full_name || user.email || 'Desconhecido',
       user_email: user.email || '',
       action_type: actionType,
