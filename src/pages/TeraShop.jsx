@@ -6,7 +6,6 @@ import { ShoppingBag, MessageCircle, Filter } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import SectionTitle from '@/components/common/SectionTitle';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 const WHATSAPP_NUMBER = '5567999999999'; // Substituir pelo número real

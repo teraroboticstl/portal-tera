@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const MISSION_IMAGES = {
   M01: 'https://media.base44.com/images/public/698a86446abc83aece20025a/c69a9ffca_misso1.jpeg',

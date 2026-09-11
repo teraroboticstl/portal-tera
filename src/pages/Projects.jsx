@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { FolderOpen, Calendar, ExternalLink, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { FolderOpen, Calendar, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import SectionTitle from '@/components/common/SectionTitle';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import Badge from '@/components/common/Badge';
 
 const tagColors = {
   'Educação': 'bg-blue-500/20 text-blue-400',

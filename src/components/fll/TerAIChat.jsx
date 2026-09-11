@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Bot, Loader2, Globe } from 'lucide-react';
+import { X, Send, Bot, Loader2, Globe } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const SYSTEM_PROMPT = `Você é o TerAI, assistente oficial da equipe 10343 Tera Robotics. Você é especialista em TUDO relacionado à FIRST Robotics — FRC, FTC e FLL — e também em marketing e comunicação de equipes. Responda sempre em português brasileiro de forma direta e animada.

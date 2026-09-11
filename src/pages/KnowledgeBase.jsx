@@ -5,7 +5,6 @@ import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { BookOpen, Plus, Trash2, Save, ChevronDown, ChevronUp, Users, Trophy, Handshake, History } from 'lucide-react';
 
 function KnowledgeBaseContent({ user }) {

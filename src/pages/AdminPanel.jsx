@@ -3,10 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { motion } from 'framer-motion';
 import { 
-  Users, Settings, Clock, Check, X, Trash2, 
-  Shield, Calendar, Upload, Plus, Edit2, Image,
+  Users, Clock, Check, X, Trash2, 
+  Shield, Calendar, Plus, Edit2,
   Package, Heart, Cpu, FolderOpen, Home, LogOut, LayoutDashboard, Archive, AlertTriangle
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";

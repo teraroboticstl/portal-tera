@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { Archive, BookOpen, FlaskConical, Calendar, Target, ChevronDown, ChevronUp } from 'lucide-react';
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
-import { Badge } from '@/components/ui/badge';
 
 const PROGRAM_COLORS = {
   FRC: 'bg-red-500/20 text-red-400 border-red-500/30',

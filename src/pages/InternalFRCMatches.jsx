@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
-import { Zap, TrendingUp } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 function MatchPredictionContent({ user }) {

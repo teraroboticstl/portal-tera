@@ -6,11 +6,10 @@ import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import ScoutForm from '@/components/scout/ScoutForm';
 import TeamAnalysis from '@/components/scout/TeamAnalysis';
 import ScoutProcessTab from '@/components/scout/ScoutProcessTab';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Plus, Search, BarChart2, ClipboardList, Trash2,
-  Zap, ChevronDown, ChevronUp, BookOpen, Filter
+  Zap, ChevronDown, ChevronUp, BookOpen
 } from 'lucide-react';
 
 const TABS = [

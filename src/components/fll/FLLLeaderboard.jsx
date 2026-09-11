@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Printer } from 'lucide-react';
+import { Trophy, Printer } from 'lucide-react';
 
 export default function FLLLeaderboard({ ranked, rounds, getBestScore }) {
   const handlePrint = () => {

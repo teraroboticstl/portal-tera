@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import {
-  AlertTriangle, Plus, Trash2, CheckCircle, Eye, AlertCircle,
-  XCircle, ShieldCheck, Filter, Download, Save, Edit2, X
+  AlertTriangle, Plus, Trash2, CheckCircle, AlertCircle,
+  XCircle, ShieldCheck, Filter, Download, Save, Edit2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

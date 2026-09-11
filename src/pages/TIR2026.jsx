@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Shield, Users, BookOpen, Zap, Plus, Trash2, Save,
-  MessageCircle, Mail, Star
+  MessageCircle, Star
 } from 'lucide-react';
 import ChatMentor from '@/components/tir/ChatMentor';
 

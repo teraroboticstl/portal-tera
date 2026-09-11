@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Cpu, Users, Wrench, Calendar, MapPin, ArrowRight } from 'lucide-react';
+import { Trophy, Cpu, Users, Wrench, Calendar, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";

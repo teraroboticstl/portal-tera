@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Circle, Clock } from 'lucide-react';
+import { Users, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function formatDuration(sessionStart) {

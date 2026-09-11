@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  Clock, Bot, Users, Shirt, ChevronDown, ChevronLeft, ChevronRight,
-  X, Trophy, MapPin, Calendar, Award, Play, Star
+  Clock, Bot, Users, Shirt, ChevronLeft, ChevronRight, Trophy, MapPin, Calendar, Play, Star
 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 

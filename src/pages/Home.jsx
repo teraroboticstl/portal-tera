@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion } from 'framer-motion';
-import { Cog, Settings, Wrench, ChevronDown, Cpu, Rocket, Award } from 'lucide-react';
+import { Cog, Settings, Wrench, ChevronDown, Cpu, Award } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';

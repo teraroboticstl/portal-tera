@@ -1,14 +1,153 @@
-import { createClient } from '@base44/sdk';
-import { appParams } from '@/lib/app-params';
+import { supabase } from './supabaseClient';
+import { adaptedEntities } from './adapters/base44ToSupabaseAdapter';
 
-const { appId, token, functionsVersion, appBaseUrl } = appParams;
+/**
+ * SHIM DE COMPATIBILIDADE - PORTAL TERA
+ * 
+ * Este arquivo foi reescrito para eliminar COMPLETAMENTE a dependência do SDK `@base44/sdk`.
+ * Todas as chamadas herdadas feitas por componentes React e hooks de consulta ao objeto `base44`
+ * são interceptadas e mapeadas diretamente para as APIs nativas do Supabase (Auth, Database e Storage).
+ * 
+ * Isso possibilita que o Portal Tera continue compilando sem erros e com todas as páginas 100%
+ * operacionais durante o processo de migração definitiva.
+ */
 
-//Create a client with authentication required
-export const base44 = createClient({
-  appId,
-  token,
-  functionsVersion,
-  serverUrl: '',
-  requiresAuth: false,
-  appBaseUrl
-});
+// Mock de logs silencioso para o NavigationTracker
+const appLogsShim = {
+  async logUserInApp(pageName) {
+    // Apenas loga no console para desenvolvimento, sem dependências
+    console.log(`[Navigation Tracker] Membro visualizou a página: ${pageName}`);
+    return { success: true };
+  }
+};
+
+// Integrações de arquivos mapeadas para o Supabase Storage
+const integrationsShim = {
+  Core: {
+    /**
+     * Faz upload de arquivos diretamente no Supabase Storage.
+     * Mapeia para a assinatura do SDK antigo para não quebrar as chamadas existentes.
+     */
+    async UploadFile({ file, bucketName = 'gallery' }) {
+      console.log(`[Supabase Storage] Iniciando upload de ${file.name} para o bucket "${bucketName}"...`);
+      
+      // Gerar um nome de arquivo único para evitar colisões
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `uploads/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('[Supabase Storage] Erro ao realizar upload:', error);
+        throw error;
+      }
+
+      // Buscar a URL pública do arquivo enviado
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(filePath);
+
+      console.log('[Supabase Storage] Upload concluído com sucesso. URL pública:', publicUrl);
+      return { file_url: publicUrl };
+    }
+  }
+};
+
+// Autenticação integrada diretamente com Supabase Auth e Profiles
+const authShim = {
+  /**
+   * Retorna o usuário logado atualmente no Supabase.
+   */
+  async me() {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return null;
+
+    // Buscar dados complementares da tabela de perfis (profiles)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    return {
+      id: user.id,
+      email: user.email,
+      full_name: profile?.full_name || user.user_metadata?.full_name || 'Membro do Portal',
+      avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || '',
+      role: profile?.role || 'aluno',
+      category: profile?.category || 'Geral',
+      created_at: user.created_at
+    };
+  },
+
+  /**
+   * Verifica se existe um usuário autenticado.
+   */
+  async isAuthenticated() {
+    const { data: { session } } = await supabase.auth.getSession();
+    return !!session;
+  },
+
+  /**
+   * Atualiza os dados cadastrais do perfil do próprio usuário no Supabase.
+   */
+  async updateMe(payload) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado no Supabase');
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(payload)
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Supabase Auth Shim] Erro ao atualizar perfil:', error);
+      throw error;
+    }
+    return data;
+  },
+
+  /**
+   * Executa o logout no Supabase Auth.
+   */
+  async logout(redirectTo = window.location.origin) {
+    console.log('[Supabase Auth Shim] Executando logout...');
+    await supabase.auth.signOut();
+    window.location.href = redirectTo;
+  },
+
+  /**
+   * Redireciona para o login do Google OAuth via Supabase.
+   */
+  async redirectToLogin(redirectTo = window.location.href) {
+    console.log('[Supabase Auth Shim] Redirecionando para login com Google...');
+    
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectTo
+      }
+    });
+
+    if (error) {
+      console.error('[Supabase Auth Shim] Erro ao iniciar login com Google:', error.message);
+      throw error;
+    }
+  }
+};
+
+// Exportar o cliente fake de compatibilidade apontado para o Supabase
+export const base44 = {
+  entities: adaptedEntities,
+  auth: authShim,
+  appLogs: appLogsShim,
+  integrations: integrationsShim
+};

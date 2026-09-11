@@ -4,7 +4,7 @@ import { createPageUrl } from '@/utils';
 import { 
   LayoutDashboard, FileText, Target, BookOpen, Lightbulb,
   Cpu, Trophy, Rocket, Settings, ChevronRight, Home, X,
-  Users, FlaskConical, Calendar, Zap, Image as ImageIcon, Shield, AlertTriangle, Leaf, Calculator, Wrench, Archive,
+  Users, FlaskConical, Calendar, Image as ImageIcon, Shield, AlertTriangle, Leaf, Calculator, Wrench, Archive,
   Heart, ListTodo, HelpCircle, Paperclip
 } from 'lucide-react';
 

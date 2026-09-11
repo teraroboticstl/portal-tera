@@ -4,14 +4,13 @@ import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion } from 'framer-motion';
-import { Rocket, BookOpen, FlaskConical, Trophy, ArrowRight, Calendar, Calculator } from 'lucide-react';
+import { Rocket, BookOpen, FlaskConical, ArrowRight, Calendar, Calculator } from 'lucide-react';
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import Badge from '@/components/common/Badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import PrioritiesBoard from '@/components/internal/PrioritiesBoard';
-import TerAIChat from '@/components/fll/TerAIChat';
 
 function InternalFLLContent({ user }) {
   const { data: logs = [] } = useQuery({

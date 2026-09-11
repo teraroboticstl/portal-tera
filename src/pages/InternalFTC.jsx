@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion } from 'framer-motion';
-import { Cpu, BookOpen, FlaskConical, Settings, FileText, ArrowRight, Calendar, NotebookPen } from 'lucide-react';
+import { Cpu, BookOpen, FlaskConical, Settings, FileText, ArrowRight, Calendar } from 'lucide-react';
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import Badge from '@/components/common/Badge';

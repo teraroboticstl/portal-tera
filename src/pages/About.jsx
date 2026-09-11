@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, Award, Lightbulb, Users, Heart, Target, Camera } from 'lucide-react';
+import { MapPin, Calendar, Lightbulb, Users, Heart, Target, Camera } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 

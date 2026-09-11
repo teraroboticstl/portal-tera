@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Pencil, X, Plus, ExternalLink, Trash2, Save } from 'lucide-react';
 import { base44 } from '@/api/base44Client';

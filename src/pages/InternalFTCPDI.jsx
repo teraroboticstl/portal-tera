@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Target, Wrench, BookOpen, Star, MessageSquare,
-  Plus, ChevronDown, ChevronUp, Edit2, Trash2,
+  Plus, ChevronDown, ChevronUp,
   CheckCircle, Save, X, Upload, Loader2, FileText, ExternalLink
 } from 'lucide-react';
 import ProtectedRoute from '@/components/internal/ProtectedRoute';

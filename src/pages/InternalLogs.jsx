@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, Eye, Filter, BookOpen, Calendar, Users, X, Lock } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Plus, Edit2, Trash2, Eye, Filter, BookOpen, Calendar, Users, Lock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";

@@ -10,8 +10,6 @@ import {
 } from 'lucide-react';
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 const FLL_COLOR = 'orange';
 const FLL_HEX = '#f97316';

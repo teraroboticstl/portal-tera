@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Edit2, Trash2, Eye, BookOpen, Wrench, Code, Megaphone,
+  Plus, Edit2, Trash2, BookOpen, Wrench, Code, Megaphone,
   Calendar, Users, Link as LinkIcon, ChevronDown, ChevronUp, Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

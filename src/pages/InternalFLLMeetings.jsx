@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import ProtectedRoute, { canEdit, isAdmin } from '@/components/internal/ProtectedRoute';
+import ProtectedRoute, { canEdit } from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
 
 const EMPTY = { date: new Date().toISOString().split('T')[0], participants: '', agenda: '', technical_discussions: '', final_decisions: '', pending_items: '', responsible_deadlines: '' };

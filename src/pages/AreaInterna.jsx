@@ -5,11 +5,11 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion } from 'framer-motion';
 import {
-  BookOpen, Calendar, FlaskConical, Target, Cpu, Rocket,
-  ArrowRight, Clock, User, UserCog, Shield, AlertCircle,
-  FileText, Star, Trophy, CheckCircle2, Users, BarChart2, Lightbulb
+  BookOpen, Calendar, FlaskConical, Target, Cpu,
+  ArrowRight, AlertCircle,
+  FileText, Trophy, CheckCircle2, BarChart2, Lightbulb
 } from 'lucide-react';
-import ProtectedRoute, { getUserRole, getRoleLabel, canEdit } from '@/components/internal/ProtectedRoute';
+import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import CountdownTimer from '@/components/CountdownTimer';
 const LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698a86446abc83aece20025a/1062ccfa5_WhatsAppImage2026-02-05at171715.jpg";

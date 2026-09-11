@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { Box, ExternalLink, Filter, Calendar } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import SectionTitle from '@/components/common/SectionTitle';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Badge from '@/components/common/Badge';
 

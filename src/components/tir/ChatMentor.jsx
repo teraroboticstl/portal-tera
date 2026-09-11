@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, MessageCircle, ArrowLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { X, Send, MessageCircle } from 'lucide-react';
 
 export default function ChatMentor({ mentor, user, onClose }) {
   const qc = useQueryClient();

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Clock, XCircle, Shield } from 'lucide-react';
 

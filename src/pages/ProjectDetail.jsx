@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Pencil, Check, X, Plus, Download, Target, Users, Heart, Building2 } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
 
 const PROJECTS_DATA = {
   'TIR': {

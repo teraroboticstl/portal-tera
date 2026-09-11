@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { Shield, Search, Filter, RefreshCw, Trash2, Plus, Edit, Upload, Settings, LogIn } from 'lucide-react';
+import { Shield, Search, RefreshCw, Trash2, Plus, Edit, Upload, Settings, LogIn } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 
