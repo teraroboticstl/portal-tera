@@ -23,11 +23,10 @@ $$ LANGUAGE plpgsql;
 -- =====================================================================
 
 -- Retorna se o usuário atual está autenticado
+
 CREATE OR REPLACE FUNCTION public.is_authenticated()
 RETURNS BOOLEAN AS $$
-BEGIN
-    RETURN auth.uid() IS NOT NULL;
-END;
+    SELECT auth.uid() IS NOT NULL;
 $$ LANGUAGE sql STABLE;
 
 -- Retorna o papel principal do usuário logado na tabela profiles
