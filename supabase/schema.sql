@@ -142,7 +142,12 @@ CREATE TRIGGER trg_sync_profile_roles
     FOR EACH ROW
     EXECUTE FUNCTION public.sync_profile_roles();
 
--- Proteger contra escalação indevida de privilégios em profiles
+-- =====================================================================
+-- 🛡️ PROTEÇÃO CONTRA ESCALAÇÃO INDEVIDA DE PRIVILÉGIOS (PROFILES)
+-- =====================================================================
+-- Esta função e trigger impedem que qualquer usuário não-administrador
+-- altere suas próprias permissões ('role', 'member_role') ou seu 'status'
+-- de aprovação, mesmo que tente enviar um UPDATE direto pelo cliente Supabase.
 CREATE OR REPLACE FUNCTION public.check_profile_role_escalation()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -152,11 +157,12 @@ BEGIN
         OLD.member_role IS DISTINCT FROM NEW.member_role OR 
         OLD.status IS DISTINCT FROM NEW.status) THEN
         
+        -- Administradores têm permissão total para alterar papéis e status
         IF public.is_admin() THEN
             RETURN NEW;
         END IF;
 
-        -- Permitir se for o bootstrap inicial do primeiro admin (SetupAdmin)
+        -- Permitir apenas se for o bootstrap inicial do primeiro admin quando o banco está vazio
         SELECT EXISTS (
             SELECT 1 FROM public.profiles WHERE role = 'admin' OR member_role = 'admin'
         ) INTO admin_exists;
@@ -177,7 +183,18 @@ CREATE TRIGGER trg_check_profile_role_escalation
     FOR EACH ROW
     EXECUTE FUNCTION public.check_profile_role_escalation();
 
--- Trigger automático para criação segura de perfil ao autenticar pelo Supabase Auth
+-- =====================================================================
+-- 🚀 BOOTSTRAP DE PRIMEIRO USUÁRIO E CRIAÇÃO AUTOMÁTICA DE PERFIL
+-- =====================================================================
+-- COMPORTAMENTO DE BOOTSTRAP DOCUMENTADO:
+-- 1. Quando o banco de dados é novo/vazio, NENHUM perfil existe na tabela 'profiles'.
+-- 2. No primeiro cadastro realizado via Supabase Auth (auth.users), a trigger verifica:
+--    'admin_exists := EXISTS (SELECT 1 FROM public.profiles WHERE role = "admin" OR member_role = "admin")'.
+-- 3. Como admin_exists é FALSO, este primeiro usuário torna-se automaticamente:
+--    role = 'admin', member_role = 'admin', status = 'approved'.
+-- 4. Para TODOS os usuários subsequentes (quando admin_exists for VERDADEIRO):
+--    role = 'aluno', member_role = 'user', status = 'pending'.
+--    Eles ficam aguardando aprovação explícita de um administrador no Portal Tera.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -185,7 +202,7 @@ DECLARE
     user_name TEXT;
     user_avatar TEXT;
 BEGIN
-    -- Se não há nenhum admin no sistema, o primeiro usuário torna-se admin aprovado
+    -- Verificar se já existe algum administrador cadastrado no sistema
     SELECT EXISTS (
         SELECT 1 FROM public.profiles WHERE role = 'admin' OR member_role = 'admin'
     ) INTO admin_exists;
@@ -241,8 +258,15 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 CREATE POLICY "Membros autenticados podem listar perfis" ON public.profiles
     FOR SELECT TO authenticated USING (true);
 
+-- Política de UPDATE com USING e WITH CHECK estritos:
+-- Garante que um usuário comum só pode submeter UPDATE na sua própria linha (auth.uid() = id)
+-- e que administradores podem gerenciar qualquer linha. A integridade dos campos sensíveis
+-- (role, member_role, status) é defendida de forma intransponível pelo trigger
+-- BEFORE UPDATE trg_check_profile_role_escalation.
 CREATE POLICY "Usuário atualiza o próprio perfil ou admin atualiza qualquer" ON public.profiles
-    FOR UPDATE TO authenticated USING (auth.uid() = id OR public.is_admin());
+    FOR UPDATE TO authenticated 
+    USING (auth.uid() = id OR public.is_admin())
+    WITH CHECK (auth.uid() = id OR public.is_admin());
 
 CREATE POLICY "Apenas admin pode deletar perfis" ON public.profiles
     FOR DELETE TO authenticated USING (public.is_admin() AND auth.uid() != id);
@@ -623,8 +647,11 @@ CREATE POLICY "Apenas membros autenticados lêem meeting_notes" ON public.meetin
     FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Membros autenticados criam meeting_notes" ON public.meeting_notes
     FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados editam meeting_notes" ON public.meeting_notes
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+-- Nota de governança: meeting_notes não possui coluna de autor/responsável (possui apenas array textual attendees).
+-- Para permitir que um aluno edite apenas sua própria ata, propõe-se adicionar a coluna:
+-- author_id UUID REFERENCES public.profiles(id). Sem essa coluna, a edição é restrita a mentores e admins.
+CREATE POLICY "Edição de meeting_notes restrita a mentores e admins" ON public.meeting_notes
+    FOR UPDATE TO authenticated USING (public.is_mentor_or_admin()) WITH CHECK (public.is_mentor_or_admin());
 CREATE POLICY "Exclusão de meeting_notes restrita a mentores e admins" ON public.meeting_notes
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
@@ -645,10 +672,13 @@ CREATE TRIGGER update_priorities_updated_at BEFORE UPDATE ON public.priorities F
 
 CREATE POLICY "Apenas membros autenticados lêem priorities" ON public.priorities
     FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Membros autenticados criam e atualizam priorities" ON public.priorities
+CREATE POLICY "Membros autenticados criam priorities" ON public.priorities
     FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados atualizam priorities" ON public.priorities
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+-- Nota de governança: priorities não possui coluna de responsável (assignee_id/owner_id).
+-- Para permitir que um aluno edite apenas prioridades a ele atribuídas, propõe-se adicionar:
+-- assignee_id UUID REFERENCES public.profiles(id). Sem essa coluna, a edição fica restrita a mentores e admins.
+CREATE POLICY "Edição de priorities restrita a mentores e admins" ON public.priorities
+    FOR UPDATE TO authenticated USING (public.is_mentor_or_admin()) WITH CHECK (public.is_mentor_or_admin());
 CREATE POLICY "Exclusão de priorities restrita a mentores e admins" ON public.priorities
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
@@ -696,10 +726,13 @@ CREATE TRIGGER update_prototype_tests_updated_at BEFORE UPDATE ON public.prototy
 
 CREATE POLICY "Apenas membros autenticados lêem prototype_tests" ON public.prototype_tests
     FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Membros autenticados criam e editam testes" ON public.prototype_tests
+CREATE POLICY "Membros autenticados criam testes" ON public.prototype_tests
     FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados editam testes" ON public.prototype_tests
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+-- O membro que executou o teste (tester_name correspondente ao seu perfil) ou mentores/admins podem editar
+CREATE POLICY "Tester ou mentor/admin edita prototype_tests" ON public.prototype_tests
+    FOR UPDATE TO authenticated 
+    USING (public.is_mentor_or_admin() OR tester_name = (SELECT full_name FROM public.profiles WHERE id = auth.uid())) 
+    WITH CHECK (public.is_mentor_or_admin() OR tester_name = (SELECT full_name FROM public.profiles WHERE id = auth.uid()));
 CREATE POLICY "Exclusão de testes restrita a mentores e admins" ON public.prototype_tests
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
@@ -742,10 +775,12 @@ CREATE TRIGGER update_esg_initiatives_updated_at BEFORE UPDATE ON public.esg_ini
 
 CREATE POLICY "Apenas membros autenticados lêem esg_initiatives" ON public.esg_initiatives
     FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Membros autenticados criam e atualizam esg_initiatives" ON public.esg_initiatives
+CREATE POLICY "Membros autenticados criam esg_initiatives" ON public.esg_initiatives
     FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados atualizam esg_initiatives" ON public.esg_initiatives
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+-- Nota de governança: esg_initiatives não possui coluna de autor/responsável.
+-- A edição fica restrita a mentores e administradores.
+CREATE POLICY "Edição de iniciativas ESG restrita a mentores e admins" ON public.esg_initiatives
+    FOR UPDATE TO authenticated USING (public.is_mentor_or_admin()) WITH CHECK (public.is_mentor_or_admin());
 CREATE POLICY "Exclusão de iniciativas ESG restrita a mentores e admins" ON public.esg_initiatives
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
@@ -788,9 +823,12 @@ CREATE POLICY "Apenas membros autenticados lêem presenças" ON public.user_pres
 CREATE POLICY "Membros autenticados registram presença" ON public.user_presences
     FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
 CREATE POLICY "Membros atualizam sua própria presença" ON public.user_presences
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros ou admins limpam presenças" ON public.user_presences
-    FOR DELETE TO authenticated USING (public.is_authenticated());
+    FOR UPDATE TO authenticated 
+    USING (user_email = (SELECT email FROM public.profiles WHERE id = auth.uid()) OR public.is_admin()) 
+    WITH CHECK (user_email = (SELECT email FROM public.profiles WHERE id = auth.uid()) OR public.is_admin());
+CREATE POLICY "Membros ou admins limpam sua própria presença" ON public.user_presences
+    FOR DELETE TO authenticated 
+    USING (user_email = (SELECT email FROM public.profiles WHERE id = auth.uid()) OR public.is_admin());
 
 -- Base de Conhecimento Interno da Equipe (team_knowledge_bases)
 CREATE TABLE IF NOT EXISTS public.team_knowledge_bases (
@@ -953,10 +991,10 @@ CREATE TRIGGER update_fll_missions_updated_at BEFORE UPDATE ON public.fll_missio
 
 CREATE POLICY "Apenas membros autenticados lêem fll_missions" ON public.fll_missions
     FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Membros autenticados criam e atualizam fll_missions" ON public.fll_missions
-    FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados atualizam fll_missions" ON public.fll_missions
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+CREATE POLICY "Criação de fll_missions restrita a mentores e admins" ON public.fll_missions
+    FOR INSERT TO authenticated WITH CHECK (public.is_mentor_or_admin());
+CREATE POLICY "Edição de fll_missions restrita a mentores e admins" ON public.fll_missions
+    FOR UPDATE TO authenticated USING (public.is_mentor_or_admin()) WITH CHECK (public.is_mentor_or_admin());
 CREATE POLICY "Exclusão de missões FLL restrita a mentores e admins" ON public.fll_missions
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
@@ -998,10 +1036,10 @@ ALTER TABLE public.fll_attachments ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Apenas membros autenticados lêem fll_attachments" ON public.fll_attachments
     FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Membros autenticados criam e editam anexos FLL" ON public.fll_attachments
-    FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados editam anexos FLL" ON public.fll_attachments
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+CREATE POLICY "Criação de anexos FLL restrita a mentores e admins" ON public.fll_attachments
+    FOR INSERT TO authenticated WITH CHECK (public.is_mentor_or_admin());
+CREATE POLICY "Edição de anexos FLL restrita a mentores e admins" ON public.fll_attachments
+    FOR UPDATE TO authenticated USING (public.is_mentor_or_admin()) WITH CHECK (public.is_mentor_or_admin());
 CREATE POLICY "Exclusão de anexos FLL restrita a mentores e admins" ON public.fll_attachments
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
@@ -1017,10 +1055,10 @@ ALTER TABLE public.fll_core_values ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Apenas membros autenticados lêem fll_core_values" ON public.fll_core_values
     FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Membros autenticados registram core values FLL" ON public.fll_core_values
-    FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados editam core values FLL" ON public.fll_core_values
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+CREATE POLICY "Criação de core values FLL restrita a mentores e admins" ON public.fll_core_values
+    FOR INSERT TO authenticated WITH CHECK (public.is_mentor_or_admin());
+CREATE POLICY "Edição de core values FLL restrita a mentores e admins" ON public.fll_core_values
+    FOR UPDATE TO authenticated USING (public.is_mentor_or_admin()) WITH CHECK (public.is_mentor_or_admin());
 CREATE POLICY "Exclusão de core values FLL restrita a mentores e admins" ON public.fll_core_values
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
@@ -1039,10 +1077,10 @@ CREATE TRIGGER update_fll_innovation_projects_updated_at BEFORE UPDATE ON public
 
 CREATE POLICY "Apenas membros autenticados lêem inovação FLL" ON public.fll_innovation_projects
     FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Membros autenticados registram e editam projeto de inovação FLL" ON public.fll_innovation_projects
-    FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados editam projeto de inovação FLL" ON public.fll_innovation_projects
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+CREATE POLICY "Criação de inovação FLL restrita a mentores e admins" ON public.fll_innovation_projects
+    FOR INSERT TO authenticated WITH CHECK (public.is_mentor_or_admin());
+CREATE POLICY "Edição de projeto de inovação FLL restrita a mentores e admins" ON public.fll_innovation_projects
+    FOR UPDATE TO authenticated USING (public.is_mentor_or_admin()) WITH CHECK (public.is_mentor_or_admin());
 CREATE POLICY "Exclusão de projetos de inovação FLL restrita a mentores e admins" ON public.fll_innovation_projects
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
@@ -1059,10 +1097,12 @@ ALTER TABLE public.fll_judge_preps ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Apenas membros autenticados lêem preparação de juízes FLL" ON public.fll_judge_preps
     FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Membros autenticados criam e editam preparação de juízes FLL" ON public.fll_judge_preps
+CREATE POLICY "Membros autenticados criam preparação de juízes FLL" ON public.fll_judge_preps
     FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados editam preparação de juízes FLL" ON public.fll_judge_preps
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+CREATE POLICY "Responsável ou mentor/admin edita preparação de juízes FLL" ON public.fll_judge_preps
+    FOR UPDATE TO authenticated 
+    USING (public.is_mentor_or_admin() OR responsible_student = (SELECT full_name FROM public.profiles WHERE id = auth.uid()))
+    WITH CHECK (public.is_mentor_or_admin() OR responsible_student = (SELECT full_name FROM public.profiles WHERE id = auth.uid()));
 CREATE POLICY "Exclusão de perguntas de juízes restrita a mentores e admins" ON public.fll_judge_preps
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
@@ -1089,8 +1129,10 @@ CREATE POLICY "Apenas membros autenticados lêem diretório de equipes" ON publi
     FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Membros autenticados cadastram equipes" ON public.teams
     FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados atualizam equipes" ON public.teams
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+-- Nota de governança: teams é um diretório coletivo de equipes adversárias.
+-- Para evitar corrupção acidental de cadastros oficiais, a edição é restrita a mentores e admins.
+CREATE POLICY "Edição de equipes restrita a mentores e admins" ON public.teams
+    FOR UPDATE TO authenticated USING (public.is_mentor_or_admin()) WITH CHECK (public.is_mentor_or_admin());
 CREATE POLICY "Exclusão de equipes restrita a mentores e admins" ON public.teams
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
@@ -1151,8 +1193,11 @@ CREATE POLICY "Apenas membros autenticados lêem scouting FTC" ON public.scout_f
     FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Membros autenticados registram scout FTC" ON public.scout_ftcs
     FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados atualizam scout FTC" ON public.scout_ftcs
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+-- Nota de governança: scout_ftcs não possui coluna de identificação do autor/scout (como 'scout_name TEXT' ou 'user_id UUID REFERENCES public.profiles(id)').
+-- Sem essa coluna, é impossível garantir via RLS que um aluno edite apenas o seu próprio registro.
+-- Portanto, a edição fica restrita a mentores e administradores até que uma coluna de autoria seja adicionada.
+CREATE POLICY "Edição de scout FTC restrita a mentores e admins" ON public.scout_ftcs
+    FOR UPDATE TO authenticated USING (public.is_mentor_or_admin()) WITH CHECK (public.is_mentor_or_admin());
 CREATE POLICY "Exclusão de scout FTC restrita a mentores e admins" ON public.scout_ftcs
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
@@ -1209,8 +1254,10 @@ CREATE POLICY "Apenas membros autenticados lêem dados de partidas" ON public.ma
     FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Membros autenticados registram partidas" ON public.matches
     FOR INSERT TO authenticated WITH CHECK (public.is_authenticated());
-CREATE POLICY "Membros autenticados atualizam partidas" ON public.matches
-    FOR UPDATE TO authenticated USING (public.is_authenticated()) WITH CHECK (public.is_authenticated());
+-- Nota de governança: matches armazena placares e resultados consolidados de alianças.
+-- A edição e homologação de partidas é restrita a mentores e administradores.
+CREATE POLICY "Edição de partidas restrita a mentores e admins" ON public.matches
+    FOR UPDATE TO authenticated USING (public.is_mentor_or_admin()) WITH CHECK (public.is_mentor_or_admin());
 CREATE POLICY "Exclusão de partidas restrita a mentores e admins" ON public.matches
     FOR DELETE TO authenticated USING (public.is_mentor_or_admin());
 
