@@ -9,8 +9,8 @@ export default function MuseumSection({ robots }) {
   const [selectedRobot, setSelectedRobot] = useState(null);
   const [imgIndex, setImgIndex] = useState(0);
 
-  const frcRobots = robots.filter(r => r.category === 'FRC').sort((a, b) => b.year - a.year);
-  const ftcRobots = robots.filter(r => r.category === 'FTC').sort((a, b) => b.year - a.year);
+  const frcRobots = robots.filter(r => r.category === 'FRC').sort((a, b) => (b.year || 0) - (a.year || 0));
+  const ftcRobots = robots.filter(r => r.category === 'FTC').sort((a, b) => (b.year || 0) - (a.year || 0));
 
   const openRobot = (robot) => { setSelectedRobot(robot); setImgIndex(0); };
   const closeModal = () => setSelectedRobot(null);

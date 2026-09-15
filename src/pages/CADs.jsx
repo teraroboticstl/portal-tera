@@ -13,7 +13,7 @@ export default function CADs() {
 
   const { data: robots = [], isLoading } = useQuery({
     queryKey: ['robots', 'cads'],
-    queryFn: () => base44.entities.Robot.list('-year'),
+    queryFn: () => base44.entities.Robot.list('-created_at'),
   });
 
   const robotsWithCAD = robots.filter(r => r.cad_url);

@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { createPageUrl } from '@/utils';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { Button } from "@/components/ui/button";
-import { Clock, XCircle, Shield } from 'lucide-react';
+import { Clock, XCircle, Shield, LogIn } from 'lucide-react';
 
 // E-mails dos admins seed (bootstrap admins) - sempre aprovados automaticamente
-const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com'];
+export const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com'];
 
 // Níveis de acesso: user (viewer), member (editor), admin
 export const ROLES = {
@@ -21,6 +21,8 @@ export const canEdit = (user) => {
   if (!user) return false;
   // Admin do sistema (role = 'admin') SEMPRE pode editar
   if (user.role === 'admin') return true;
+  // Seed admin sempre pode editar
+  if (user.email && SEED_ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
   // Verificar member_role para outros usuários
   const memberRole = user.member_role || 'user';
   // member_role pode ser 'admin' ou 'member' para permitir edição
@@ -30,6 +32,8 @@ export const canEdit = (user) => {
 // Helper para verificar se é admin
 export const isAdmin = (user) => {
   if (!user) return false;
+  // Seed admin
+  if (user.email && SEED_ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
   // Prioridade: role='admin' do sistema OU member_role='admin'
   return user.role === 'admin' || user.member_role === 'admin';
 };
@@ -37,6 +41,7 @@ export const isAdmin = (user) => {
 // Helper para obter o nível de acesso do usuário
 export const getUserRole = (user) => {
   if (!user) return null;
+  if (user.email && SEED_ADMIN_EMAILS.includes(user.email.toLowerCase())) return 'admin';
   // Se role do sistema é 'admin', retornar 'admin'
   if (user.role === 'admin') return 'admin';
   // Caso contrário, retornar member_role (padrão: 'user')
@@ -59,92 +64,11 @@ export default function ProtectedRoute({
   requireAdmin = false,
   requireMember = false 
 }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [accessDenied, setAccessDenied] = useState(false);
-  const [denialReason, setDenialReason] = useState(null);
+  const { user, isAuthenticated, isLoadingAuth, navigateToLogin } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const isAuth = await base44.auth.isAuthenticated();
-        if (!isAuth) {
-          base44.auth.redirectToLogin(window.location.pathname);
-          return;
-        }
-        
-        let userData = await base44.auth.me();
-        
-        // BOOTSTRAP ADMIN: Se for um dos e-mails seed, garantir admin e approved
-        if (SEED_ADMIN_EMAILS.includes(userData.email)) {
-          if (userData.status !== 'approved' || userData.member_role !== 'admin') {
-            await base44.auth.updateMe({ status: 'approved', member_role: 'admin' });
-            userData = await base44.auth.me();
-          }
-        }
-        
-        // CRITICAL: Verificar se é admin (role='admin' OU member_role='admin')
-        const userIsAdmin = userData.role === 'admin' || userData.member_role === 'admin';
-        
-        // BYPASS TOTAL: Admins sempre têm acesso completo, sem verificações
-        if (userIsAdmin) {
-          setUser(userData);
-          setLoading(false);
-          return;
-        }
-        
-        // Verificar status de aprovação
-        if (userData.status === 'pending') {
-          setAccessDenied(true);
-          setDenialReason('pending');
-          setLoading(false);
-          return;
-        }
-        
-        if (userData.status === 'rejected') {
-          setAccessDenied(true);
-          setDenialReason('rejected');
-          setLoading(false);
-          return;
-        }
-        
-        // Para não-admins, verificar se requer admin
-        if (requireAdmin) {
-          setAccessDenied(true);
-          setDenialReason('admin_required');
-          setLoading(false);
-          return;
-        }
-        
-        // Verificar se requer member (editor)
-        if (requireMember && userData.member_role !== 'member') {
-          setAccessDenied(true);
-          setDenialReason('member_required');
-          setLoading(false);
-          return;
-        }
-        
-        // Para não-admins, verificar aprovação
-        if (requireApproved && userData.status !== 'approved') {
-          setAccessDenied(true);
-          setDenialReason('approval_required');
-          setLoading(false);
-          return;
-        }
-        
-        setUser(userData);
-      } catch (e) {
-        console.error('Auth error:', e);
-        base44.auth.redirectToLogin(window.location.pathname);
-      } finally {
-        setLoading(false);
-      }
-    };
-    checkAuth();
-  }, [requireApproved, requireAdmin, requireMember]);
-
-  if (loading) {
+  // 1. Enquanto o AuthContext estiver restaurando a sessão ou carregando o perfil:
+  if (isLoadingAuth) {
     return (
       <div className="min-h-screen bg-[#0B0B0D] flex items-center justify-center">
         <LoadingSpinner text="Verificando acesso..." />
@@ -152,7 +76,62 @@ export default function ProtectedRoute({
     );
   }
 
-  if (accessDenied) {
+  // 2. Se a sessão finalizou de carregar e o usuário não está logado:
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="min-h-screen bg-[#0B0B0D] flex items-center justify-center p-4">
+        <div className="bg-[#111217] border border-[#1F222B] rounded-2xl p-8 text-center max-w-md w-full shadow-2xl">
+          <div className="w-20 h-20 mx-auto mb-6 bg-[#1F222B] rounded-full flex items-center justify-center">
+            <Shield className="w-10 h-10 text-[#E10600]" />
+          </div>
+          <h1 className="text-2xl font-bold mb-3 text-[#F5F7FA]">Área Interna Tera</h1>
+          <p className="text-[#B8BDC7] mb-6 text-sm leading-relaxed">
+            Esta área é restrita aos membros da equipe. Faça login com sua conta Google autorizada para continuar.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => navigateToLogin(window.location.href)}
+              className="bg-[#E10600] hover:bg-[#E10600]/90 text-white font-bold flex items-center justify-center gap-2 h-11"
+            >
+              <LogIn className="w-4 h-4" /> Entrar com o Google
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate(createPageUrl('Home'))}
+              className="border-[#1F222B] text-[#B8BDC7] hover:text-[#F5F7FA] hover:bg-[#1F222B] h-11"
+            >
+              Voltar ao Site
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Usuário autenticado: verificar se é admin (role, member_role ou seed admin)
+  const isSeedAdmin = user.email && SEED_ADMIN_EMAILS.includes(user.email.toLowerCase());
+  const userIsAdmin = user.role === 'admin' || user.member_role === 'admin' || isSeedAdmin;
+
+  // BYPASS TOTAL: Admins sempre têm acesso completo e irrestrito
+  if (userIsAdmin) {
+    return React.cloneElement(children, { user });
+  }
+
+  // 4. Verificação de status para usuários comuns
+  let denialReason = null;
+  if (user.status === 'pending') {
+    denialReason = 'pending';
+  } else if (user.status === 'rejected') {
+    denialReason = 'rejected';
+  } else if (requireAdmin) {
+    denialReason = 'admin_required';
+  } else if (requireMember && user.member_role !== 'member' && user.role !== 'mentor') {
+    denialReason = 'member_required';
+  } else if (requireApproved && user.status !== 'approved') {
+    denialReason = 'approval_required';
+  }
+
+  if (denialReason) {
     const denialContent = {
       pending: {
         icon: <Clock className="w-12 h-12 text-yellow-500" />,
@@ -190,23 +169,23 @@ export default function ProtectedRoute({
 
     return (
       <div className="min-h-screen bg-[#0B0B0D] flex items-center justify-center p-4">
-        <div className="bg-[#111217] border border-[#1F222B] rounded-2xl p-8 text-center max-w-md">
+        <div className="bg-[#111217] border border-[#1F222B] rounded-2xl p-8 text-center max-w-md w-full shadow-2xl">
           <div className="w-20 h-20 mx-auto mb-6 bg-[#1F222B] rounded-full flex items-center justify-center">
             {content.icon}
           </div>
           <h1 className={`text-2xl font-bold mb-4 ${content.color}`}>{content.title}</h1>
-          <p className="text-[#B8BDC7] mb-6">{content.message}</p>
+          <p className="text-[#B8BDC7] mb-6 text-sm leading-relaxed">{content.message}</p>
           <div className="flex flex-col gap-3">
             <Button
               onClick={() => navigate(createPageUrl('Home'))}
-              className="bg-[#E10600] hover:bg-[#E10600]/90"
+              className="bg-[#E10600] hover:bg-[#E10600]/90 text-white font-bold h-11"
             >
               Voltar ao Site
             </Button>
             <Button
               variant="outline"
               onClick={() => navigate(createPageUrl('Contact'))}
-              className="border-[#1F222B]"
+              className="border-[#1F222B] text-[#B8BDC7] hover:text-[#F5F7FA] hover:bg-[#1F222B] h-11"
             >
               Entrar em Contato
             </Button>
@@ -216,7 +195,6 @@ export default function ProtectedRoute({
     );
   }
 
-  if (!user) return null;
-
+  // Acesso concedido
   return React.cloneElement(children, { user });
 }

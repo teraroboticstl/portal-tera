@@ -10,7 +10,7 @@ import Badge from '@/components/common/Badge';
 export default function CurrentRobot() {
   const { data: robots, isLoading } = useQuery({
     queryKey: ['robots', 'current'],
-    queryFn: () => base44.entities.Robot.filter({ is_current: true }),
+    queryFn: () => base44.entities.Robot.filter({ is_active: true }),
   });
 
   const currentRobot = robots?.[0];

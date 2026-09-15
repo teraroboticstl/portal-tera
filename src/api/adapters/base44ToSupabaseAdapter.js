@@ -16,13 +16,38 @@ export const createEntityAdapter = (entityName, tableName = '') => {
 
   const actualTableName = tableName || defaultTable;
 
-  // Helper para injetar o campo virtual created_date esperado por muitas páginas do Portal Tera
+  // Helper para mapear campos do modelo relacional e compatibilizar campos virtuais
   const mapItem = (item) => {
     if (!item) return item;
-    return {
+
+    const mapped = {
       ...item,
       created_date: item.created_at || item.created_date || null
     };
+
+    if (actualTableName === 'robots') {
+      const seasonYear = item.seasons?.year;
+      const createdYear = item.created_at ? new Date(item.created_at).getFullYear() : null;
+      const imagesArray = Array.isArray(item.images) ? item.images : [];
+
+      mapped.year = item.year || seasonYear || createdYear || new Date().getFullYear();
+      mapped.season_name = item.season_name || item.seasons?.theme || (seasonYear ? `Temporada ${seasonYear}` : '');
+      mapped.cad_url = item.cad_url || item.cad_link || '';
+      mapped.image_url = item.image_url || imagesArray[0] || '';
+      mapped.extra_images = item.extra_images || (imagesArray.length > 1 ? imagesArray.slice(1) : []);
+      mapped.is_current = item.is_current !== undefined ? item.is_current : (item.is_active ?? false);
+      mapped.is_active = item.is_active !== undefined ? item.is_active : mapped.is_current;
+      mapped.game_objective = item.game_objective || (item.specs && typeof item.specs === 'object' ? item.specs.game_objective : '') || '';
+    }
+
+    return mapped;
+  };
+
+  const getSelectQuery = () => {
+    if (actualTableName === 'robots') {
+      return '*, seasons(id, year, theme)';
+    }
+    return '*';
   };
 
   const mapItems = (items) => {
@@ -37,7 +62,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
     async list(query = {}) {
       console.log(`[Supabase Adapter] Buscando registros de ${entityName} (Tabela: ${actualTableName})...`);
       
-      let req = supabase.from(actualTableName).select('*');
+      let req = supabase.from(actualTableName).select(getSelectQuery());
 
       let orderField = 'created_at';
       let ascending = false;
@@ -48,6 +73,10 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         ascending = !cleanQuery.startsWith('-');
         const rawField = cleanQuery.startsWith('-') ? cleanQuery.substring(1) : cleanQuery;
         orderField = rawField === 'created_date' ? 'created_at' : rawField;
+        // Se tentar ordenar 'robots' pela coluna virtual 'year', redireciona para a coluna real 'created_at'
+        if (actualTableName === 'robots' && orderField === 'year') {
+          orderField = 'created_at';
+        }
       } else if (['daily_logs', 'board_diaries', 'meeting_notes', 'prototype_tests'].includes(actualTableName)) {
         orderField = 'date';
         ascending = false;
@@ -70,17 +99,26 @@ export const createEntityAdapter = (entityName, tableName = '') => {
     async filter(filterObj = {}, order = '', limit = null) {
       console.log(`[Supabase Adapter] Filtrando ${entityName} (Tabela: ${actualTableName})...`, filterObj);
       
-      let req = supabase.from(actualTableName).select('*');
+      let req = supabase.from(actualTableName).select(getSelectQuery());
       
+      const cleanFilters = { ...filterObj };
+      if (actualTableName === 'robots' && cleanFilters.is_current !== undefined) {
+        cleanFilters.is_active = cleanFilters.is_current;
+        delete cleanFilters.is_current;
+      }
+
       // Aplicar filtros simples de igualdade
-      Object.entries(filterObj).forEach(([key, val]) => {
+      Object.entries(cleanFilters).forEach(([key, val]) => {
         req = req.eq(key, val);
       });
 
       if (order) {
         const isDescending = order.startsWith('-');
         const rawField = isDescending ? order.substring(1) : order;
-        const orderField = rawField === 'created_date' ? 'created_at' : rawField;
+        let orderField = rawField === 'created_date' ? 'created_at' : rawField;
+        if (actualTableName === 'robots' && orderField === 'year') {
+          orderField = 'created_at';
+        }
         req = req.order(orderField, { ascending: !isDescending });
       } else {
         req = req.order('created_at', { ascending: false });
@@ -106,7 +144,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       console.log(`[Supabase Adapter] Buscando ID ${id} de ${entityName} no Supabase...`);
       const { data, error } = await supabase
         .from(actualTableName)
-        .select('*')
+        .select(getSelectQuery())
         .eq('id', id)
         .single();
 
@@ -127,6 +165,33 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       delete sanitized.id;
       delete sanitized.created_date;
 
+      // Sanitização específica para a tabela robots existente no schema
+      if (actualTableName === 'robots') {
+        if (sanitized.cad_url && !sanitized.cad_link) {
+          sanitized.cad_link = sanitized.cad_url;
+        }
+        if (sanitized.is_current !== undefined && sanitized.is_active === undefined) {
+          sanitized.is_active = sanitized.is_current;
+        }
+        if (sanitized.image_url && (!sanitized.images || sanitized.images.length === 0)) {
+          sanitized.images = [sanitized.image_url, ...(sanitized.extra_images || [])].filter(Boolean);
+        }
+        if (sanitized.game_objective) {
+          sanitized.specs = {
+            ...(typeof sanitized.specs === 'object' && sanitized.specs !== null ? sanitized.specs : {}),
+            game_objective: sanitized.game_objective
+          };
+        }
+        delete sanitized.year;
+        delete sanitized.season_name;
+        delete sanitized.cad_url;
+        delete sanitized.image_url;
+        delete sanitized.extra_images;
+        delete sanitized.is_current;
+        delete sanitized.game_objective;
+        delete sanitized.seasons;
+      }
+
       // Tratar strings vazias em UUIDs/Foreign Keys para null
       for (const key of Object.keys(sanitized)) {
         if ((key.endsWith('_id') || key === 'user_id') && sanitized[key] === '') {
@@ -137,7 +202,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       const { data, error } = await supabase
         .from(actualTableName)
         .insert([sanitized])
-        .select()
+        .select(getSelectQuery())
         .single();
 
       if (error) {
@@ -157,6 +222,32 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       delete sanitized.id;
       delete sanitized.created_date;
 
+      if (actualTableName === 'robots') {
+        if (sanitized.cad_url !== undefined && !sanitized.cad_link) {
+          sanitized.cad_link = sanitized.cad_url;
+        }
+        if (sanitized.is_current !== undefined && sanitized.is_active === undefined) {
+          sanitized.is_active = sanitized.is_current;
+        }
+        if (sanitized.image_url !== undefined && (!sanitized.images || sanitized.images.length === 0)) {
+          sanitized.images = [sanitized.image_url, ...(sanitized.extra_images || [])].filter(Boolean);
+        }
+        if (sanitized.game_objective !== undefined) {
+          sanitized.specs = {
+            ...(typeof sanitized.specs === 'object' && sanitized.specs !== null ? sanitized.specs : {}),
+            game_objective: sanitized.game_objective
+          };
+        }
+        delete sanitized.year;
+        delete sanitized.season_name;
+        delete sanitized.cad_url;
+        delete sanitized.image_url;
+        delete sanitized.extra_images;
+        delete sanitized.is_current;
+        delete sanitized.game_objective;
+        delete sanitized.seasons;
+      }
+
       for (const key of Object.keys(sanitized)) {
         if ((key.endsWith('_id') || key === 'user_id') && sanitized[key] === '') {
           sanitized[key] = null;
@@ -167,7 +258,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         .from(actualTableName)
         .update(sanitized)
         .eq('id', id)
-        .select()
+        .select(getSelectQuery())
         .single();
 
       if (error) {

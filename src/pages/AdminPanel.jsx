@@ -38,18 +38,17 @@ export default function AdminPanel() {
           return;
         }
         
-        let userData = await base44.auth.me();
-        
-        // BOOTSTRAP ADMIN: Se for o e-mail seed, garantir que está approved
-        if (userData.email === SEED_ADMIN_EMAIL) {
-          if (userData.status !== 'approved') {
-            await base44.auth.updateMe({ status: 'approved' });
-            userData = await base44.auth.me();
-          }
+        const userData = await base44.auth.me();
+        if (!userData) {
+          navigate(createPageUrl('Home'));
+          return;
         }
         
+        const isSeedAdmin = userData.email && (userData.email.toLowerCase() === SEED_ADMIN_EMAIL || userData.email.toLowerCase() === 'nathannovaes16@gmail.com');
+        const userIsAdmin = userData.role === 'admin' || userData.member_role === 'admin' || isSeedAdmin;
+        
         // Apenas admins podem acessar
-        if (userData.role !== 'admin') {
+        if (!userIsAdmin) {
           navigate(createPageUrl('Home'));
           return;
         }
@@ -513,7 +512,7 @@ function RobotsManagement() {
 
   const { data: robots = [], isLoading } = useQuery({
     queryKey: ['admin-robots'],
-    queryFn: () => base44.entities.Robot.list('-year'),
+    queryFn: () => base44.entities.Robot.list('-created_at'),
   });
 
   const createRobot = useMutation({

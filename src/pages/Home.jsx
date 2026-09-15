@@ -15,7 +15,7 @@ import SponsorsBanner from '@/components/home/SponsorsBanner';
 export default function Home() {
   const { data: allRobots = [] } = useQuery({
     queryKey: ['robots-home'],
-    queryFn: () => base44.entities.Robot.list('-year'),
+    queryFn: () => base44.entities.Robot.list('-created_at'),
     initialData: []
   });
 

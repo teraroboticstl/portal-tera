@@ -227,7 +227,7 @@ export default function Memoria() {
 
   const { data: robots = [] } = useQuery({
     queryKey: ['memoria-robots'],
-    queryFn: () => base44.entities.Robot.list('-year'),
+    queryFn: () => base44.entities.Robot.list('-created_at'),
   });
 
   const { data: moments = [] } = useQuery({
@@ -246,9 +246,9 @@ export default function Memoria() {
     : [];
 
   const robotsByCategory = {
-    FRC: robots.filter(r => r.category === 'FRC').sort((a, b) => b.year - a.year),
-    FTC: robots.filter(r => r.category === 'FTC').sort((a, b) => b.year - a.year),
-    FLL: robots.filter(r => r.category === 'FLL').sort((a, b) => b.year - a.year),
+    FRC: robots.filter(r => r.category === 'FRC').sort((a, b) => (b.year || 0) - (a.year || 0)),
+    FTC: robots.filter(r => r.category === 'FTC').sort((a, b) => (b.year || 0) - (a.year || 0)),
+    FLL: robots.filter(r => r.category === 'FLL').sort((a, b) => (b.year || 0) - (a.year || 0)),
   };
 
   const filteredTimeline = programFilter === 'all'

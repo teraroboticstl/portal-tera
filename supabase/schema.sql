@@ -23,10 +23,11 @@ $$ LANGUAGE plpgsql;
 -- =====================================================================
 
 -- Retorna se o usuário atual está autenticado
-
 CREATE OR REPLACE FUNCTION public.is_authenticated()
 RETURNS BOOLEAN AS $$
-    SELECT auth.uid() IS NOT NULL;
+BEGIN
+    RETURN auth.uid() IS NOT NULL;
+END;
 $$ LANGUAGE sql STABLE;
 
 -- Retorna o papel principal do usuário logado na tabela profiles
@@ -1295,3 +1296,38 @@ CREATE INDEX IF NOT EXISTS idx_frc_scouts_team ON public.frc_scouts(team_number)
 CREATE INDEX IF NOT EXISTS idx_scout_ftcs_team ON public.scout_ftcs(team_number);
 CREATE INDEX IF NOT EXISTS idx_user_presences_last_seen ON public.user_presences(last_seen DESC);
 CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON public.contact_messages(status);
+
+
+-- =====================================================================
+-- 🛡️ 10. CONCESSÃO DE PRIVILÉGIOS SQL MÍNIMOS (GRANTS)
+-- =====================================================================
+-- Necessário para que a API Supabase (PostgREST) possa executar operações
+-- permitidas pelo RLS para os papéis 'anon' e 'authenticated'.
+
+-- 1. Permissão de uso no schema public
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+
+-- 2. Concessão de APENAS leitura (SELECT) ao papel anon nas tabelas institucionais públicas.
+-- Segurança estrita: Nenhuma permissão de INSERT, UPDATE ou DELETE é concedida ao papel anon.
+-- O Row Level Security (RLS) permanece 100% ativo e obrigatório em todas as tabelas.
+GRANT SELECT ON public.sponsors TO anon;
+GRANT SELECT ON public.robots TO anon;
+GRANT SELECT ON public.seasons TO anon;
+GRANT SELECT ON public.projects TO anon;
+GRANT SELECT ON public.products TO anon;
+GRANT SELECT ON public.tournament_memorials TO anon;
+GRANT SELECT ON public.event_galleries TO anon;
+GRANT SELECT ON public.event_medias TO anon;
+GRANT SELECT ON public.tir_equipes TO anon;
+GRANT SELECT ON public.tir_regras TO anon;
+GRANT SELECT ON public.tir_fotos TO anon;
+GRANT SELECT ON public.tir_mensagens TO anon;
+
+-- 3. Permissão de envio anônimo para formulário institucional de contato
+-- (Permitido e validado pela policy RLS 'Qualquer visitante pode enviar mensagem de contato')
+GRANT INSERT ON public.contact_messages TO anon;
+
+-- 4. Privilégios para usuários autenticados (todas as operações são estritamente governadas por RLS)
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+

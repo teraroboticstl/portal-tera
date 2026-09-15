@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
-import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { Menu, X, ChevronDown, LogOut, Settings, LayoutDashboard, Calendar } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
@@ -16,25 +16,12 @@ import {
 const LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698a86446abc83aece20025a/71928ec1c_WhatsAppImage2026-02-05at171715.jpg";
 
 export default function Layout({ children, currentPageName }) {
-  const [user, setUser] = useState(null);
+  const { user, isLoadingAuth: loading, logout, navigateToLogin } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const isAuth = await base44.auth.isAuthenticated();
-        if (isAuth) {
-          const userData = await base44.auth.me();
-          setUser(userData);
-        }
-      } catch (e) {}
-      finally { setLoading(false); }
-    };
-    checkAuth();
-  }, []);
-
-  const handleLogout = async () => { await base44.auth.logout(); };
+  const handleLogout = async () => { 
+    await logout(true); 
+  };
 
   const navLinks = [
     { name: 'Início', path: 'Home' },
@@ -189,7 +176,7 @@ export default function Layout({ children, currentPageName }) {
                 ) : (
                   <Button
                     size="sm"
-                    onClick={() => base44.auth.redirectToLogin(window.location.pathname)}
+                    onClick={() => navigateToLogin(window.location.href)}
                     className="bg-[#E10600] hover:bg-[#7A0000] text-white font-bold text-xs uppercase"
                   >
                     Entrar
@@ -258,7 +245,7 @@ export default function Layout({ children, currentPageName }) {
                       </div>
                     ) : (
                       <button
-                        onClick={() => { setMobileMenuOpen(false); base44.auth.redirectToLogin(window.location.pathname); }}
+                        onClick={() => { setMobileMenuOpen(false); navigateToLogin(window.location.href); }}
                         style={{ width: '100%', padding: '12px 0', backgroundColor: '#E10600', color: '#fff', fontWeight: 700, fontSize: 14, textTransform: 'uppercase', borderRadius: 8, border: 'none', cursor: 'pointer' }}>
                         Entrar
                       </button>

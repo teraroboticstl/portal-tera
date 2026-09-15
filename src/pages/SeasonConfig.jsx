@@ -34,8 +34,14 @@ export default function SeasonConfig() {
     const checkAuth = async () => {
       try {
         const userData = await base44.auth.me();
+        if (!userData) {
+          navigate('/');
+          return;
+        }
         setUser(userData);
-        if (userData.role !== 'admin') {
+        const isSeedAdmin = userData.email && ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com'].includes(userData.email.toLowerCase());
+        const userIsAdmin = userData.role === 'admin' || userData.member_role === 'admin' || isSeedAdmin;
+        if (!userIsAdmin) {
           navigate('/');
         }
       } catch (e) {

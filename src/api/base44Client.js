@@ -59,46 +59,75 @@ const integrationsShim = {
   }
 };
 
+// E-mails dos administradores seed
+const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com'];
+
 // Autenticação integrada diretamente com Supabase Auth e Profiles
 const authShim = {
   /**
-   * Retorna o usuário logado atualmente no Supabase.
+   * Retorna o usuário logado atualmente no Supabase com seu perfil completo.
    */
   async me() {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) return null;
+    try {
+      // 1. Tentar obter o usuário da sessão em cache local primeiro
+      const { data: { session } } = await supabase.auth.getSession();
+      let user = session?.user;
 
-    // Buscar dados complementares da tabela de perfis (profiles)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+      if (!user) {
+        const { data: { user: authUser }, error } = await supabase.auth.getUser();
+        if (error || !authUser) return null;
+        user = authUser;
+      }
 
-    return {
-      id: user.id,
-      email: user.email,
-      full_name: profile?.full_name || user.user_metadata?.full_name || 'Membro do Portal',
-      avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || '',
-      role: profile?.role || 'aluno',
-      category: profile?.category || 'Geral',
-      created_at: user.created_at
-    };
+      // 2. Buscar dados complementares da tabela de perfis (profiles)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const isSeedAdmin = user.email && SEED_ADMIN_EMAILS.includes(user.email.toLowerCase());
+      const role = profile?.role || (isSeedAdmin ? 'admin' : 'aluno');
+      const memberRole = profile?.member_role || (role === 'admin' || isSeedAdmin ? 'admin' : role === 'mentor' ? 'member' : 'user');
+      const status = profile?.status || (role === 'admin' || isSeedAdmin ? 'approved' : 'pending');
+
+      return {
+        id: user.id,
+        email: user.email,
+        full_name: profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Membro do Portal',
+        avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
+        category: profile?.category || 'Geral',
+        program: profile?.program || 'Geral',
+        created_at: user.created_at,
+        ...(profile || {}),
+        role,
+        member_role: memberRole,
+        status
+      };
+    } catch (err) {
+      console.warn('[Supabase Auth Shim] Falha ao recuperar perfil do usuário:', err);
+      return null;
+    }
   },
 
   /**
    * Verifica se existe um usuário autenticado.
    */
   async isAuthenticated() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return !!session;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      return !!session;
+    } catch {
+      return false;
+    }
   },
 
   /**
    * Atualiza os dados cadastrais do perfil do próprio usuário no Supabase.
    */
   async updateMe(payload) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user || (await supabase.auth.getUser()).data?.user;
     if (!user) throw new Error('Usuário não autenticado no Supabase');
 
     const { data, error } = await supabase
@@ -106,7 +135,7 @@ const authShim = {
       .update(payload)
       .eq('id', user.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('[Supabase Auth Shim] Erro ao atualizar perfil:', error);
@@ -130,10 +159,14 @@ const authShim = {
   async redirectToLogin(redirectTo = window.location.href) {
     console.log('[Supabase Auth Shim] Redirecionando para login com Google...');
     
+    const targetUrl = redirectTo && redirectTo.startsWith('http') 
+      ? redirectTo 
+      : `${window.location.origin}${!redirectTo || redirectTo === '/' ? '' : (redirectTo.startsWith('/') ? redirectTo : '/' + redirectTo)}`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: redirectTo
+        redirectTo: targetUrl
       }
     });
 
