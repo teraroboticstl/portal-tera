@@ -405,7 +405,7 @@ function UsersManagement() {
 function TournamentSettings() {
   const { data: seasons = [], isLoading } = useQuery({
     queryKey: ['seasons'],
-    queryFn: () => base44.entities.Season.filter({ is_active: true }, '-created_date', 1),
+    queryFn: () => base44.entities.Season.list('-year'),
   });
 
   const activeSeason = seasons && seasons.length > 0 ? seasons[0] : null;

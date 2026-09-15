@@ -68,7 +68,7 @@ function AreaInternaContent({ user }) {
 
   const { data: seasons = [] } = useQuery({
     queryKey: ['seasons-active'],
-    queryFn: () => base44.entities.Season.filter({ is_active: true }, '-created_date', 1),
+    queryFn: () => base44.entities.Season.list('-year'),
   });
   const activeSeason = seasons[0];
 

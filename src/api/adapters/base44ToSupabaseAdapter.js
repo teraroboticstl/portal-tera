@@ -38,6 +38,8 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       mapped.is_current = item.is_current !== undefined ? item.is_current : (item.is_active ?? false);
       mapped.is_active = item.is_active !== undefined ? item.is_active : mapped.is_current;
       mapped.game_objective = item.game_objective || (item.specs && typeof item.specs === 'object' ? item.specs.game_objective : '') || '';
+    } else if (actualTableName === 'seasons') {
+      mapped.is_active = true;
     }
 
     return mapped;
@@ -106,6 +108,9 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         cleanFilters.is_active = cleanFilters.is_current;
         delete cleanFilters.is_current;
       }
+      if (actualTableName === 'seasons') {
+        delete cleanFilters.is_active;
+      }
 
       // Aplicar filtros simples de igualdade
       Object.entries(cleanFilters).forEach(([key, val]) => {
@@ -117,6 +122,9 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         const rawField = isDescending ? order.substring(1) : order;
         let orderField = rawField === 'created_date' ? 'created_at' : rawField;
         if (actualTableName === 'robots' && orderField === 'year') {
+          orderField = 'created_at';
+        }
+        if (actualTableName === 'seasons' && orderField === 'created_date') {
           orderField = 'created_at';
         }
         req = req.order(orderField, { ascending: !isDescending });
@@ -192,6 +200,12 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         delete sanitized.seasons;
       }
 
+      if (actualTableName === 'seasons') {
+        delete sanitized.is_active;
+        delete sanitized.competition_date;
+        delete sanitized.awards_targeted;
+      }
+
       // Tratar strings vazias em UUIDs/Foreign Keys para null
       for (const key of Object.keys(sanitized)) {
         if ((key.endsWith('_id') || key === 'user_id') && sanitized[key] === '') {
@@ -248,6 +262,12 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         delete sanitized.seasons;
       }
 
+      if (actualTableName === 'seasons') {
+        delete sanitized.is_active;
+        delete sanitized.competition_date;
+        delete sanitized.awards_targeted;
+      }
+
       for (const key of Object.keys(sanitized)) {
         if ((key.endsWith('_id') || key === 'user_id') && sanitized[key] === '') {
           sanitized[key] = null;
@@ -283,6 +303,56 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         throw error;
       }
       return { success: true, id };
+    },
+
+    /**
+     * Subscrição Realtime para alterações na tabela (Supabase Realtime via Postgres Changes).
+     */
+    subscribe(callback) {
+      if (!callback || typeof callback !== 'function') {
+        return () => {};
+      }
+      try {
+        const channelName = `realtime:${actualTableName}:${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        const channel = supabase
+          .channel(channelName)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: actualTableName },
+            (payload) => {
+              try {
+                let eventType = 'update';
+                let data = mapItem(payload.new);
+                let id = payload.new?.id || payload.old?.id;
+                if (payload.eventType === 'INSERT') {
+                  eventType = 'create';
+                } else if (payload.eventType === 'DELETE') {
+                  eventType = 'delete';
+                  data = mapItem(payload.old);
+                }
+                callback({ type: eventType, data, id });
+              } catch (err) {
+                console.warn(`[Supabase Realtime Adapter] Erro no callback (${actualTableName}):`, err);
+              }
+            }
+          )
+          .subscribe((status, err) => {
+            if (err) {
+              console.warn(`[Supabase Realtime Adapter] Falha na subscrição (${actualTableName}):`, err);
+            }
+          });
+
+        return () => {
+          try {
+            supabase.removeChannel(channel);
+          } catch (err) {
+            console.warn(`[Supabase Realtime Adapter] Erro ao desinscrever (${actualTableName}):`, err);
+          }
+        };
+      } catch (err) {
+        console.warn(`[Supabase Realtime Adapter] Erro ao criar canal (${actualTableName}):`, err);
+        return () => {};
+      }
     }
   };
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/api/supabaseClient';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Users, Clock } from 'lucide-react';
@@ -34,7 +35,7 @@ function getProgramColor(program) {
   return colors[program] || 'bg-gray-500';
 }
 
-export default function OnlineUsers({ currentUser }) {
+function OnlineUsersContent({ currentUser }) {
   const [tick, setTick] = useState(0);
 
   // Force re-render every 30s to update durations
@@ -46,24 +47,61 @@ export default function OnlineUsers({ currentUser }) {
   const { data: presences = [] } = useQuery({
     queryKey: ['user-presences', tick],
     queryFn: () => base44.entities.UserPresence.list('-last_seen'),
-    refetchInterval: 15000,
+    refetchInterval: 30000,
   });
 
-  // Real-time subscription
+  // Real-time subscription via Supabase Realtime
   const [livePresences, setLivePresences] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = base44.entities.UserPresence.subscribe((event) => {
-      setLivePresences(prev => {
-        const list = prev || presences;
-        if (event.type === 'create') return [...list, event.data];
-        if (event.type === 'update') return list.map(p => p.id === event.id ? event.data : p);
-        if (event.type === 'delete') return list.filter(p => p.id !== event.id);
-        return list;
-      });
-    });
-    return unsubscribe;
-  }, []);
+    let channel = null;
+    try {
+      channel = supabase
+        .channel('public:user_presences')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'user_presences' },
+          (payload) => {
+            try {
+              setLivePresences(prev => {
+                const list = prev || presences;
+                if (payload.eventType === 'INSERT') {
+                  const newItem = payload.new;
+                  return [...list.filter(p => p.id !== newItem.id), newItem];
+                }
+                if (payload.eventType === 'UPDATE') {
+                  const updatedItem = payload.new;
+                  return list.map(p => p.id === updatedItem.id ? updatedItem : p);
+                }
+                if (payload.eventType === 'DELETE') {
+                  return list.filter(p => p.id !== payload.old.id);
+                }
+                return list;
+              });
+            } catch (err) {
+              console.warn('[OnlineUsers] Erro ao atualizar estado com evento realtime:', err);
+            }
+          }
+        )
+        .subscribe((status, err) => {
+          if (err) {
+            console.warn('[OnlineUsers] Falha na inscrição Realtime:', err);
+          }
+        });
+    } catch (err) {
+      console.warn('[OnlineUsers] Erro ao iniciar canal Realtime:', err);
+    }
+
+    return () => {
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch (err) {
+          console.warn('[OnlineUsers] Erro ao remover canal:', err);
+        }
+      }
+    };
+  }, [presences]);
 
   const allPresences = livePresences || presences;
   const onlineUsers = allPresences.filter(p => p.is_online && isRecentlyOnline(p.last_seen));
@@ -158,5 +196,35 @@ export default function OnlineUsers({ currentUser }) {
         </div>
       )}
     </div>
+  );
+}
+
+class OnlineUsersErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.warn('[OnlineUsers] Erro não-fatal capturado no widget de presenças:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null;
+    }
+    return this.props.children;
+  }
+}
+
+export default function OnlineUsers(props) {
+  return (
+    <OnlineUsersErrorBoundary>
+      <OnlineUsersContent {...props} />
+    </OnlineUsersErrorBoundary>
   );
 }

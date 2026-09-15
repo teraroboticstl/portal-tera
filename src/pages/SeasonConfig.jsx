@@ -53,7 +53,7 @@ export default function SeasonConfig() {
 
   const { data: seasons } = useQuery({
     queryKey: ['seasons'],
-    queryFn: () => base44.entities.Season.filter({ is_active: true }, '-created_date', 1),
+    queryFn: () => base44.entities.Season.list('-year'),
     initialData: []
   });
 
