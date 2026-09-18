@@ -147,10 +147,11 @@ const authShim = {
   /**
    * Executa o logout no Supabase Auth.
    */
-  async logout(redirectTo = window.location.origin) {
+  async logout(redirectTo = '/') {
     console.log('[Supabase Auth Shim] Executando logout...');
     await supabase.auth.signOut();
-    window.location.href = redirectTo;
+    const destination = !redirectTo || redirectTo === '/Home' ? '/' : redirectTo;
+    window.location.href = destination;
   },
 
   /**

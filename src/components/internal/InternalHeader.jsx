@@ -17,7 +17,7 @@ export default function InternalHeader({ user, title, onMenuClick }) {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await base44.auth.logout(createPageUrl('Home'));
+    await base44.auth.logout('/');
   };
 
   return (

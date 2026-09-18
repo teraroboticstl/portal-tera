@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       
       if (shouldRedirect) {
-        window.location.href = window.location.origin;
+        window.location.href = '/';
       }
     } catch (err) {
       console.error('[AuthContext] Erro ao realizar logout:', err);
