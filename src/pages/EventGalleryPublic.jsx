@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
-const LOGO = "/logo-complete.png";
+const LOGO = "/logo-complete.png?v=2026";
 
 export default function EventGalleryPublic() {
   const [selectedYear, setSelectedYear] = useState('all');

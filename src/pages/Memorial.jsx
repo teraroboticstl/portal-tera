@@ -10,7 +10,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 
-const LOGO = "/logo-complete.png";
+const LOGO = "/logo-complete.png?v=2026";
 
 export default function Memorial() {
   const [selectedProgram, setSelectedProgram] = useState('all');

@@ -45,7 +45,7 @@ export default function Home() {
             {/* Logo */}
             <motion.div className="flex justify-center mb-6" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }}>
               <img
-                src="/logo-complete.png"
+                src="/logo-complete.png?v=2026"
                 alt="TeraRobotics"
                 className="w-36 h-36 sm:w-48 sm:h-48 object-contain drop-shadow-[0_0_40px_rgba(225,6,0,0.5)]"
               />

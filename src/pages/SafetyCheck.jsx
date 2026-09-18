@@ -4,7 +4,7 @@ import { Shield, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
-const LOGO = "/logo-complete.png";
+const LOGO = "/logo-complete.png?v=2026";
 
 const questions = [
   "Todos os membros da equipe estão usando óculos de proteção nas áreas de pit ou robótica?",

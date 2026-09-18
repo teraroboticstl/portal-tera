@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const LOGO_MINIMALIST = "/logo-minimalist.png";
-const LOGO_COMPLETE = "/logo-complete.png";
+const LOGO_COMPLETE = "/logo-complete.png?v=2026";
 
 export default function Layout({ children, currentPageName }) {
   const { user, isLoadingAuth: loading, logout, navigateToLogin } = useAuth();
