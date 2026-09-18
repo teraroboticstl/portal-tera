@@ -45,9 +45,9 @@ export default function Home() {
             {/* Logo */}
             <motion.div className="flex justify-center mb-6" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }}>
               <img
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698a86446abc83aece20025a/71928ec1c_WhatsAppImage2026-02-05at171715.jpg"
+                src="/logo-complete.png"
                 alt="TeraRobotics"
-                className="w-36 h-36 sm:w-48 sm:h-48 rounded-full border-4 border-[#E10600] shadow-[0_0_40px_rgba(225,6,0,0.5)]"
+                className="w-36 h-36 sm:w-48 sm:h-48 object-contain drop-shadow-[0_0_40px_rgba(225,6,0,0.5)]"
               />
             </motion.div>
 

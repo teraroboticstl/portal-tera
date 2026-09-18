@@ -32,6 +32,10 @@ function isUserPhotoUrl(url) {
     lower.includes('logotera') ||
     lower.includes('whatsappimage') ||
     lower.includes('base44.com/logo') ||
+    lower.includes('logo-minimalist') ||
+    lower.includes('logo-complete') ||
+    lower.includes('tera-logo') ||
+    lower.includes('favicon') ||
     lower.includes('base44-prod/public/698a86446abc83aece20025a/71928ec1c') ||
     lower.includes('base44-prod/public/698a86446abc83aece20025a/553877171')
   ) {

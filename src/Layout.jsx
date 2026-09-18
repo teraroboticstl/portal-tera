@@ -14,7 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698a86446abc83aece20025a/71928ec1c_WhatsAppImage2026-02-05at171715.jpg";
+const LOGO_MINIMALIST = "/logo-minimalist.png";
+const LOGO_COMPLETE = "/logo-complete.png";
 
 export default function Layout({ children, currentPageName }) {
   const { user, isLoadingAuth: loading, logout, navigateToLogin } = useAuth();
@@ -82,7 +83,7 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Logo */}
             <Link to={createPageUrl('Home')} className="flex items-center gap-2 flex-shrink-0">
-              <img src={LOGO} alt="TeraRobotics" className="w-9 h-9 rounded-full" />
+              <img src={LOGO_MINIMALIST} alt="TeraRobotics" className="w-9 h-9 object-contain" />
               <span className="font-black text-lg tracking-tight hidden sm:block">
                 TERA<span className="text-[#E10600]">ROBOTICS</span>
               </span>
@@ -204,7 +205,7 @@ export default function Layout({ children, currentPageName }) {
               {/* Mobile header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
                 <Link to={createPageUrl('Home')} className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                  <img src={LOGO} alt="TeraRobotics" className="w-10 h-10 rounded-full" />
+                  <img src={LOGO_MINIMALIST} alt="TeraRobotics" className="w-10 h-10 object-contain" />
                   <span className="font-black text-lg tracking-tight text-white">TERA<span className="text-[#E10600]">ROBOTICS</span></span>
                 </Link>
                 <button onClick={() => setMobileMenuOpen(false)} className="p-2 text-gray-300 hover:text-white">
@@ -283,7 +284,7 @@ export default function Layout({ children, currentPageName }) {
               {/* Col 1 */}
               <div>
                 <div className="flex items-center gap-3 mb-5">
-                  <img src={LOGO} alt="TeraRobotics" className="w-12 h-12 rounded-full border-2 border-[#E10600]" />
+                  <img src={LOGO_COMPLETE} alt="TeraRobotics" className="w-14 h-14 object-contain" />
                   <div>
                     <p className="font-black text-xl tracking-tight">TERA<span className="text-[#E10600]">ROBOTICS</span></p>
                     <p className="text-gray-500 text-xs">#10343 • #17730 • FLL</p>

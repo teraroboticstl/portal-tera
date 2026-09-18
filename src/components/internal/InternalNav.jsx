@@ -71,9 +71,9 @@ export default function InternalNav({ currentPage, onClose, isAdmin }) {
       <div className="p-4 border-b border-[#1F222B] flex items-center justify-between flex-shrink-0">
         <Link to={createPageUrl('Home')} className="flex items-center gap-3 group">
           <img 
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698a86446abc83aece20025a/553877171_LogoTera.png"
+            src="/logo-minimalist.png"
             alt="TeraRobotics Logo"
-            className="w-10 h-10 transition-transform group-hover:scale-105"
+            className="w-10 h-10 object-contain transition-transform group-hover:scale-105"
           />
           <div>
             <span className="font-bold text-[#F5F7FA]">Tera</span>

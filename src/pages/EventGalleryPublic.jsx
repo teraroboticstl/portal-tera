@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
-const LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698a86446abc83aece20025a/71928ec1c_WhatsAppImage2026-02-05at171715.jpg";
+const LOGO = "/logo-complete.png";
 
 export default function EventGalleryPublic() {
   const [selectedYear, setSelectedYear] = useState('all');
@@ -98,7 +98,7 @@ export default function EventGalleryPublic() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <img src={LOGO} alt="TeraRobotics" className="w-20 h-20 mx-auto mb-6 rounded-full border-4 border-[#E10600]" />
+            <img src={LOGO} alt="TeraRobotics" className="w-20 h-20 mx-auto mb-6 object-contain drop-shadow-[0_0_20px_rgba(225,6,0,0.4)]" />
             <h1 className="text-5xl font-black mb-4 tracking-tight">
               NOSSA <span className="text-[#E10600]">JORNADA</span>
             </h1>
