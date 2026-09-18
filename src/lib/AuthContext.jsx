@@ -33,18 +33,38 @@ export const AuthProvider = ({ children }) => {
       const memberRole = profile?.member_role || (role === 'admin' || isSeedAdmin ? 'admin' : role === 'mentor' ? 'member' : 'user');
       const status = profile?.status || (role === 'admin' || isSeedAdmin ? 'approved' : 'pending');
 
+      const googleAvatarUrl = authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null;
+      const profileAvatarUrl = profile?.avatar_url || null;
+      const effectiveAvatarUrl = googleAvatarUrl || profileAvatarUrl || '';
+
+      // Se existir o perfil e houver foto do Google, sincroniza assincronamente com profiles.avatar_url
+      if (profile && googleAvatarUrl && profile.avatar_url !== googleAvatarUrl) {
+        supabase
+          .from('profiles')
+          .update({ avatar_url: googleAvatarUrl })
+          .eq('id', authUser.id)
+          .then(() => {
+            console.log('[AuthContext] Foto Google sincronizada com profiles.avatar_url');
+          })
+          .catch((syncErr) => {
+            console.warn('[AuthContext] Aviso ao sincronizar avatar_url:', syncErr?.message);
+          });
+      }
+
       const userProfile = {
+        ...(profile || {}),
         id: authUser.id,
         email: authUser.email,
         full_name: profile?.full_name || authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Membro do Portal',
-        avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
+        google_avatar_url: googleAvatarUrl,
+        avatar_url: effectiveAvatarUrl,
         category: profile?.category || 'Geral',
         program: profile?.program || 'Geral',
         created_at: authUser.created_at,
-        ...(profile || {}),
         role,
         member_role: memberRole,
-        status
+        status,
+        user_metadata: authUser.user_metadata
       };
 
       setUser(userProfile);

@@ -91,18 +91,24 @@ const authShim = {
       const memberRole = profile?.member_role || (role === 'admin' || isSeedAdmin ? 'admin' : role === 'mentor' ? 'member' : 'user');
       const status = profile?.status || (role === 'admin' || isSeedAdmin ? 'approved' : 'pending');
 
+      const googleAvatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+      const profileAvatarUrl = profile?.avatar_url || null;
+      const effectiveAvatarUrl = googleAvatarUrl || profileAvatarUrl || '';
+
       return {
+        ...(profile || {}),
         id: user.id,
         email: user.email,
         full_name: profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Membro do Portal',
-        avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
+        google_avatar_url: googleAvatarUrl,
+        avatar_url: effectiveAvatarUrl,
         category: profile?.category || 'Geral',
         program: profile?.program || 'Geral',
         created_at: user.created_at,
-        ...(profile || {}),
         role,
         member_role: memberRole,
-        status
+        status,
+        user_metadata: user.user_metadata
       };
     } catch (err) {
       console.warn('[Supabase Auth Shim] Falha ao recuperar perfil do usuário:', err);

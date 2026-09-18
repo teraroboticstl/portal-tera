@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { useAuth } from '@/lib/AuthContext';
+import UserAvatar from '@/components/common/UserAvatar';
 import { Menu, X, ChevronDown, LogOut, Settings, LayoutDashboard, Calendar } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
@@ -138,15 +139,18 @@ export default function Layout({ children, currentPageName }) {
                 user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="flex items-center gap-1 text-gray-300 hover:text-white hover:bg-white/10 px-2">
-                        <img src={LOGO} alt="" className="w-6 h-6 rounded-full" />
-                        <ChevronDown className="w-3 h-3" />
+                      <Button variant="ghost" size="sm" className="flex items-center gap-1.5 text-gray-300 hover:text-white hover:bg-white/10 px-2">
+                        <UserAvatar user={user} className="w-6 h-6 text-[10px]" />
+                        <ChevronDown className="w-3 h-3 text-gray-400" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-black border-white/10 w-48">
-                      <div className="px-3 py-2 border-b border-white/10">
-                        <p className="text-sm font-medium text-white">{user.full_name}</p>
-                        <p className="text-xs text-gray-400">{user.email}</p>
+                    <DropdownMenuContent align="end" className="bg-black border-white/10 w-52">
+                      <div className="px-3 py-2.5 border-b border-white/10 flex items-center gap-2.5">
+                        <UserAvatar user={user} className="w-8 h-8 text-xs" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-white truncate">{user.full_name}</p>
+                          <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                        </div>
                       </div>
                       <DropdownMenuItem asChild>
                         <Link to={createPageUrl('AreaInterna')} className="flex items-center gap-2 text-gray-300 hover:text-white text-sm">
@@ -221,7 +225,13 @@ export default function Layout({ children, currentPageName }) {
                   {!loading && (
                     user ? (
                       <div>
-                        <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>{user.full_name}</p>
+                        <div className="flex items-center gap-3 mb-3 pb-2 border-b border-white/5">
+                          <UserAvatar user={user} className="w-9 h-9 text-xs" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-white truncate m-0">{user.full_name}</p>
+                            <p className="text-xs text-gray-400 truncate m-0">{user.email}</p>
+                          </div>
+                        </div>
                         <Link to={createPageUrl('AreaInterna')} onClick={() => setMobileMenuOpen(false)}
                           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0', color: '#d1d5db', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
                           <LayoutDashboard size={16} /> Área Interna
