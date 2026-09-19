@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion } from 'framer-motion';
-import { Cog, Settings, Wrench, ChevronDown, Cpu, Award } from 'lucide-react';
+import { Cog, Settings, Wrench, ChevronDown, Cpu, Award, FolderOpen } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -22,6 +22,12 @@ export default function Home() {
   const { data: sponsors = [] } = useQuery({
     queryKey: ['sponsors-home'],
     queryFn: () => base44.entities.Sponsor.list('order'),
+    initialData: []
+  });
+
+  const { data: activeProjects = [], isLoading: isLoadingProjects } = useQuery({
+    queryKey: ['active-projects-home'],
+    queryFn: () => base44.entities.Project.filter({ status: 'active' }, '-created_date'),
     initialData: []
   });
 
@@ -136,32 +142,43 @@ export default function Home() {
             <p className="text-sm sm:text-lg text-gray-400 max-w-2xl mx-auto">Conheça os projetos desenvolvidos pela nossa equipe que estão evoluindo a robótica educacional.</p>
           </motion.div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-10 justify-items-center">
-            {[
-              { logo: 'https://media.base44.com/images/public/698a86446abc83aece20025a/e685bd1ed_ChatGPTImage11demaide202621_33_32.png', title: 'TIR' },
-              { logo: 'https://media.base44.com/images/public/698a86446abc83aece20025a/df0a61560_Ecotera.jpg', title: 'Eco Tera' },
-              { logo: 'https://media.base44.com/images/public/698a86446abc83aece20025a/b59f1ff25_TeraUnearthed.jpg', title: 'M.I.A' },
-              { logo: 'https://media.base44.com/images/public/698a86446abc83aece20025a/e9a7bf59e_LogoTera-Corao2.png', title: 'NeuroBotics' },
-            ].map((item, index) => (
-              <motion.div
-                key={item.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="flex flex-col items-center gap-3"
-              >
-                <Link to={`/ProjectDetail?project=${encodeURIComponent(item.title)}`} className="flex flex-col items-center gap-3 group">
-                  <div className="w-52 h-52 sm:w-64 sm:h-64 rounded-full overflow-hidden border-4 border-black group-hover:border-[#E10600] transition-all duration-300 shadow-[0_0_20px_rgba(225,6,0,0.15)] group-hover:shadow-[0_0_30px_rgba(225,6,0,0.35)]">
-                    <img src={item.logo} alt={item.title} className="w-full h-full object-cover scale-110" />
-                  </div>
-                  <span className="bg-[#CC0000] text-white text-xs sm:text-sm font-black uppercase tracking-wider px-4 py-1.5 rounded-full">
-                    {item.title}
-                  </span>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
+          {activeProjects.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-10 justify-items-center">
+              {activeProjects.map((item, index) => {
+                const projectImage = item.images?.[0] || '';
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex flex-col items-center gap-3"
+                  >
+                    <Link to={`/ProjectDetail?id=${encodeURIComponent(item.id)}`} className="flex flex-col items-center gap-3 group">
+                      <div className="w-52 h-52 sm:w-64 sm:h-64 rounded-full overflow-hidden border-4 border-black group-hover:border-[#E10600] transition-all duration-300 shadow-[0_0_20px_rgba(225,6,0,0.15)] group-hover:shadow-[0_0_30px_rgba(225,6,0,0.35)] bg-[#111217] flex items-center justify-center">
+                        {projectImage ? (
+                          <img src={projectImage} alt={item.title} className="w-full h-full object-cover scale-110" />
+                        ) : (
+                          <FolderOpen className="w-16 h-16 text-[#1F222B]" />
+                        )}
+                      </div>
+                      <span className="bg-[#CC0000] text-white text-xs sm:text-sm font-black uppercase tracking-wider px-4 py-1.5 rounded-full text-center">
+                        {item.title}
+                      </span>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12 px-4 rounded-2xl bg-[#0B0B0D] border border-[#1F222B] max-w-lg mx-auto">
+              <FolderOpen className="w-10 h-10 text-[#333742] mx-auto mb-3" />
+              <p className="text-gray-400 text-sm">
+                Projetos inovadores serão divulgados em breve.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
