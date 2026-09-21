@@ -185,6 +185,10 @@ function UsersManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast.success('Usuário atualizado!');
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar usuário:', err);
+      toast.error('Erro ao atualizar usuário: ' + (err.message || 'Verifique as permissões.'));
     }
   });
 
@@ -522,6 +526,10 @@ function RobotsManagement() {
       setShowForm(false);
       resetForm();
       toast.success('Robô criado!');
+    },
+    onError: (err) => {
+      console.error('Erro ao criar robô:', err);
+      toast.error('Erro ao criar robô: ' + (err.message || 'Verifique as permissões.'));
     }
   });
 
@@ -531,6 +539,10 @@ function RobotsManagement() {
       queryClient.invalidateQueries({ queryKey: ['admin-robots'] });
       setEditingRobot(null);
       toast.success('Robô atualizado!');
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar robô:', err);
+      toast.error('Erro ao atualizar robô: ' + (err.message || 'Verifique as permissões.'));
     }
   });
 
@@ -539,6 +551,10 @@ function RobotsManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-robots'] });
       toast.success('Robô removido!');
+    },
+    onError: (err) => {
+      console.error('Erro ao remover robô:', err);
+      toast.error('Erro ao remover robô: ' + (err.message || 'Verifique as permissões.'));
     }
   });
 
@@ -602,7 +618,7 @@ function RobotsManagement() {
               <h3 className="font-bold">{robot.name}</h3>
               <p className="text-sm text-[#B8BDC7]">Temporada {robot.year}</p>
               <div className="flex gap-2 mt-3">
-                <Button size="sm" variant="outline" onClick={() => setEditingRobot(robot)} className="border-[#1F222B]">
+                <Button size="sm" variant="outline" onClick={() => setEditingRobot(robot)} className="border-[#1F222B] bg-white text-zinc-900 hover:bg-zinc-100 hover:text-black">
                   <Edit2 className="w-3 h-3 mr-1" />
                   Editar
                 </Button>
@@ -781,6 +797,10 @@ function SponsorsManagement() {
       setShowForm(false);
       setForm(emptyForm);
       toast.success('Patrocinador adicionado!');
+    },
+    onError: (err) => {
+      console.error('Erro ao adicionar patrocinador:', err);
+      toast.error('Erro ao adicionar patrocinador: ' + (err.message || 'Verifique as permissões.'));
     }
   });
 
@@ -790,6 +810,10 @@ function SponsorsManagement() {
       queryClient.invalidateQueries({ queryKey: ['admin-sponsors'] });
       setEditingSponsor(null);
       toast.success('Patrocinador atualizado!');
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar patrocinador:', err);
+      toast.error('Erro ao atualizar patrocinador: ' + (err.message || 'Verifique as permissões.'));
     }
   });
 
@@ -798,6 +822,10 @@ function SponsorsManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-sponsors'] });
       toast.success('Patrocinador removido!');
+    },
+    onError: (err) => {
+      console.error('Erro ao remover patrocinador:', err);
+      toast.error('Erro ao remover patrocinador: ' + (err.message || 'Verifique as permissões.'));
     }
   });
 
@@ -902,7 +930,7 @@ function SponsorsManagement() {
               <p className="text-xs text-gray-600">Ordem: {sponsor.order ?? 0}</p>
             </div>
             <div className="flex gap-1 mt-auto flex-wrap">
-              <Button size="sm" variant="outline" onClick={() => setEditingSponsor({ ...sponsor })} className="border-[#1F222B] text-xs h-7 px-2">
+              <Button size="sm" variant="outline" onClick={() => setEditingSponsor({ ...sponsor })} className="border-[#1F222B] bg-white text-zinc-900 hover:bg-zinc-100 hover:text-black text-xs h-7 px-2">
                 <Edit2 className="w-3 h-3 mr-1" /> Editar
               </Button>
               <Button size="sm" variant="ghost" onClick={() => moveOrder(sponsor, 'up')} className="text-gray-400 h-7 px-2 text-xs">↑</Button>
@@ -964,6 +992,10 @@ function ProjectsManagement() {
       setForm({ title: '', description: '', date_period: '', tags: [], link: '', status: 'active' });
       setImages([]);
       toast.success('Projeto criado!');
+    },
+    onError: (err) => {
+      console.error('Erro ao criar projeto:', err);
+      toast.error('Erro ao criar projeto: ' + (err.message || 'Verifique as permissões.'));
     }
   });
 
@@ -974,6 +1006,10 @@ function ProjectsManagement() {
       setEditingProject(null);
       setImages([]);
       toast.success('Projeto atualizado!');
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar projeto:', err);
+      toast.error('Erro ao atualizar projeto: ' + (err.message || 'Verifique as permissões.'));
     }
   });
 
@@ -982,6 +1018,10 @@ function ProjectsManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-projects'] });
       toast.success('Projeto removido!');
+    },
+    onError: (err) => {
+      console.error('Erro ao remover projeto:', err);
+      toast.error('Erro ao remover projeto: ' + (err.message || 'Verifique as permissões.'));
     }
   });
 
@@ -1067,7 +1107,7 @@ function ProjectsManagement() {
                   size="sm" 
                   variant="outline" 
                   onClick={() => { setEditingProject(project); setImages(project.images || []); }} 
-                  className="border-[#1F222B] text-zinc-900 hover:text-zinc-950 focus-visible:text-zinc-950 active:text-zinc-950 disabled:text-zinc-400"
+                  className="border-[#1F222B] bg-white text-zinc-900 hover:bg-zinc-100 hover:text-black focus-visible:text-black active:text-black disabled:text-zinc-400 font-medium"
                 >
                   <Edit2 className="w-3 h-3 mr-1" />
                   Editar
@@ -1238,7 +1278,7 @@ function SeasonCloseManagement() {
       // 1. Criar cópias arquivadas (nova entidade de arquivo)
       // Já temos os IDs em logsToTag, prioritiesToTag, etc — usar direto
 
-      // 2. Marcar com a tag e já guardar os IDs para deletar
+      // 2. Marcar registros ativos com a tag da temporada
       await Promise.all([
         ...logsToTag.map(r => base44.entities.DailyLog.update(r.id, { season_tag: seasonTag })),
         ...prioritiesToTag.map(r => base44.entities.Priority.update(r.id, { season_tag: seasonTag })),
@@ -1246,20 +1286,22 @@ function SeasonCloseManagement() {
         ...meetingsToTag.map(r => base44.entities.MeetingNote.update(r.id, { season_tag: seasonTag })),
       ]);
 
-      // 3. Deletar usando os IDs que já temos (sem precisar buscar de novo)
-      await Promise.all([
-        ...logsToTag.map(r => base44.entities.DailyLog.delete(r.id)),
-        ...prioritiesToTag.map(r => base44.entities.Priority.delete(r.id)),
-        ...prototypesToTag.map(r => base44.entities.PrototypeTest.delete(r.id)),
-        ...meetingsToTag.map(r => base44.entities.MeetingNote.delete(r.id)),
-      ]);
+      queryClient.invalidateQueries({ queryKey: ['daily-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['priorities'] });
+      queryClient.invalidateQueries({ queryKey: ['prototype-tests'] });
+      queryClient.invalidateQueries({ queryKey: ['meeting-notes'] });
+      queryClient.invalidateQueries({ queryKey: ['archive-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['archive-priorities'] });
+      queryClient.invalidateQueries({ queryKey: ['archive-prototypes'] });
+      queryClient.invalidateQueries({ queryKey: ['archive-meetings'] });
 
       const total = logsToTag.length + prioritiesToTag.length + prototypesToTag.length + meetingsToTag.length;
-      toast.success(`✅ ${total} registros arquivados em "${seasonTag}" e removidos da área ativa!`);
+      toast.success(`✅ ${total} registros arquivados com sucesso na temporada "${seasonTag}"!`);
       setConfirm(false);
       setSeasonTag('');
     } catch (e) {
-      toast.error('Erro ao arquivar. Tente novamente.');
+      console.error('Erro ao arquivar temporada:', e);
+      toast.error('Erro ao arquivar: ' + (e.message || 'Tente novamente.'));
     } finally {
       setLoading(false);
     }
@@ -1339,6 +1381,8 @@ function ProductsManagement() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', price: 0, category: 'Camisetas', image_url: '', available: true });
 
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['admin-products'],
     queryFn: () => base44.entities.Product.list(),
@@ -1351,6 +1395,10 @@ function ProductsManagement() {
       setShowForm(false);
       setForm({ name: '', description: '', price: 0, category: 'Camisetas', image_url: '', available: true });
       toast.success('Produto adicionado!');
+    },
+    onError: (err) => {
+      console.error('Erro ao criar produto:', err);
+      toast.error('Erro ao adicionar produto: ' + (err.message || 'Verifique as permissões de administrador.'));
     }
   });
 
@@ -1359,6 +1407,10 @@ function ProductsManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success('Produto removido!');
+    },
+    onError: (err) => {
+      console.error('Erro ao remover produto:', err);
+      toast.error('Erro ao remover produto: ' + (err.message || 'Verifique as permissões de administrador.'));
     }
   });
 
@@ -1366,12 +1418,15 @@ function ProductsManagement() {
     const file = e.target.files[0];
     if (!file) return;
     
+    setUploadingImage(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       setForm(prev => ({ ...prev, image_url: file_url }));
       toast.success('Imagem carregada!');
     } catch (err) {
       toast.error('Erro ao carregar imagem.');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -1447,7 +1502,13 @@ function ProductsManagement() {
               <Label>Imagem</Label>
               <Input type="file" accept="image/*" onChange={handleUpload} className="bg-[#0B0B0D] border-[#1F222B] text-white" />
             </div>
-            <Button type="submit" className="w-full bg-[#E10600] hover:bg-[#E10600]/90">Adicionar Produto</Button>
+            <Button 
+              type="submit" 
+              disabled={createProduct.isPending || uploadingImage} 
+              className="w-full bg-[#E10600] hover:bg-[#E10600]/90 text-white font-medium"
+            >
+              {createProduct.isPending ? 'Adicionando...' : uploadingImage ? 'Carregando Imagem...' : 'Adicionar Produto'}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>

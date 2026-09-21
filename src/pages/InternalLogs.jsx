@@ -35,9 +35,10 @@ function InternalLogsContent({ user }) {
     }
   });
 
+  const activeLogs = logs.filter(l => !l.season_tag);
   const filteredLogs = filterProgram === 'all' 
-    ? logs 
-    : logs.filter(l => l.program === filterProgram);
+    ? activeLogs 
+    : activeLogs.filter(l => l.program === filterProgram);
 
   // Verificar permissões baseadas em member_role
   const canCreate = userCanEdit(user);

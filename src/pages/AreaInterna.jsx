@@ -71,23 +71,27 @@ function AreaInternaContent({ user }) {
   });
   const activeSeason = seasons[0];
 
+  const activeLogs = allLogs.filter(l => !l.season_tag);
+  const activeMeetings = recentMeetings.filter(m => !m.season_tag);
+  const activePrototypes = allPrototypes.filter(p => !p.season_tag);
+
   // FLL stats
   const fllMissions = teamLogs.filter(l => l.program === 'FLL' && l.section === 'robot_game');
   const fllCoreValues = teamLogs.filter(l => l.program === 'FLL' && l.section === 'core_values');
-  const fllMeetings = recentMeetings.filter(m => m.program === 'FLL');
-  const fllPrototypes = allPrototypes.filter(p => p.program === 'FLL');
+  const fllMeetings = activeMeetings.filter(m => m.program === 'FLL');
+  const fllPrototypes = activePrototypes.filter(p => p.program === 'FLL');
 
   // FTC stats
-  const ftcLogs = allLogs.filter(l => l.program === 'FTC');
-  const ftcPrototypes = allPrototypes.filter(p => p.program === 'FTC');
+  const ftcLogs = activeLogs.filter(l => l.program === 'FTC');
+  const ftcPrototypes = activePrototypes.filter(p => p.program === 'FTC');
   const ftcApproved = ftcPrototypes.filter(p => p.conclusion === 'Aprovado').length;
   const ftcConsistency = ftcPrototypes.length > 0 ? Math.round((ftcApproved / ftcPrototypes.length) * 100) : 0;
-  const ftcMeetings = recentMeetings.filter(m => m.program === 'FTC');
+  const ftcMeetings = activeMeetings.filter(m => m.program === 'FTC');
 
   // FRC stats
-  const frcLogs = allLogs.filter(l => l.program === 'FRC');
-  const frcPrototypes = allPrototypes.filter(p => p.program === 'FRC');
-  const frcMeetings = recentMeetings.filter(m => m.program === 'FRC');
+  const frcLogs = activeLogs.filter(l => l.program === 'FRC');
+  const frcPrototypes = activePrototypes.filter(p => p.program === 'FRC');
+  const frcMeetings = activeMeetings.filter(m => m.program === 'FRC');
 
   const programData = [
     {

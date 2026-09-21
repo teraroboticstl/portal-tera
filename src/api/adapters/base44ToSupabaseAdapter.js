@@ -40,6 +40,16 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       mapped.game_objective = item.game_objective || (item.specs && typeof item.specs === 'object' ? item.specs.game_objective : '') || '';
     } else if (actualTableName === 'seasons') {
       mapped.is_active = true;
+      if (item.description && item.description.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(item.description);
+          Object.assign(mapped, parsed);
+          mapped.description = parsed.custom_description || '';
+        } catch (e) {
+          // Mantém original se não for JSON válido
+        }
+      }
+      mapped.season_name = mapped.theme || mapped.season_name || `Temporada ${mapped.year}`;
     } else if (actualTableName === 'projects') {
       const baseImages = Array.isArray(item.images) ? item.images : (item.image_url ? [item.image_url] : []);
       const extraImages = Array.isArray(item.links?.extra_images) ? item.links.extra_images : [];
@@ -49,6 +59,35 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       mapped.link = item.link || item.links?.primary || item.links?.url || '';
       mapped.tags = Array.isArray(item.tags) ? item.tags : (item.links?.tags || []);
       mapped.date_period = item.date_period || item.links?.date_period || '';
+    } else if (actualTableName === 'products') {
+      mapped.available = item.in_stock !== undefined ? Boolean(item.in_stock) : true;
+      mapped.in_stock = mapped.available;
+      if (item.description && item.description.startsWith('[cat:')) {
+        const match = item.description.match(/^\[cat:([^\]]+)\]\s*([\s\S]*)$/);
+        if (match) {
+          mapped.category = match[1];
+          mapped.description = match[2];
+        }
+      }
+    } else if (actualTableName === 'sponsors') {
+      mapped.category = item.category || (
+        item.tier === 'Diamante' ? 'Master' :
+        item.tier === 'Ouro' ? 'Gold' :
+        item.tier === 'Prata' ? 'Silver' :
+        'Apoio'
+      );
+      mapped.tier = item.tier;
+      mapped.link = item.website || item.link || '';
+      mapped.website = mapped.link;
+    } else if (['daily_logs', 'meeting_notes', 'priorities', 'prototype_tests'].includes(actualTableName)) {
+      const textToCheck = item.content || item.description || item.title || '';
+      const tagMatch = textToCheck.match(/\[season_tag:([^\]]+)\]/);
+      if (tagMatch) {
+        mapped.season_tag = tagMatch[1];
+        if (mapped.content) mapped.content = mapped.content.replace(/\s*\[season_tag:[^\]]+\]/, '');
+        if (mapped.description) mapped.description = mapped.description.replace(/\s*\[season_tag:[^\]]+\]/, '');
+        if (mapped.title) mapped.title = mapped.title.replace(/\s*\[season_tag:[^\]]+\]/, '');
+      }
     }
 
     return mapped;
@@ -122,6 +161,24 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       }
       if (actualTableName === 'projects' && cleanFilters.status === 'active') {
         cleanFilters.status = 'Ativo';
+      }
+      if (actualTableName === 'products' && cleanFilters.available !== undefined) {
+        cleanFilters.in_stock = Boolean(cleanFilters.available);
+        delete cleanFilters.available;
+      }
+      if (actualTableName === 'sponsors') {
+        if (cleanFilters.category !== undefined) {
+          const cat = cleanFilters.category;
+          cleanFilters.tier = cat === 'Master' ? 'Diamante'
+            : cat === 'Gold' ? 'Ouro'
+            : cat === 'Silver' ? 'Prata'
+            : 'Apoio';
+          delete cleanFilters.category;
+        }
+        if (cleanFilters.link !== undefined) {
+          cleanFilters.website = cleanFilters.link;
+          delete cleanFilters.link;
+        }
       }
 
       // Aplicar filtros simples de igualdade
@@ -213,9 +270,100 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       }
 
       if (actualTableName === 'seasons') {
+        sanitized.year = parseInt(sanitized.year, 10) || new Date().getFullYear();
+        sanitized.theme = sanitized.theme || sanitized.season_name || `Temporada ${sanitized.year}`;
+
+        const extraFields = {
+          game_name: sanitized.game_name,
+          kickoff_date: sanitized.kickoff_date,
+          competition_date: sanitized.competition_date,
+          robot_name: sanitized.robot_name,
+          robot_weight: sanitized.robot_weight,
+          awards_targeted: sanitized.awards_targeted,
+          game_manual_a: sanitized.game_manual_a,
+          game_manual_b: sanitized.game_manual_b,
+          scoring_zones: sanitized.scoring_zones,
+          endgame_options: sanitized.endgame_options,
+          team_objectives: sanitized.team_objectives,
+          custom_description: (sanitized.description && !sanitized.description.startsWith('{')) ? sanitized.description : ''
+        };
+        sanitized.description = JSON.stringify(extraFields);
+
         delete sanitized.is_active;
         delete sanitized.competition_date;
         delete sanitized.awards_targeted;
+        delete sanitized.kickoff_date;
+        delete sanitized.game_name;
+        delete sanitized.season_name;
+        delete sanitized.robot_name;
+        delete sanitized.robot_weight;
+        delete sanitized.game_manual_a;
+        delete sanitized.game_manual_b;
+        delete sanitized.scoring_zones;
+        delete sanitized.endgame_options;
+        delete sanitized.team_objectives;
+      }
+
+      if (actualTableName === 'products') {
+        if (sanitized.available !== undefined) {
+          sanitized.in_stock = Boolean(sanitized.available);
+          delete sanitized.available;
+        }
+        if (sanitized.price !== undefined) {
+          const numPrice = parseFloat(sanitized.price);
+          sanitized.price = isNaN(numPrice) ? 0 : numPrice;
+        }
+        const allowedCategories = ['Vestuário', 'Acessórios', 'Colecionáveis', 'Outros'];
+        const frontendCategory = sanitized.category;
+        if (frontendCategory && !allowedCategories.includes(frontendCategory)) {
+          let mappedDbCat = 'Outros';
+          if (frontendCategory === 'Camisetas') {
+            mappedDbCat = 'Vestuário';
+          } else if (['Canecas', 'Bottons', 'Chaveiros'].includes(frontendCategory)) {
+            mappedDbCat = 'Colecionáveis';
+          } else if (frontendCategory === 'Acessórios') {
+            mappedDbCat = 'Acessórios';
+          }
+          sanitized.category = mappedDbCat;
+          const rawDesc = sanitized.description || '';
+          const cleanDesc = rawDesc.replace(/^\[cat:[^\]]+\]\s*/, '');
+          sanitized.description = `[cat:${frontendCategory}] ${cleanDesc}`.trim();
+        }
+      }
+
+      if (actualTableName === 'sponsors') {
+        if (sanitized.category !== undefined || !sanitized.tier) {
+          const cat = sanitized.category;
+          sanitized.tier = cat === 'Master' ? 'Diamante'
+            : cat === 'Gold' ? 'Ouro'
+            : cat === 'Silver' ? 'Prata'
+            : cat === 'Apoio' ? 'Apoio'
+            : (sanitized.tier || 'Apoio');
+          delete sanitized.category;
+        }
+        if (sanitized.link !== undefined) {
+          sanitized.website = sanitized.link || null;
+          delete sanitized.link;
+        }
+        if (sanitized.order !== undefined) {
+          sanitized.order = parseInt(sanitized.order, 10) || 0;
+        }
+      }
+
+      if (['daily_logs', 'meeting_notes', 'priorities', 'prototype_tests'].includes(actualTableName)) {
+        if (sanitized.season_tag !== undefined) {
+          const sTag = sanitized.season_tag;
+          delete sanitized.season_tag;
+          if (sTag) {
+            if (actualTableName === 'daily_logs' || actualTableName === 'meeting_notes') {
+              sanitized.content = `${sanitized.content || ''}\n[season_tag:${sTag}]`.trim();
+            } else if (actualTableName === 'priorities') {
+              sanitized.title = `${sanitized.title || ''} [season_tag:${sTag}]`.trim();
+            } else if (actualTableName === 'prototype_tests') {
+              sanitized.description = `${sanitized.description || ''}\n[season_tag:${sTag}]`.trim();
+            }
+          }
+        }
       }
 
       if (actualTableName === 'projects') {
@@ -296,9 +444,99 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       }
 
       if (actualTableName === 'seasons') {
+        const extraFields = {};
+        if (sanitized.game_name !== undefined) extraFields.game_name = sanitized.game_name;
+        if (sanitized.kickoff_date !== undefined) extraFields.kickoff_date = sanitized.kickoff_date;
+        if (sanitized.competition_date !== undefined) extraFields.competition_date = sanitized.competition_date;
+        if (sanitized.robot_name !== undefined) extraFields.robot_name = sanitized.robot_name;
+        if (sanitized.robot_weight !== undefined) extraFields.robot_weight = sanitized.robot_weight;
+        if (sanitized.awards_targeted !== undefined) extraFields.awards_targeted = sanitized.awards_targeted;
+        if (sanitized.game_manual_a !== undefined) extraFields.game_manual_a = sanitized.game_manual_a;
+        if (sanitized.game_manual_b !== undefined) extraFields.game_manual_b = sanitized.game_manual_b;
+        if (sanitized.scoring_zones !== undefined) extraFields.scoring_zones = sanitized.scoring_zones;
+        if (sanitized.endgame_options !== undefined) extraFields.endgame_options = sanitized.endgame_options;
+        if (sanitized.team_objectives !== undefined) extraFields.team_objectives = sanitized.team_objectives;
+
+        if (Object.keys(extraFields).length > 0 || (sanitized.description && !sanitized.description.startsWith('{'))) {
+          extraFields.custom_description = (sanitized.description && !sanitized.description.startsWith('{')) ? sanitized.description : '';
+          sanitized.description = JSON.stringify(extraFields);
+        }
+
         delete sanitized.is_active;
         delete sanitized.competition_date;
         delete sanitized.awards_targeted;
+        delete sanitized.kickoff_date;
+        delete sanitized.game_name;
+        delete sanitized.season_name;
+        delete sanitized.robot_name;
+        delete sanitized.robot_weight;
+        delete sanitized.game_manual_a;
+        delete sanitized.game_manual_b;
+        delete sanitized.scoring_zones;
+        delete sanitized.endgame_options;
+        delete sanitized.team_objectives;
+      }
+
+      if (actualTableName === 'products') {
+        if (sanitized.available !== undefined) {
+          sanitized.in_stock = Boolean(sanitized.available);
+          delete sanitized.available;
+        }
+        if (sanitized.price !== undefined) {
+          const numPrice = parseFloat(sanitized.price);
+          sanitized.price = isNaN(numPrice) ? 0 : numPrice;
+        }
+        const allowedCategories = ['Vestuário', 'Acessórios', 'Colecionáveis', 'Outros'];
+        const frontendCategory = sanitized.category;
+        if (frontendCategory && !allowedCategories.includes(frontendCategory)) {
+          let mappedDbCat = 'Outros';
+          if (frontendCategory === 'Camisetas') {
+            mappedDbCat = 'Vestuário';
+          } else if (['Canecas', 'Bottons', 'Chaveiros'].includes(frontendCategory)) {
+            mappedDbCat = 'Colecionáveis';
+          } else if (frontendCategory === 'Acessórios') {
+            mappedDbCat = 'Acessórios';
+          }
+          sanitized.category = mappedDbCat;
+          const rawDesc = sanitized.description || '';
+          const cleanDesc = rawDesc.replace(/^\[cat:[^\]]+\]\s*/, '');
+          sanitized.description = `[cat:${frontendCategory}] ${cleanDesc}`.trim();
+        }
+      }
+
+      if (actualTableName === 'sponsors') {
+        if (sanitized.category !== undefined) {
+          const cat = sanitized.category;
+          sanitized.tier = cat === 'Master' ? 'Diamante'
+            : cat === 'Gold' ? 'Ouro'
+            : cat === 'Silver' ? 'Prata'
+            : cat === 'Apoio' ? 'Apoio'
+            : (sanitized.tier || 'Apoio');
+          delete sanitized.category;
+        }
+        if (sanitized.link !== undefined) {
+          sanitized.website = sanitized.link || null;
+          delete sanitized.link;
+        }
+        if (sanitized.order !== undefined) {
+          sanitized.order = parseInt(sanitized.order, 10) || 0;
+        }
+      }
+
+      if (['daily_logs', 'meeting_notes', 'priorities', 'prototype_tests'].includes(actualTableName)) {
+        if (sanitized.season_tag !== undefined) {
+          const sTag = sanitized.season_tag;
+          delete sanitized.season_tag;
+          if (sTag) {
+            if (actualTableName === 'daily_logs' || actualTableName === 'meeting_notes') {
+              sanitized.content = `${sanitized.content || ''}\n[season_tag:${sTag}]`.trim();
+            } else if (actualTableName === 'priorities') {
+              sanitized.title = `${sanitized.title || ''} [season_tag:${sTag}]`.trim();
+            } else if (actualTableName === 'prototype_tests') {
+              sanitized.description = `${sanitized.description || ''}\n[season_tag:${sTag}]`.trim();
+            }
+          }
+        }
       }
 
       if (actualTableName === 'projects') {
