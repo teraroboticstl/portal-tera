@@ -6,7 +6,8 @@ import { createPageUrl } from '@/utils';
 import { 
   Users, Clock, Check, X, Trash2, 
   Shield, Calendar, Plus, Edit2,
-  Package, Heart, Cpu, FolderOpen, Home, LogOut, LayoutDashboard, Archive, AlertTriangle
+  Package, Heart, Cpu, FolderOpen, Home, LogOut, LayoutDashboard, Archive, AlertTriangle,
+  HardDrive
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import { toast } from "sonner";
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Badge from '@/components/common/Badge';
 import CountdownTimer from '@/components/CountdownTimer';
+import GoogleDriveTestManagement from '@/components/admin/GoogleDriveTestManagement';
 
 // E-mail do admin seed (bootstrap admin) - sempre aprovado automaticamente
 const SEED_ADMIN_EMAIL = 'teraroboticstl@gmail.com';
@@ -142,6 +144,10 @@ export default function AdminPanel() {
               <Archive className="w-4 h-4 mr-2" />
               Encerrar Temporada
             </TabsTrigger>
+            <TabsTrigger value="google_drive" className="data-[state=active]:bg-[#E10600]">
+              <HardDrive className="w-4 h-4 mr-2" />
+              Google Drive (Teste)
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users">
@@ -164,6 +170,9 @@ export default function AdminPanel() {
           </TabsContent>
           <TabsContent value="season_close">
             <SeasonCloseManagement />
+          </TabsContent>
+          <TabsContent value="google_drive">
+            <GoogleDriveTestManagement user={user} />
           </TabsContent>
         </Tabs>
       </div>
