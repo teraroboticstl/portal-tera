@@ -89,34 +89,36 @@ export default function Projects() {
                     setSelectedProject(project);
                     setCurrentImageIndex(0);
                   }}
-                  className="bg-[#111217] border border-[#1F222B] rounded-2xl overflow-hidden cursor-pointer group hover:border-[#E10600]/50 transition-all"
+                  className="bg-[#111217] border border-[#1F222B] rounded-2xl overflow-hidden cursor-pointer group hover:border-[#E10600]/50 transition-all flex flex-col"
                 >
-                  <div className="aspect-video relative overflow-hidden bg-[#0B0B0D]">
-                    {project.images?.[0] ? (
-                      <img 
-                        src={project.images[0]} 
-                        alt={project.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <FolderOpen className="w-16 h-16 text-[#1F222B]" />
-                      </div>
-                    )}
+                  <div className="relative pt-8 pb-6 px-4 flex items-center justify-center bg-[#0B0B0D]/50 border-b border-[#1F222B]/60">
+                    <div className="w-40 h-40 sm:w-44 sm:h-44 rounded-full overflow-hidden bg-[#111217] border-2 border-[#1F222B] group-hover:border-[#E10600] transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_25px_rgba(225,6,0,0.25)] flex items-center justify-center flex-shrink-0">
+                      {project.images?.[0] ? (
+                        <img 
+                          src={project.images[0]} 
+                          alt={project.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <FolderOpen className="w-16 h-16 text-[#1F222B]" />
+                        </div>
+                      )}
+                    </div>
                     {project.images?.length > 1 && (
-                      <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/50 rounded-lg text-xs">
+                      <div className="absolute top-3 right-3 px-2.5 py-1 bg-[#111217]/90 border border-[#1F222B] rounded-full text-xs text-[#B8BDC7] backdrop-blur-sm">
                         +{project.images.length - 1} fotos
                       </div>
                     )}
                   </div>
-                  <div className="p-5">
+                  <div className="p-5 flex-1 flex flex-col">
                     <h3 className="font-bold text-lg mb-2 group-hover:text-[#E10600] transition-colors">
                       {project.title}
                     </h3>
                     <p className="text-[#B8BDC7] text-sm line-clamp-2 mb-4">
                       {project.description}
                     </p>
-                    <div className="flex flex-wrap gap-2 mb-4">
+                    <div className="flex flex-wrap gap-2 mb-4 mt-auto">
                       {project.tags?.map((tag) => (
                         <span 
                           key={tag}

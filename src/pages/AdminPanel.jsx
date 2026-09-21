@@ -1032,15 +1032,32 @@ function ProjectsManagement() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {projects.map((project) => (
-          <div key={project.id} className="bg-[#111217] border border-[#1F222B] rounded-xl overflow-hidden">
-            {project.images?.[0] && (
-              <img src={project.images[0]} alt={project.title} className="w-full h-36 object-cover" />
-            )}
-            <div className="p-4">
+          <div key={project.id} className="bg-[#111217] border border-[#1F222B] rounded-xl overflow-hidden flex flex-col group hover:border-[#E10600]/50 transition-all">
+            <div className="relative pt-8 pb-6 px-4 flex items-center justify-center bg-[#0B0B0D]/50 border-b border-[#1F222B]/60">
+              <div className="w-40 h-40 sm:w-44 sm:h-44 rounded-full overflow-hidden bg-[#111217] border-2 border-[#1F222B] group-hover:border-[#E10600] transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_25px_rgba(225,6,0,0.25)] flex items-center justify-center flex-shrink-0">
+                {project.images?.[0] ? (
+                  <img 
+                    src={project.images[0]} 
+                    alt={project.title} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <FolderOpen className="w-12 h-12 text-[#1F222B]" />
+                  </div>
+                )}
+              </div>
+              {project.images?.length > 1 && (
+                <div className="absolute top-3 right-3 px-2.5 py-1 bg-[#111217]/90 border border-[#1F222B] rounded-full text-xs text-[#B8BDC7] backdrop-blur-sm">
+                  +{project.images.length - 1} fotos
+                </div>
+              )}
+            </div>
+            <div className="p-4 flex-1 flex flex-col">
               <h3 className="font-bold mb-1">{project.title}</h3>
               {project.date_period && <p className="text-xs text-[#B8BDC7] mb-2">{project.date_period}</p>}
               <p className="text-sm text-[#B8BDC7] line-clamp-2 mb-3">{project.description}</p>
-              <div className="flex flex-wrap gap-1 mb-3">
+              <div className="flex flex-wrap gap-1 mb-3 mt-auto">
                 {project.tags?.map((tag) => (
                   <Badge key={tag} className="text-xs">{tag}</Badge>
                 ))}
