@@ -1063,7 +1063,12 @@ function ProjectsManagement() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => { setEditingProject(project); setImages(project.images || []); }} className="border-[#1F222B]">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => { setEditingProject(project); setImages(project.images || []); }} 
+                  className="border-[#1F222B] text-zinc-900 hover:text-zinc-950 focus-visible:text-zinc-950 active:text-zinc-950 disabled:text-zinc-400"
+                >
                   <Edit2 className="w-3 h-3 mr-1" />
                   Editar
                 </Button>
