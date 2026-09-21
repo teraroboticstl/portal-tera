@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { FolderOpen, Calendar, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FolderOpen, Calendar, ExternalLink, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import LoadingSpinner from '@/components/common/LoadingSpinner';
@@ -216,19 +217,28 @@ export default function Projects() {
                   </p>
                 </div>
 
-                {/* Link */}
-                {selectedProject.link && (
-                  <a 
-                    href={selectedProject.link} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
-                    <Button className="w-full bg-[#E10600] hover:bg-[#E10600]/90">
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Acessar Link do Projeto
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <Link to={`/ProjectDetail?id=${encodeURIComponent(selectedProject.id)}`} className="flex-1">
+                    <Button variant="outline" className="w-full border-[#1F222B] hover:border-[#E10600] hover:text-[#E10600]">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Ver Página Completa
                     </Button>
-                  </a>
-                )}
+                  </Link>
+                  {selectedProject.link && (
+                    <a 
+                      href={selectedProject.link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex-1"
+                    >
+                      <Button className="w-full bg-[#E10600] hover:bg-[#E10600]/90">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Acessar Link do Projeto
+                      </Button>
+                    </a>
+                  )}
+                </div>
               </div>
             </>
           )}

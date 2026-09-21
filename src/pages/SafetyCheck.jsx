@@ -4,7 +4,7 @@ import { Shield, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
-const LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698a86446abc83aece20025a/71928ec1c_WhatsAppImage2026-02-05at171715.jpg";
+const LOGO = "/logo-complete.png?v=2026";
 
 const questions = [
   "Todos os membros da equipe estão usando óculos de proteção nas áreas de pit ou robótica?",
@@ -110,7 +110,7 @@ export default function SafetyCheck() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
-            <img src={LOGO} alt="TeraRobotics" className="w-20 h-20 mx-auto mb-6 rounded-full border-4 border-white shadow-2xl" />
+            <img src={LOGO} alt="TeraRobotics" className="w-20 h-20 mx-auto mb-6 object-contain drop-shadow-2xl" />
             <h1 className="text-4xl md:text-5xl font-black mb-4 text-white tracking-tight">
               TERA ROBOTICS
             </h1>

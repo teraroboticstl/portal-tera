@@ -40,6 +40,15 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       mapped.game_objective = item.game_objective || (item.specs && typeof item.specs === 'object' ? item.specs.game_objective : '') || '';
     } else if (actualTableName === 'seasons') {
       mapped.is_active = true;
+    } else if (actualTableName === 'projects') {
+      const baseImages = Array.isArray(item.images) ? item.images : (item.image_url ? [item.image_url] : []);
+      const extraImages = Array.isArray(item.links?.extra_images) ? item.links.extra_images : [];
+      mapped.images = baseImages.length > 0 ? Array.from(new Set([...baseImages, ...extraImages])) : [];
+      mapped.image_url = item.image_url || mapped.images[0] || '';
+      mapped.status = (item.status === 'Ativo' ? 'active' : item.status);
+      mapped.link = item.link || item.links?.primary || item.links?.url || '';
+      mapped.tags = Array.isArray(item.tags) ? item.tags : (item.links?.tags || []);
+      mapped.date_period = item.date_period || item.links?.date_period || '';
     }
 
     return mapped;
@@ -110,6 +119,9 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       }
       if (actualTableName === 'seasons') {
         delete cleanFilters.is_active;
+      }
+      if (actualTableName === 'projects' && cleanFilters.status === 'active') {
+        cleanFilters.status = 'Ativo';
       }
 
       // Aplicar filtros simples de igualdade
@@ -206,6 +218,27 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         delete sanitized.awards_targeted;
       }
 
+      if (actualTableName === 'projects') {
+        if (sanitized.images && Array.isArray(sanitized.images) && sanitized.images.length > 0 && !sanitized.image_url) {
+          sanitized.image_url = sanitized.images[0];
+        }
+        if (sanitized.status === 'active') {
+          sanitized.status = 'Ativo';
+        }
+        const existingLinks = (typeof sanitized.links === 'object' && sanitized.links !== null) ? sanitized.links : {};
+        sanitized.links = {
+          ...existingLinks,
+          ...(sanitized.link ? { primary: sanitized.link } : {}),
+          ...(sanitized.tags && sanitized.tags.length > 0 ? { tags: sanitized.tags } : {}),
+          ...(sanitized.date_period ? { date_period: sanitized.date_period } : {}),
+          ...(sanitized.images && sanitized.images.length > 1 ? { extra_images: sanitized.images.slice(1) } : {})
+        };
+        delete sanitized.images;
+        delete sanitized.link;
+        delete sanitized.tags;
+        delete sanitized.date_period;
+      }
+
       // Tratar strings vazias em UUIDs/Foreign Keys para null
       for (const key of Object.keys(sanitized)) {
         if ((key.endsWith('_id') || key === 'user_id') && sanitized[key] === '') {
@@ -266,6 +299,27 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         delete sanitized.is_active;
         delete sanitized.competition_date;
         delete sanitized.awards_targeted;
+      }
+
+      if (actualTableName === 'projects') {
+        if (sanitized.images && Array.isArray(sanitized.images) && sanitized.images.length > 0) {
+          sanitized.image_url = sanitized.images[0];
+        }
+        if (sanitized.status === 'active') {
+          sanitized.status = 'Ativo';
+        }
+        const existingLinks = (typeof sanitized.links === 'object' && sanitized.links !== null) ? sanitized.links : {};
+        sanitized.links = {
+          ...existingLinks,
+          ...(sanitized.link !== undefined ? { primary: sanitized.link } : {}),
+          ...(sanitized.tags !== undefined ? { tags: sanitized.tags } : {}),
+          ...(sanitized.date_period !== undefined ? { date_period: sanitized.date_period } : {}),
+          ...(sanitized.images && sanitized.images.length > 1 ? { extra_images: sanitized.images.slice(1) } : {})
+        };
+        delete sanitized.images;
+        delete sanitized.link;
+        delete sanitized.tags;
+        delete sanitized.date_period;
       }
 
       for (const key of Object.keys(sanitized)) {

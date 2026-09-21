@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { useAuth } from '@/lib/AuthContext';
+import UserAvatar from '@/components/common/UserAvatar';
 import { Menu, X, ChevronDown, LogOut, Settings, LayoutDashboard, Calendar } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,262 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698a86446abc83aece20025a/71928ec1c_WhatsAppImage2026-02-05at171715.jpg";
+const LOGO_MINIMALIST = "/logo-minimalist.png";
+const LOGO_COMPLETE = "/logo-complete.png?v=2026";
+
+// Estrutura hierárquica do menu público
+const PUBLIC_NAV_ITEMS = [
+  {
+    type: 'link',
+    label: 'INÍCIO',
+    path: 'Home',
+  },
+  {
+    type: 'group',
+    label: 'QUEM SOMOS',
+    children: [
+      { label: 'Quem Somos', path: 'About' },
+      { label: 'Nossa Equipe', path: 'Team' },
+    ],
+  },
+  {
+    type: 'group',
+    label: 'PROGRAMAS',
+    children: [
+      { label: 'Visão Geral', path: 'Competitions' },
+      { label: 'FIRST LEGO League (FLL)', path: 'CompetitionsFLL' },
+      { label: 'FIRST Tech Challenge (FTC)', path: 'CompetitionsFTC' },
+      { label: 'FIRST Robotics Competition (FRC)', path: 'CompetitionsFRC' },
+    ],
+  },
+  {
+    type: 'link',
+    label: 'PROJETOS',
+    path: 'Projects',
+  },
+  {
+    type: 'group',
+    label: 'ENGENHARIA',
+    children: [
+      { label: 'Robô Atual', path: 'CurrentRobot' },
+      { label: 'Desenvolvimento / Progresso', path: 'Engineering' },
+      { label: 'CADs', path: 'CADs' },
+    ],
+  },
+  {
+    type: 'group',
+    label: 'HISTÓRIA',
+    children: [
+      { label: 'Memória Tera', path: 'Memoria' },
+      { label: 'Memorial', path: 'Memorial' },
+      { label: 'Galeria', path: 'EventGalleryPublic' },
+    ],
+  },
+  {
+    type: 'group',
+    label: 'MAIS',
+    children: [
+      { label: 'TIR 2026', path: 'TIR2026' },
+      { label: 'Patrocinadores', path: 'Sponsors' },
+      { label: 'Contato', path: 'Contact' },
+      { label: 'Safety Check', path: 'SafetyCheck' },
+    ],
+  },
+];
+
+// Submenu dropdown para desktop com suporte contínuo a hover, clique e teclado
+function NavDropdown({ item, currentPageName }) {
+  const [open, setOpen] = useState(false);
+  const timeoutRef = useRef(null);
+  const containerRef = useRef(null);
+
+  const isGroupActive = item.children.some(c => c.path === currentPageName);
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setOpen(false);
+    }, 200);
+  };
+
+  const handleToggleClick = (e) => {
+    e.stopPropagation();
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setOpen((prev) => !prev);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setOpen(false);
+    } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      setOpen(true);
+    }
+  };
+
+  // Fecha dropdown ao clicar fora ou pressionar Escape
+  useEffect(() => {
+    if (!open) return;
+    const handleDocumentClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    const handleDocumentKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleDocumentClick);
+    document.addEventListener('keydown', handleDocumentKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentClick);
+      document.removeEventListener('keydown', handleDocumentKeyDown);
+    };
+  }, [open]);
+
+  // Limpa timer ao desmontar
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <button
+        type="button"
+        onClick={handleToggleClick}
+        onKeyDown={handleKeyDown}
+        aria-haspopup="true"
+        aria-expanded={open}
+        className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] xl:text-xs font-semibold uppercase tracking-wider transition-colors rounded hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#E10600] whitespace-nowrap ${
+          isGroupActive || open
+            ? 'text-[#E10600]'
+            : 'text-gray-300 hover:text-white'
+        }`}
+      >
+        <span>{item.label}</span>
+        <ChevronDown
+          className={`w-3 h-3 transition-transform duration-200 ${
+            open ? 'rotate-180 text-[#E10600]' : 'text-gray-400'
+          }`}
+        />
+      </button>
+
+      {/* Região contínua do submenu sem gap ou zona morta */}
+      {open && (
+        <div
+          className="absolute top-full left-0 pt-1.5 z-50 animate-in fade-in-0 zoom-in-95 duration-150"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div
+            role="menu"
+            aria-orientation="vertical"
+            className="bg-[#E10600] border border-black/20 shadow-2xl rounded-lg py-1.5 px-1.5 min-w-[220px]"
+          >
+            {item.children.map((sub) => {
+              const isSubActive = sub.path === currentPageName;
+              return (
+                <Link
+                  key={sub.path}
+                  to={createPageUrl(sub.path)}
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                  className={`w-full px-3.5 py-2 text-xs transition-colors flex items-center justify-between rounded-md cursor-pointer ${
+                    isSubActive
+                      ? 'text-white bg-black font-bold shadow-sm'
+                      : 'text-white hover:text-white hover:bg-black font-medium'
+                  }`}
+                >
+                  <span>{sub.label}</span>
+                  {isSubActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-white ml-2 flex-shrink-0" />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Seção expansível do menu mobile
+function MobileNavGroup({ item, currentPageName, onClose }) {
+  const isChildActive = item.children.some(c => c.path === currentPageName);
+  const [expanded, setExpanded] = useState(isChildActive);
+
+  return (
+    <div className="border-b border-white/5">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+        className="w-full flex items-center justify-between py-3.5 px-5 text-sm font-semibold tracking-wider uppercase text-left transition-colors hover:bg-white/[0.02]"
+      >
+        <span className={isChildActive ? 'text-[#E10600] font-bold' : 'text-gray-200'}>
+          {item.label}
+        </span>
+        <div className="flex items-center gap-2">
+          {isChildActive && (
+            <span className="text-[10px] bg-[#E10600]/20 text-[#E10600] px-2 py-0.5 rounded font-mono">
+              Ativo
+            </span>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 transition-transform duration-200 ${
+              expanded ? 'rotate-180 text-[#E10600]' : 'text-gray-400'
+            }`}
+          />
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="bg-white/[0.02] py-1 pl-4 pr-3 border-l-2 border-[#E10600]/40 ml-5 mr-4 mb-2 space-y-1 rounded-r">
+          {item.children.map((child) => {
+            const isSelected = child.path === currentPageName;
+            return (
+              <Link
+                key={child.path}
+                to={createPageUrl(child.path)}
+                onClick={onClose}
+                className={`flex items-center justify-between py-2.5 px-3 text-xs rounded transition-colors ${
+                  isSelected
+                    ? 'text-white bg-[#E10600] font-bold shadow-[0_0_12px_rgba(225,6,0,0.3)]'
+                    : 'text-gray-300 hover:text-white hover:bg-white/5 font-medium'
+                }`}
+              >
+                <span>{child.label}</span>
+                {isSelected && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-white ml-2 flex-shrink-0" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Layout({ children, currentPageName }) {
   const { user, isLoadingAuth: loading, logout, navigateToLogin } = useAuth();
@@ -22,45 +278,6 @@ export default function Layout({ children, currentPageName }) {
   const handleLogout = async () => { 
     await logout(true); 
   };
-
-  const navLinks = [
-    { name: 'Início', path: 'Home' },
-    { name: 'TIR 2026', path: 'TIR2026' },
-    { name: 'Quem Somos', path: 'About' },
-    { name: 'Programas', path: 'Competitions' },
-    { name: 'Impacto Social', path: 'Projects' },
-    { name: 'Engenharia', path: 'CurrentRobot' },
-    { name: 'Progresso', path: 'Engineering' },
-    { name: 'Memória', path: 'Memoria' },
-    { name: 'Galeria', path: 'EventGalleryPublic' },
-    { name: 'CAD', path: 'CADs' },
-    { name: 'Equipe', path: 'Team' },
-    { name: 'Patrocinadores', path: 'Sponsors' },
-    { name: 'Safety Check', path: 'SafetyCheck' },
-    { name: 'Contato', path: 'Contact' },
-  ];
-
-  // Links exibidos diretamente na navbar desktop
-  const primaryLinks = [
-    { name: 'Início', path: 'Home' },
-    { name: 'TIR 2026', path: 'TIR2026' },
-    { name: 'Quem Somos', path: 'About' },
-    { name: 'Programas', path: 'Competitions' },
-    { name: 'Impacto Social', path: 'Projects' },
-    { name: 'Engenharia', path: 'CurrentRobot' },
-    { name: 'Progresso', path: 'Engineering' },
-    { name: 'Memória', path: 'Memoria' },
-    { name: 'Galeria', path: 'EventGalleryPublic' },
-  ];
-
-  // Links agrupados no dropdown "Mais"
-  const secondaryLinks = [
-    { name: 'CAD', path: 'CADs' },
-    { name: 'Equipe', path: 'Team' },
-    { name: 'Patrocinadores', path: 'Sponsors' },
-    { name: 'Safety Check', path: 'SafetyCheck' },
-    { name: 'Contato', path: 'Contact' },
-  ];
 
   const isInternalPage = currentPageName?.startsWith('Internal') || currentPageName === 'AdminPanel' || currentPageName === 'SeasonConfig' || currentPageName === 'AreaInterna';
   const isPublicPage = !isInternalPage;
@@ -81,72 +298,65 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Logo */}
             <Link to={createPageUrl('Home')} className="flex items-center gap-2 flex-shrink-0">
-              <img src={LOGO} alt="TeraRobotics" className="w-9 h-9 rounded-full" />
+              <img src={LOGO_MINIMALIST} alt="TeraRobotics" className="w-9 h-9 object-contain" />
               <span className="font-black text-lg tracking-tight hidden sm:block">
                 TERA<span className="text-[#E10600]">ROBOTICS</span>
               </span>
             </Link>
 
             {/* Desktop nav */}
-            <div className="hidden lg:flex items-center gap-0 flex-1 justify-center">
-              {primaryLinks.map((page) => (
-                <Link
-                  key={page.name}
-                  to={createPageUrl(page.path)}
-                  className={`px-2 py-2 text-[11px] font-medium uppercase tracking-wide transition-colors whitespace-nowrap ${
-                    currentPageName === page.path ? 'text-[#E10600]' : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  {page.name}
-                </Link>
-              ))}
-              {/* Dropdown "Mais" para links secundários */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-1 px-2 py-2 text-[11px] font-medium text-gray-300 hover:text-white uppercase tracking-wide transition-colors whitespace-nowrap">
-                    Mais <ChevronDown className="w-3 h-3" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-black border-white/10">
-                  {secondaryLinks.map((page) => (
-                    <DropdownMenuItem key={page.name} asChild>
-                      <Link
-                        to={createPageUrl(page.path)}
-                        className={`text-xs uppercase ${currentPageName === page.path ? 'text-[#E10600]' : 'text-gray-300 hover:text-white'}`}
-                      >
-                        {page.name}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 flex-1 justify-center">
+              {PUBLIC_NAV_ITEMS.map((item) => {
+                if (item.type === 'link') {
+                  const isActive = currentPageName === item.path;
+                  return (
+                    <Link
+                      key={item.label}
+                      to={createPageUrl(item.path)}
+                      className={`px-2.5 py-1.5 text-[11px] xl:text-xs font-semibold uppercase tracking-wider transition-colors rounded hover:bg-white/[0.05] whitespace-nowrap ${
+                        isActive ? 'text-[#E10600]' : 'text-gray-300 hover:text-white'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                }
+                return (
+                  <NavDropdown
+                    key={item.label}
+                    item={item}
+                    currentPageName={currentPageName}
+                  />
+                );
+              })}
             </div>
 
             {/* Right side: badges + auth */}
             <div className="flex items-center gap-2">
-              {!loading && user && (
-                <Link
-                  to={createPageUrl('AreaInterna')}
-                  className="hidden lg:flex items-center gap-1 px-3 py-1.5 text-xs font-bold uppercase tracking-wide border border-white/20 text-gray-300 hover:border-[#E10600] hover:text-[#E10600] transition-colors"
-                >
-                  <LayoutDashboard className="w-3.5 h-3.5" /> Área Interna
-                </Link>
-              )}
-
+              <Link
+                to={createPageUrl('AreaInterna')}
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider border border-[#E10600]/40 text-gray-200 bg-[#E10600]/10 hover:bg-[#E10600] hover:text-white hover:border-[#E10600] transition-all rounded"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5 text-[#E10600]" />
+                <span>Área Interna</span>
+              </Link>
 
               {!loading && (
                 user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="flex items-center gap-1 text-gray-300 hover:text-white hover:bg-white/10 px-2">
-                        <img src={LOGO} alt="" className="w-6 h-6 rounded-full" />
-                        <ChevronDown className="w-3 h-3" />
+                      <Button variant="ghost" size="sm" className="flex items-center gap-1.5 text-gray-300 hover:text-white hover:bg-white/10 px-2">
+                        <UserAvatar user={user} className="w-6 h-6 text-[10px]" />
+                        <ChevronDown className="w-3 h-3 text-gray-400" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-black border-white/10 w-48">
-                      <div className="px-3 py-2 border-b border-white/10">
-                        <p className="text-sm font-medium text-white">{user.full_name}</p>
-                        <p className="text-xs text-gray-400">{user.email}</p>
+                    <DropdownMenuContent align="end" className="bg-black border-white/10 w-52">
+                      <div className="px-3 py-2.5 border-b border-white/10 flex items-center gap-2.5">
+                        <UserAvatar user={user} className="w-8 h-8 text-xs" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-white truncate">{user.full_name}</p>
+                          <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                        </div>
                       </div>
                       <DropdownMenuItem asChild>
                         <Link to={createPageUrl('AreaInterna')} className="flex items-center gap-2 text-gray-300 hover:text-white text-sm">
@@ -200,7 +410,7 @@ export default function Layout({ children, currentPageName }) {
               {/* Mobile header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
                 <Link to={createPageUrl('Home')} className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                  <img src={LOGO} alt="TeraRobotics" className="w-10 h-10 rounded-full" />
+                  <img src={LOGO_MINIMALIST} alt="TeraRobotics" className="w-10 h-10 object-contain" />
                   <span className="font-black text-lg tracking-tight text-white">TERA<span className="text-[#E10600]">ROBOTICS</span></span>
                 </Link>
                 <button onClick={() => setMobileMenuOpen(false)} className="p-2 text-gray-300 hover:text-white">
@@ -208,20 +418,62 @@ export default function Layout({ children, currentPageName }) {
                 </button>
               </div>
               {/* Nav links */}
-              <div style={{ flex: 1, overflowY: 'auto', paddingTop: 16, paddingBottom: 16 }}>
-                {navLinks.map((page) => (
-                  <Link key={page.name} to={createPageUrl(page.path)} onClick={() => setMobileMenuOpen(false)}
-                    style={{ display: 'flex', alignItems: 'center', padding: '16px 24px', fontSize: 16, fontWeight: 500, borderLeft: `4px solid ${currentPageName === page.path ? '#E10600' : 'transparent'}`, color: currentPageName === page.path ? '#fff' : '#d1d5db', textDecoration: 'none' }}>
-                    {page.name}
+              <div style={{ flex: 1, overflowY: 'auto', paddingTop: 8, paddingBottom: 24 }}>
+                {/* Destaque Área Interna no topo do menu mobile */}
+                <div className="px-5 py-3 border-b border-white/10 mb-2">
+                  <Link
+                    to={createPageUrl('AreaInterna')}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#E10600] hover:bg-[#7A0000] text-white font-bold text-xs uppercase tracking-wider rounded transition-colors"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Acessar Área Interna</span>
                   </Link>
-                ))}
+                </div>
+
+                {PUBLIC_NAV_ITEMS.map((item) => {
+                  if (item.type === 'link') {
+                    const isSelected = currentPageName === item.path;
+                    return (
+                      <Link
+                        key={item.label}
+                        to={createPageUrl(item.path)}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center justify-between py-3.5 px-5 text-sm font-semibold tracking-wider uppercase border-b border-white/5 transition-colors ${
+                          isSelected
+                            ? 'text-white bg-[#E10600] font-bold shadow-[0_0_12px_rgba(225,6,0,0.3)]'
+                            : 'text-gray-300 hover:text-white hover:bg-white/[0.02]'
+                        }`}
+                      >
+                        <span>{item.label}</span>
+                        {isSelected && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-white ml-2 flex-shrink-0" />
+                        )}
+                      </Link>
+                    );
+                  }
+                  return (
+                    <MobileNavGroup
+                      key={item.label}
+                      item={item}
+                      currentPageName={currentPageName}
+                      onClose={() => setMobileMenuOpen(false)}
+                    />
+                  );
+                })}
 
                 {/* Auth links no mobile */}
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 16, paddingTop: 16, paddingLeft: 24, paddingRight: 24 }}>
                   {!loading && (
                     user ? (
                       <div>
-                        <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>{user.full_name}</p>
+                        <div className="flex items-center gap-3 mb-3 pb-2 border-b border-white/5">
+                          <UserAvatar user={user} className="w-9 h-9 text-xs" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-white truncate m-0">{user.full_name}</p>
+                            <p className="text-xs text-gray-400 truncate m-0">{user.email}</p>
+                          </div>
+                        </div>
                         <Link to={createPageUrl('AreaInterna')} onClick={() => setMobileMenuOpen(false)}
                           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0', color: '#d1d5db', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
                           <LayoutDashboard size={16} /> Área Interna
@@ -273,7 +525,7 @@ export default function Layout({ children, currentPageName }) {
               {/* Col 1 */}
               <div>
                 <div className="flex items-center gap-3 mb-5">
-                  <img src={LOGO} alt="TeraRobotics" className="w-12 h-12 rounded-full border-2 border-[#E10600]" />
+                  <img src={LOGO_COMPLETE} alt="TeraRobotics" className="w-14 h-14 object-contain" />
                   <div>
                     <p className="font-black text-xl tracking-tight">TERA<span className="text-[#E10600]">ROBOTICS</span></p>
                     <p className="text-gray-500 text-xs">#10343 • #17730 • FLL</p>
@@ -288,23 +540,44 @@ export default function Layout({ children, currentPageName }) {
               {/* Col 2 */}
               <div>
                 <h4 className="font-bold text-white text-xs uppercase tracking-widest mb-5">Navegação</h4>
-                <div className="space-y-2">
-                  {[
-                    { label: 'Início', path: 'Home' },
-                    { label: 'Quem Somos', path: 'About' },
-                    { label: 'Programas', path: 'Competitions' },
-                    { label: 'Impacto Social', path: 'Projects' },
-                    { label: 'Engenharia', path: 'CurrentRobot' },
-                    { label: 'Memória', path: 'Memoria' },
-                    { label: 'Galeria', path: 'EventGalleryPublic' },
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Institucional</p>
+                    <div className="space-y-1 mb-3">
+                      <Link to={createPageUrl('Home')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Início</Link>
+                      <Link to={createPageUrl('About')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Quem Somos</Link>
+                      <Link to={createPageUrl('Team')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Nossa Equipe</Link>
+                    </div>
 
-                    { label: 'CAD', path: 'CADs' },
-                    { label: 'Patrocinadores', path: 'Sponsors' },
-                    { label: 'Safety Check', path: 'SafetyCheck' },
-                    { label: 'Contato', path: 'Contact' },
-                  ].map(l => (
-                    <Link key={l.path} to={createPageUrl(l.path)} className="block text-sm text-gray-500 hover:text-[#E10600] transition-colors">{l.label}</Link>
-                  ))}
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Programas</p>
+                    <div className="space-y-1 mb-3">
+                      <Link to={createPageUrl('Competitions')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Visão Geral</Link>
+                      <Link to={createPageUrl('CompetitionsFLL')} className="block text-gray-500 hover:text-[#E10600] transition-colors">FLL</Link>
+                      <Link to={createPageUrl('CompetitionsFTC')} className="block text-gray-500 hover:text-[#E10600] transition-colors">FTC</Link>
+                      <Link to={createPageUrl('CompetitionsFRC')} className="block text-gray-500 hover:text-[#E10600] transition-colors">FRC</Link>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Engenharia & Histórico</p>
+                    <div className="space-y-1 mb-3">
+                      <Link to={createPageUrl('Projects')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Projetos</Link>
+                      <Link to={createPageUrl('CurrentRobot')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Robô Atual</Link>
+                      <Link to={createPageUrl('Engineering')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Desenvolvimento</Link>
+                      <Link to={createPageUrl('CADs')} className="block text-gray-500 hover:text-[#E10600] transition-colors">CADs</Link>
+                      <Link to={createPageUrl('Memoria')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Memória Tera</Link>
+                      <Link to={createPageUrl('Memorial')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Memorial</Link>
+                      <Link to={createPageUrl('EventGalleryPublic')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Galeria</Link>
+                    </div>
+
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Mais</p>
+                    <div className="space-y-1">
+                      <Link to={createPageUrl('TIR2026')} className="block text-gray-500 hover:text-[#E10600] transition-colors">TIR 2026</Link>
+                      <Link to={createPageUrl('Sponsors')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Patrocinadores</Link>
+                      <Link to={createPageUrl('Contact')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Contato</Link>
+                      <Link to={createPageUrl('SafetyCheck')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Safety Check</Link>
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -44,7 +44,7 @@ export default function CompetitionsFRC() {
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </Link>
-              <Link to={createPageUrl('Museum')}>
+              <Link to={createPageUrl('Memoria')}>
                 <Button variant="outline" className="border-[#1F222B] hover:bg-[#1F222B]">
                   Museu da Tera
                 </Button>

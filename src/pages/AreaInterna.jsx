@@ -12,7 +12,6 @@ import {
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import CountdownTimer from '@/components/CountdownTimer';
-const LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698a86446abc83aece20025a/1062ccfa5_WhatsAppImage2026-02-05at171715.jpg";
 
 function StatCard({ value, label, icon: Icon, color = '#E10600' }) {
   return (

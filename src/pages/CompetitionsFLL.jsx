@@ -61,7 +61,7 @@ export default function CompetitionsFLL() {
               se divertem e fazem a diferença no mundo.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link to={createPageUrl('Museum')}>
+              <Link to={createPageUrl('Memoria')}>
                 <Button className="bg-yellow-500 hover:bg-yellow-600 text-black">
                   Ver Projetos FLL
                   <ArrowRight className="ml-2 w-4 h-4" />

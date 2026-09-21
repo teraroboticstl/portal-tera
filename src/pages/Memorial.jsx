@@ -10,7 +10,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 
-const LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698a86446abc83aece20025a/71928ec1c_WhatsAppImage2026-02-05at171715.jpg";
+const LOGO = "/logo-complete.png?v=2026";
 
 export default function Memorial() {
   const [selectedProgram, setSelectedProgram] = useState('all');
@@ -54,7 +54,7 @@ export default function Memorial() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <img src={LOGO} alt="TeraRobotics" className="w-24 h-24 mx-auto mb-6 rounded-full border-4 border-[#E10600]" />
+            <img src={LOGO} alt="TeraRobotics" className="w-24 h-24 mx-auto mb-6 object-contain drop-shadow-[0_0_20px_rgba(225,6,0,0.4)]" />
             <h1 className="text-6xl font-black mb-4 tracking-tight">
               MEMORIAL <span className="text-[#E10600]">TERAROBOTICS</span>
             </h1>

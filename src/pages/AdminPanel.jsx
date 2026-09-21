@@ -99,7 +99,7 @@ export default function AdminPanel() {
               </Button>
             </Link>
             <Button 
-              onClick={() => base44.auth.logout(createPageUrl('Home'))}
+              onClick={() => base44.auth.logout('/')}
               className="bg-[#E10600]/10 text-[#E10600] hover:bg-[#E10600]/20 border border-[#E10600]/30"
             >
               <LogOut className="w-4 h-4 mr-2" />

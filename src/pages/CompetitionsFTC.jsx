@@ -38,7 +38,7 @@ export default function CompetitionsFTC() {
               criativas com foco em programação e design.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link to={createPageUrl('Museum')}>
+              <Link to={createPageUrl('Memoria')}>
                 <Button className="bg-orange-500 hover:bg-orange-600 text-white">
                   Ver Robôs FTC
                   <ArrowRight className="ml-2 w-4 h-4" />

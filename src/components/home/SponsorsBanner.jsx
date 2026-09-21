@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 
-const TERA_LOGO = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/698a86446abc83aece20025a/553877171_LogoTera.png";
+const TERA_LOGO = "/logo-complete.png?v=2026";
 
 function SponsorCard({ sponsor }) {
   const inner = (
