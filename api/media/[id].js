@@ -51,21 +51,30 @@ export default async function handler(req, res) {
       { responseType: 'stream' }
     );
 
-    streamRes.data
-      .on('error', (err) => {
-        console.error('[Google Drive Stream] Erro de transmissão:', err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Erro ao transmitir arquivo.' });
-        }
-      })
-      .pipe(res);
+    await new Promise((resolve, reject) => {
+      streamRes.data
+        .on('error', (err) => {
+          console.error('[Google Drive Stream] Erro de transmissão:', err);
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Erro ao transmitir arquivo.' });
+          }
+          reject(err);
+        })
+        .on('end', () => {
+          resolve();
+        });
+
+      streamRes.data.pipe(res);
+    });
 
   } catch (error) {
     console.error(`[API /api/media/${fileId}] Erro ao buscar arquivo:`, error);
     const status = error.code === 404 ? 404 : 500;
-    return res.status(status).json({
-      error: 'Arquivo não encontrado ou inacessível no Google Drive',
-      message: error.message
-    });
+    if (!res.headersSent) {
+      return res.status(status).json({
+        error: 'Arquivo não encontrado ou inacessível no Google Drive',
+        message: error.message
+      });
+    }
   }
 }
