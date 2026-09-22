@@ -7,7 +7,7 @@ import {
   Users, Clock, Check, X, Trash2, 
   Shield, Calendar, Plus, Edit2,
   Package, Heart, Cpu, FolderOpen, Home, LogOut, LayoutDashboard, Archive, AlertTriangle,
-  HardDrive
+  HardDrive, Upload, Image as ImageIcon, Loader2
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +16,13 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Badge from '@/components/common/Badge';
 import CountdownTimer from '@/components/CountdownTimer';
 import GoogleDriveTestManagement from '@/components/admin/GoogleDriveTestManagement';
+import { uploadToGoogleDrive } from '@/api/googleDriveClient';
 
 // E-mail do admin seed (bootstrap admin) - sempre aprovado automaticamente
 const SEED_ADMIN_EMAIL = 'teraroboticstl@gmail.com';
@@ -1433,7 +1435,15 @@ function SeasonCloseManagement() {
 function ProductsManagement() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', price: 0, category: 'Camisetas', image_url: '', available: true });
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [form, setForm] = useState({ 
+    name: '', 
+    description: '', 
+    price: 0, 
+    category: 'Camisetas', 
+    image_url: '', 
+    available: true 
+  });
 
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -1442,13 +1452,48 @@ function ProductsManagement() {
     queryFn: () => base44.entities.Product.list(),
   });
 
+  const resetForm = () => {
+    setForm({ 
+      name: '', 
+      description: '', 
+      price: 0, 
+      category: 'Camisetas', 
+      image_url: '', 
+      available: true 
+    });
+    setEditingProduct(null);
+    setUploadingImage(false);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const openEdit = (product) => {
+    setEditingProduct(product);
+    setForm({
+      name: product.name || '',
+      description: product.description || '',
+      price: product.price !== undefined ? product.price : 0,
+      category: product.category || 'Camisetas',
+      image_url: product.image_url || '',
+      available: product.available !== undefined ? Boolean(product.available) : (product.in_stock !== undefined ? Boolean(product.in_stock) : true)
+    });
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    resetForm();
+  };
+
   const createProduct = useMutation({
     mutationFn: (data) => base44.entities.Product.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      setShowForm(false);
-      setForm({ name: '', description: '', price: 0, category: 'Camisetas', image_url: '', available: true });
-      toast.success('Produto adicionado!');
+      closeForm();
+      toast.success('Produto adicionado com sucesso!');
     },
     onError: (err) => {
       console.error('Erro ao criar produto:', err);
@@ -1456,11 +1501,24 @@ function ProductsManagement() {
     }
   });
 
+  const updateProduct = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Product.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      closeForm();
+      toast.success('Produto atualizado com sucesso!');
+    },
+    onError: (err) => {
+      console.error('Erro ao atualizar produto:', err);
+      toast.error('Erro ao atualizar produto: ' + (err.message || 'Verifique as permissões de administrador.'));
+    }
+  });
+
   const deleteProduct = useMutation({
     mutationFn: (id) => base44.entities.Product.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      toast.success('Produto removido!');
+      toast.success('Produto removido com sucesso!');
     },
     onError: (err) => {
       console.error('Erro ao remover produto:', err);
@@ -1468,76 +1526,247 @@ function ProductsManagement() {
     }
   });
 
-  const handleUpload = async (e) => {
-    const file = e.target.files[0];
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-    
+
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+    if (!allowedMimeTypes.includes(file.type)) {
+      toast.error('Tipo de arquivo não suportado. Envie uma imagem JPG, PNG, WebP, GIF ou SVG.');
+      return;
+    }
+
+    const maxSizeBytes = 15 * 1024 * 1024; // 15MB
+    if (file.size > maxSizeBytes) {
+      toast.error('A imagem excede o tamanho máximo de 15MB permitido.');
+      return;
+    }
+
     setUploadingImage(true);
+    const toastId = toast.loading('Enviando imagem para o Google Drive institucional (02. Produtos)...');
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setForm(prev => ({ ...prev, image_url: file_url }));
-      toast.success('Imagem carregada!');
+      const uploadResult = await uploadToGoogleDrive({
+        file,
+        context: 'products'
+      });
+
+      if (!uploadResult || !uploadResult.directUrl) {
+        throw new Error('Servidor não retornou o identificador direto da mídia.');
+      }
+
+      setForm(prev => ({
+        ...prev,
+        image_url: uploadResult.directUrl
+      }));
+
+      toast.success('Imagem salva no Google Drive com sucesso!', { id: toastId });
     } catch (err) {
-      toast.error('Erro ao carregar imagem.');
+      console.error('[ProductsManagement] Erro no upload para Google Drive:', err);
+      toast.error(`Falha no upload da imagem: ${err.message || 'Erro de conexão com o Google Drive.'}`, { id: toastId });
     } finally {
       setUploadingImage(false);
+      e.target.value = '';
     }
   };
 
+  const handleRemoveImage = () => {
+    setForm(prev => ({ ...prev, image_url: '' }));
+    toast.info('Imagem removida do formulário. Salve o produto para confirmar a alteração.');
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!form.name.trim()) {
+      toast.error('Informe o nome do produto.');
+      return;
+    }
+
+    const payload = {
+      name: form.name.trim(),
+      description: form.description?.trim() || '',
+      price: parseFloat(form.price) || 0,
+      category: form.category || 'Camisetas',
+      image_url: form.image_url || '',
+      available: Boolean(form.available)
+    };
+
+    if (editingProduct) {
+      updateProduct.mutate({ id: editingProduct.id, data: payload });
+    } else {
+      createProduct.mutate(payload);
+    }
+  };
+
+  const isDriveImage = (url) => url && typeof url === 'string' && url.startsWith('/api/media/');
+
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold">Gerenciar Produtos</h2>
-        <Button onClick={() => setShowForm(true)} className="bg-[#E10600] hover:bg-[#E10600]/90">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-xl font-bold">Gerenciar Produtos</h2>
+          <p className="text-sm text-[#B8BDC7]">Cadastre, edite e gerencie o estoque dos produtos oficiais da TeraShop.</p>
+        </div>
+        <Button onClick={openCreate} className="bg-[#E10600] hover:bg-[#E10600]/90 text-white font-medium">
           <Plus className="w-4 h-4 mr-2" />
           Novo Produto
         </Button>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {products.map((product) => (
-          <div key={product.id} className="bg-[#111217] border border-[#1F222B] rounded-xl overflow-hidden">
-            {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="w-full h-32 object-cover" />
-            ) : (
-              <div className="w-full h-32 bg-[#0B0B0D] flex items-center justify-center">
-                <Package className="w-8 h-8 text-[#1F222B]" />
-              </div>
-            )}
-            <div className="p-4">
-              <Badge className="mb-2">{product.category}</Badge>
-              <h3 className="font-medium">{product.name}</h3>
-              <p className="text-[#E10600] font-bold">R$ {product.price?.toFixed(2)}</p>
-              <Button size="sm" variant="ghost" onClick={() => deleteProduct.mutate(product.id)} className="text-red-500 mt-2">
-                <Trash2 className="w-3 h-3 mr-1" />
-                Remover
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="py-16 text-center">
+          <LoadingSpinner />
+        </div>
+      ) : products.length === 0 ? (
+        <div className="text-center py-16 bg-[#111217] border border-[#1F222B] rounded-2xl p-8">
+          <Package className="w-12 h-12 text-[#1F222B] mx-auto mb-3" />
+          <h3 className="text-lg font-medium text-white mb-1">Nenhum produto cadastrado</h3>
+          <p className="text-sm text-[#B8BDC7] mb-4">Adicione o primeiro produto para começar a exibir itens na TeraShop.</p>
+          <Button onClick={openCreate} className="bg-[#E10600] hover:bg-[#E10600]/90 text-white">
+            <Plus className="w-4 h-4 mr-2" />
+            Cadastrar Produto
+          </Button>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {products.map((product) => {
+            const hasDriveImg = isDriveImage(product.image_url);
+            const isAvailable = product.available !== false && product.in_stock !== false;
 
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="bg-[#111217] border-[#1F222B]">
-          <DialogHeader>
-            <DialogTitle>Novo Produto</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); createProduct.mutate(form); }} className="space-y-4">
-            <div>
-              <Label>Nome</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-[#0B0B0D] border-[#1F222B] text-white" />
-            </div>
-            <div>
-              <Label>Descrição</Label>
-              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="bg-[#0B0B0D] border-[#1F222B] text-white" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Preço (R$)</Label>
-                <Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) })} className="bg-[#0B0B0D] border-[#1F222B] text-white" />
+            return (
+              <div key={product.id} className="bg-[#111217] border border-[#1F222B] rounded-xl overflow-hidden flex flex-col justify-between hover:border-[#1F222B]/80 transition-all">
+                <div className="relative">
+                  {product.image_url ? (
+                    <img 
+                      src={product.image_url} 
+                      alt={product.name} 
+                      className="w-full h-36 object-cover bg-[#0B0B0D]" 
+                    />
+                  ) : (
+                    <div className="w-full h-36 bg-[#0B0B0D] flex items-center justify-center">
+                      <Package className="w-10 h-10 text-[#1F222B]" />
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2 flex gap-1">
+                    <Badge className="bg-[#111217]/90 backdrop-blur-sm border-[#1F222B] text-xs">
+                      {product.category}
+                    </Badge>
+                  </div>
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    {hasDriveImg && (
+                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 backdrop-blur-sm" title="Imagem armazenada no Google Drive institucional">
+                        <HardDrive className="w-3 h-3" />
+                        Drive
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start gap-2 mb-1">
+                      <h3 className="font-semibold text-white line-clamp-1">{product.name}</h3>
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium shrink-0 ${isAvailable ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}>
+                        {isAvailable ? 'Em estoque' : 'Esgotado'}
+                      </span>
+                    </div>
+                    {product.description && (
+                      <p className="text-xs text-[#B8BDC7] line-clamp-2 mb-2">{product.description}</p>
+                    )}
+                    <p className="text-[#E10600] font-bold text-base">
+                      R$ {Number(product.price || 0).toFixed(2)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-4 pt-3 border-t border-[#1F222B]">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => openEdit(product)} 
+                      className="border-[#1F222B] bg-white text-zinc-900 hover:bg-zinc-100 hover:text-black flex-1 font-medium"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 mr-1" />
+                      Editar
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => {
+                        if (window.confirm(`Tem certeza que deseja remover o produto "${product.name}"?`)) {
+                          deleteProduct.mutate(product.id);
+                        }
+                      }} 
+                      className="text-red-500 hover:text-red-400 hover:bg-red-500/10 px-2.5"
+                      title="Excluir produto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
               </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Dialog Unificado: Criar / Editar Produto */}
+      <Dialog open={showForm} onOpenChange={(open) => { if (!open) closeForm(); }}>
+        <DialogContent className="bg-[#111217] border-[#1F222B] max-w-xl max-h-[90vh] overflow-y-auto text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">
+              {editingProduct ? (
+                <>
+                  <Edit2 className="w-5 h-5 text-[#E10600]" />
+                  Editar Produto
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5 text-[#E10600]" />
+                  Novo Produto
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+            <div>
+              <Label className="text-sm font-medium text-white mb-1.5 block">Nome do Produto *</Label>
+              <Input 
+                value={form.name} 
+                onChange={(e) => setForm({ ...form, name: e.target.value })} 
+                placeholder="Ex: Camiseta Oficial Temporada 2025"
+                className="bg-[#0B0B0D] border-[#1F222B] text-white placeholder:text-zinc-500" 
+                required
+              />
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium text-white mb-1.5 block">Descrição</Label>
+              <Textarea 
+                value={form.description} 
+                onChange={(e) => setForm({ ...form, description: e.target.value })} 
+                placeholder="Detalhes sobre o produto, material, tamanhos disponíveis..."
+                rows={3}
+                className="bg-[#0B0B0D] border-[#1F222B] text-white placeholder:text-zinc-500 resize-none" 
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label>Categoria</Label>
+                <Label className="text-sm font-medium text-white mb-1.5 block">Preço (R$) *</Label>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  min="0"
+                  value={form.price} 
+                  onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} 
+                  className="bg-[#0B0B0D] border-[#1F222B] text-white" 
+                  required
+                />
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-white mb-1.5 block">Categoria *</Label>
                 <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                   <SelectTrigger className="bg-[#0B0B0D] border-[#1F222B] text-white">
                     <SelectValue />
@@ -1552,17 +1781,144 @@ function ProductsManagement() {
                 </Select>
               </div>
             </div>
-            <div>
-              <Label>Imagem</Label>
-              <Input type="file" accept="image/*" onChange={handleUpload} className="bg-[#0B0B0D] border-[#1F222B] text-white" />
+
+            {/* Disponibilidade / Em estoque */}
+            <div className="flex items-center justify-between p-3 bg-[#0B0B0D] border border-[#1F222B] rounded-lg">
+              <div>
+                <Label className="text-sm font-medium text-white block cursor-pointer">Disponível para venda</Label>
+                <p className="text-xs text-[#B8BDC7]">Define se o produto é exibido como disponível para pedidos na TeraShop.</p>
+              </div>
+              <Switch 
+                checked={form.available} 
+                onCheckedChange={(checked) => setForm({ ...form, available: checked })}
+              />
             </div>
-            <Button 
-              type="submit" 
-              disabled={createProduct.isPending || uploadingImage} 
-              className="w-full bg-[#E10600] hover:bg-[#E10600]/90 text-white font-medium"
-            >
-              {createProduct.isPending ? 'Adicionando...' : uploadingImage ? 'Carregando Imagem...' : 'Adicionar Produto'}
-            </Button>
+
+            {/* Imagem do Produto com Google Drive */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label className="text-sm font-medium text-white">Imagem do Produto</Label>
+                <span className="text-[11px] text-zinc-400 flex items-center gap-1">
+                  <HardDrive className="w-3 h-3 text-emerald-400" />
+                  Google Drive institucional (02. Produtos)
+                </span>
+              </div>
+
+              {form.image_url ? (
+                <div className="p-3 bg-[#0B0B0D] border border-[#1F222B] rounded-lg space-y-3">
+                  <div className="flex items-center gap-3">
+                    <img 
+                      src={form.image_url} 
+                      alt="Pré-visualização" 
+                      className="w-16 h-16 object-cover rounded-md border border-[#1F222B] bg-[#111217]"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {isDriveImage(form.image_url) ? (
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            <HardDrive className="w-3 h-3" />
+                            Google Drive (Ativo)
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                            URL Externa / Legada
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-400 truncate" title={form.image_url}>
+                        {form.image_url}
+                      </p>
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={handleRemoveImage}
+                      disabled={uploadingImage}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2"
+                      title="Remover imagem"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {/* Opção de substituir imagem */}
+                  <div className="pt-2 border-t border-[#1F222B]/60 flex items-center gap-2">
+                    <Label htmlFor="product-img-replace" className="cursor-pointer text-xs text-zinc-300 hover:text-white flex items-center gap-1.5 py-1 px-2.5 rounded bg-[#111217] border border-[#1F222B] hover:border-zinc-500 transition-colors">
+                      <Upload className="w-3.5 h-3.5" />
+                      Substituir imagem no Google Drive
+                    </Label>
+                    <input 
+                      id="product-img-replace" 
+                      type="file" 
+                      accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" 
+                      onChange={handleImageUpload} 
+                      disabled={uploadingImage}
+                      className="hidden" 
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-[#0B0B0D] border border-dashed border-[#1F222B] rounded-lg text-center space-y-2 hover:border-zinc-600 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-[#111217] border border-[#1F222B] mx-auto flex items-center justify-center text-zinc-400">
+                    <ImageIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <Label htmlFor="product-img-input" className="cursor-pointer text-sm font-medium text-white hover:text-[#E10600] transition-colors">
+                      Clique para selecionar uma imagem do computador
+                    </Label>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      JPG, PNG, WebP, GIF ou SVG (máx. 15MB). Salva diretamente no Google Drive institucional.
+                    </p>
+                  </div>
+                  <input 
+                    id="product-img-input" 
+                    type="file" 
+                    accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" 
+                    onChange={handleImageUpload} 
+                    disabled={uploadingImage}
+                    className="hidden" 
+                  />
+                </div>
+              )}
+
+              {uploadingImage && (
+                <div className="flex items-center gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-md text-xs text-emerald-400">
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                  <span>Enviando imagem para o Google Drive institucional (02. Produtos)... Aguarde.</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#1F222B]">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={closeForm}
+                disabled={createProduct.isPending || updateProduct.isPending || uploadingImage}
+                className="text-zinc-400 hover:text-white"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={createProduct.isPending || updateProduct.isPending || uploadingImage} 
+                className="bg-[#E10600] hover:bg-[#E10600]/90 text-white font-medium"
+              >
+                {createProduct.isPending || updateProduct.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Salvando...
+                  </>
+                ) : uploadingImage ? (
+                  'Aguardando upload...'
+                ) : editingProduct ? (
+                  'Salvar Alterações'
+                ) : (
+                  'Adicionar Produto'
+                )}
+              </Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
