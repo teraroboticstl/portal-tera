@@ -25,11 +25,56 @@ import GoogleDriveTestManagement from '@/components/admin/GoogleDriveTestManagem
 // E-mail do admin seed (bootstrap admin) - sempre aprovado automaticamente
 const SEED_ADMIN_EMAIL = 'teraroboticstl@gmail.com';
 
+// Identificadores válidos das guias do Painel Admin
+const VALID_ADMIN_TABS = [
+  'users',
+  'tournament',
+  'robots',
+  'sponsors',
+  'projects',
+  'products',
+  'season_close',
+  'google_drive'
+];
+const DEFAULT_ADMIN_TAB = 'users';
+const ADMIN_TAB_STORAGE_KEY = 'portal_tera_admin_active_tab';
+
+/**
+ * Recupera e valida a última guia ativa armazenada na sessão da aba
+ */
+function getInitialAdminTab() {
+  try {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const savedTab = window.sessionStorage.getItem(ADMIN_TAB_STORAGE_KEY);
+      if (savedTab && VALID_ADMIN_TABS.includes(savedTab)) {
+        return savedTab;
+      }
+    }
+  } catch (err) {
+    console.warn('[AdminPanel] Falha ao ler guia ativa do sessionStorage:', err);
+  }
+  return DEFAULT_ADMIN_TAB;
+}
+
 export default function AdminPanel() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(getInitialAdminTab);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const handleTabChange = (newTab) => {
+    if (VALID_ADMIN_TABS.includes(newTab)) {
+      setActiveTab(newTab);
+      try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          window.sessionStorage.setItem(ADMIN_TAB_STORAGE_KEY, newTab);
+        }
+      } catch (err) {
+        console.warn('[AdminPanel] Falha ao salvar guia ativa no sessionStorage:', err);
+      }
+    }
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -114,7 +159,7 @@ export default function AdminPanel() {
       <div className="max-w-7xl mx-auto p-4 lg:p-8">
         {/* Tabs */}
 
-        <Tabs defaultValue="users">
+        <Tabs value={activeTab} onValueChange={handleTabChange} defaultValue={DEFAULT_ADMIN_TAB}>
           <TabsList className="bg-[#111217] border border-[#1F222B] mb-8">
             <TabsTrigger value="users" className="data-[state=active]:bg-[#E10600]">
               <Users className="w-4 h-4 mr-2" />
