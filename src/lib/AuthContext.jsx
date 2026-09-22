@@ -8,15 +8,19 @@ export const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gm
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const userRef = React.useRef(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [appPublicSettings, setAppPublicSettings] = useState({ id: 'supabase-portal', public_settings: {} });
 
-  const fetchAndSetProfile = useCallback(async (authUser) => {
+  const fetchAndSetProfile = useCallback(async (authUser, options = {}) => {
+    const { isInitial = false } = options;
     try {
-      setIsLoadingAuth(true);
+      if (isInitial) {
+        setIsLoadingAuth(true);
+      }
       // Buscar dados do perfil na tabela public.profiles
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -67,17 +71,21 @@ export const AuthProvider = ({ children }) => {
         user_metadata: authUser.user_metadata
       };
 
+      userRef.current = userProfile;
       setUser(userProfile);
       setIsAuthenticated(true);
       setAuthError(null);
       return userProfile;
     } catch (err) {
       console.error('[AuthContext] Falha ao processar perfil do usuário:', err);
+      userRef.current = null;
       setUser(null);
       setIsAuthenticated(false);
       return null;
     } finally {
-      setIsLoadingAuth(false);
+      if (isInitial) {
+        setIsLoadingAuth(false);
+      }
     }
   }, []);
 
@@ -88,6 +96,7 @@ export const AuthProvider = ({ children }) => {
       
       if (error) {
         console.warn('[AuthContext] Sessão não encontrada ou expirada:', error.message);
+        userRef.current = null;
         setUser(null);
         setIsAuthenticated(false);
         setIsLoadingAuth(false);
@@ -95,14 +104,16 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (session?.user) {
-        await fetchAndSetProfile(session.user);
+        await fetchAndSetProfile(session.user, { isInitial: true });
       } else {
+        userRef.current = null;
         setUser(null);
         setIsAuthenticated(false);
         setIsLoadingAuth(false);
       }
     } catch (error) {
       console.error('[AuthContext] Falha ao checar estado inicial de autenticação:', error);
+      userRef.current = null;
       setUser(null);
       setIsAuthenticated(false);
       setIsLoadingAuth(false);
@@ -116,12 +127,19 @@ export const AuthProvider = ({ children }) => {
     // 2. Escutar mudanças no estado de autenticação (sign in, sign out, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log(`[Supabase Auth] Evento recebido: ${event}`);
-      if (session?.user) {
-        await fetchAndSetProfile(session.user);
-      } else if (event === 'SIGNED_OUT' || !session) {
+      if (event === 'SIGNED_OUT' || !session) {
+        userRef.current = null;
         setUser(null);
         setIsAuthenticated(false);
         setIsLoadingAuth(false);
+        return;
+      }
+
+      if (session?.user) {
+        // Se já tivermos um usuário autenticado carregado na memória, não reativamos isLoadingAuth: true
+        // Isso impede a desmontagem do app inteiro e perda de formulários ao alternar de aba no navegador
+        const isInitial = !userRef.current;
+        await fetchAndSetProfile(session.user, { isInitial });
       }
     });
 

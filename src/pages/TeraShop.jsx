@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import SafeImage from '@/components/common/SafeImage';
 
 const WHATSAPP_NUMBER = '5567999999999'; // Substituir pelo número real
 
@@ -122,18 +123,17 @@ export default function TeraShop() {
                   className="bg-[#111217] border border-[#1F222B] rounded-2xl overflow-hidden cursor-pointer group hover:border-[#E10600]/50 transition-all"
                 >
                   <div className="aspect-square relative overflow-hidden bg-[#0B0B0D]">
-                    {product.image_url ? (
-                      <img 
-                        src={product.image_url} 
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ShoppingBag className="w-16 h-16 text-[#1F222B]" />
-                      </div>
-                    )}
-                    <div className="absolute top-3 left-3">
+                    <SafeImage 
+                      src={product.image_url} 
+                      alt={product.name}
+                      fit="contain"
+                      position="center"
+                      allowEnlarge={true}
+                      enlargeTitle="Abrir imagem em tamanho original em nova guia"
+                      containerClassName="w-full h-full p-2"
+                      fallbackIcon={<ShoppingBag className="w-16 h-16 text-[#1F222B]" />}
+                    />
+                    <div className="absolute top-3 left-3 pointer-events-none">
                       <span className="px-2 py-1 bg-[#111217]/80 backdrop-blur-sm text-xs rounded-full">
                         {product.category}
                       </span>
@@ -173,11 +173,15 @@ export default function TeraShop() {
 
               <div className="space-y-6 mt-4">
                 {selectedProduct.image_url && (
-                  <div className="aspect-square rounded-xl overflow-hidden bg-[#0B0B0D]">
-                    <img 
+                  <div className="aspect-square rounded-xl overflow-hidden bg-[#0B0B0D] relative border border-[#1F222B]">
+                    <SafeImage 
                       src={selectedProduct.image_url} 
                       alt={selectedProduct.name}
-                      className="w-full h-full object-cover"
+                      fit="contain"
+                      position="center"
+                      allowEnlarge={true}
+                      enlargeTitle="Abrir imagem em tamanho original em nova guia"
+                      containerClassName="w-full h-full p-4"
                     />
                   </div>
                 )}

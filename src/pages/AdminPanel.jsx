@@ -7,7 +7,7 @@ import {
   Users, Clock, Check, X, Trash2, 
   Shield, Calendar, Plus, Edit2,
   Package, Heart, Cpu, FolderOpen, Home, LogOut, LayoutDashboard, Archive, AlertTriangle,
-  HardDrive, Upload, Image as ImageIcon, Loader2
+  HardDrive, Upload, Image as ImageIcon, Loader2, ExternalLink
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,8 @@ import Badge from '@/components/common/Badge';
 import CountdownTimer from '@/components/CountdownTimer';
 import GoogleDriveTestManagement from '@/components/admin/GoogleDriveTestManagement';
 import { uploadToGoogleDrive } from '@/api/googleDriveClient';
+import SafeImage from '@/components/common/SafeImage';
+import { saveAdminDraft, loadAdminDraft, clearAdminDraft } from '@/lib/adminDrafts';
 
 // E-mail do admin seed (bootstrap admin) - sempre aprovado automaticamente
 const SEED_ADMIN_EMAIL = 'teraroboticstl@gmail.com';
@@ -562,13 +564,42 @@ function TournamentSettings() {
 
 function RobotsManagement() {
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [editingRobot, setEditingRobot] = useState(null);
-  const [form, setForm] = useState({
-    name: '', category: 'FRC', year: new Date().getFullYear(),
-    season_name: '', description: '', image_url: '', game_objective: '',
-    is_current: false, cad_url: ''
-  });
+  const savedDraft = loadAdminDraft('robots');
+  const [showForm, setShowForm] = useState(Boolean(savedDraft?.isOpen && savedDraft?.mode === 'create'));
+  const [editingRobot, setEditingRobot] = useState(
+    savedDraft?.isOpen && savedDraft?.mode === 'edit' && savedDraft?.recordId
+      ? { id: savedDraft.recordId, ...(savedDraft.data || {}) }
+      : null
+  );
+  const [form, setForm] = useState(
+    savedDraft?.mode === 'create' && savedDraft?.data
+      ? savedDraft.data
+      : {
+          name: '', category: 'FRC', year: new Date().getFullYear(),
+          season_name: '', description: '', image_url: '', game_objective: '',
+          is_current: false, cad_url: ''
+        }
+  );
+
+  useEffect(() => {
+    if (editingRobot) {
+      saveAdminDraft('robots', {
+        isOpen: true,
+        mode: 'edit',
+        recordId: editingRobot.id,
+        data: editingRobot
+      });
+    } else if (showForm) {
+      saveAdminDraft('robots', {
+        isOpen: true,
+        mode: 'create',
+        recordId: null,
+        data: form
+      });
+    } else {
+      clearAdminDraft('robots');
+    }
+  }, [showForm, editingRobot, form]);
 
   const { data: robots = [], isLoading } = useQuery({
     queryKey: ['admin-robots'],
@@ -579,6 +610,7 @@ function RobotsManagement() {
     mutationFn: (data) => base44.entities.Robot.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-robots'] });
+      clearAdminDraft('robots');
       setShowForm(false);
       resetForm();
       toast.success('Robô criado!');
@@ -593,6 +625,7 @@ function RobotsManagement() {
     mutationFn: ({ id, data }) => base44.entities.Robot.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-robots'] });
+      clearAdminDraft('robots');
       setEditingRobot(null);
       toast.success('Robô atualizado!');
     },
@@ -658,27 +691,34 @@ function RobotsManagement() {
       {/* Robots List */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {robots.map((robot) => (
-          <div key={robot.id} className="bg-[#111217] border border-[#1F222B] rounded-xl overflow-hidden">
-            {robot.image_url ? (
-              <img src={robot.image_url} alt={robot.name} className="w-full h-40 object-cover" />
-            ) : (
-              <div className="w-full h-40 bg-[#0B0B0D] flex items-center justify-center">
-                <Cpu className="w-12 h-12 text-[#1F222B]" />
+          <div key={robot.id} className="bg-[#111217] border border-[#1F222B] rounded-xl overflow-hidden flex flex-col justify-between">
+            <div className="relative w-full h-40 bg-[#0B0B0D]">
+              <SafeImage 
+                src={robot.image_url} 
+                alt={robot.name} 
+                fit="cover" 
+                position="center"
+                allowEnlarge={true}
+                enlargeTitle="Abrir foto do robô em nova guia"
+                containerClassName="w-full h-40"
+                fallbackIcon={<Cpu className="w-12 h-12 text-[#1F222B]" />}
+              />
+            </div>
+            <div className="p-4 flex-1 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant={robot.category.toLowerCase()}>{robot.category}</Badge>
+                  {robot.is_current && <Badge variant="accent">Atual</Badge>}
+                </div>
+                <h3 className="font-bold text-white">{robot.name}</h3>
+                <p className="text-sm text-[#B8BDC7]">Temporada {robot.year}</p>
               </div>
-            )}
-            <div className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant={robot.category.toLowerCase()}>{robot.category}</Badge>
-                {robot.is_current && <Badge variant="accent">Atual</Badge>}
-              </div>
-              <h3 className="font-bold">{robot.name}</h3>
-              <p className="text-sm text-[#B8BDC7]">Temporada {robot.year}</p>
-              <div className="flex gap-2 mt-3">
-                <Button size="sm" variant="outline" onClick={() => setEditingRobot(robot)} className="border-[#1F222B] bg-white text-zinc-900 hover:bg-zinc-100 hover:text-black">
+              <div className="flex gap-2 mt-4 pt-3 border-t border-[#1F222B]">
+                <Button size="sm" variant="outline" onClick={() => setEditingRobot(robot)} className="border-[#1F222B] bg-white text-zinc-900 hover:bg-zinc-100 hover:text-black flex-1">
                   <Edit2 className="w-3 h-3 mr-1" />
                   Editar
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => deleteRobot.mutate(robot.id)} className="text-red-500">
+                <Button size="sm" variant="ghost" onClick={() => deleteRobot.mutate(robot.id)} className="text-red-500 hover:text-red-400 hover:bg-red-500/10">
                   <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
@@ -688,7 +728,16 @@ function RobotsManagement() {
       </div>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={showForm || !!editingRobot} onOpenChange={() => { setShowForm(false); setEditingRobot(null); }}>
+      <Dialog 
+        open={showForm || !!editingRobot} 
+        onOpenChange={(open) => { 
+          if (!open) {
+            setShowForm(false); 
+            setEditingRobot(null); 
+            clearAdminDraft('robots');
+          }
+        }}
+      >
         <DialogContent className="bg-[#111217] border-[#1F222B] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingRobot ? 'Editar Robô' : 'Novo Robô'}</DialogTitle>
@@ -835,11 +884,38 @@ function RobotsManagement() {
 
 function SponsorsManagement() {
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [editingSponsor, setEditingSponsor] = useState(null);
+  const savedDraft = loadAdminDraft('sponsors');
+  const [showForm, setShowForm] = useState(Boolean(savedDraft?.isOpen && savedDraft?.mode === 'create'));
+  const [editingSponsor, setEditingSponsor] = useState(
+    savedDraft?.isOpen && savedDraft?.mode === 'edit' && savedDraft?.recordId
+      ? { id: savedDraft.recordId, ...(savedDraft.data || {}) }
+      : null
+  );
   const emptyForm = { name: '', category: 'Apoio', logo_url: '', link: '', order: 0 };
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(
+    savedDraft?.mode === 'create' && savedDraft?.data ? savedDraft.data : emptyForm
+  );
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  useEffect(() => {
+    if (editingSponsor) {
+      saveAdminDraft('sponsors', {
+        isOpen: true,
+        mode: 'edit',
+        recordId: editingSponsor.id,
+        data: editingSponsor
+      });
+    } else if (showForm) {
+      saveAdminDraft('sponsors', {
+        isOpen: true,
+        mode: 'create',
+        recordId: null,
+        data: form
+      });
+    } else {
+      clearAdminDraft('sponsors');
+    }
+  }, [showForm, editingSponsor, form]);
 
   const { data: sponsors = [], isLoading } = useQuery({
     queryKey: ['admin-sponsors'],
@@ -850,6 +926,7 @@ function SponsorsManagement() {
     mutationFn: (data) => base44.entities.Sponsor.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-sponsors'] });
+      clearAdminDraft('sponsors');
       setShowForm(false);
       setForm(emptyForm);
       toast.success('Patrocinador adicionado!');
@@ -864,6 +941,7 @@ function SponsorsManagement() {
     mutationFn: ({ id, data }) => base44.entities.Sponsor.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-sponsors'] });
+      clearAdminDraft('sponsors');
       setEditingSponsor(null);
       toast.success('Patrocinador atualizado!');
     },
@@ -939,7 +1017,14 @@ function SponsorsManagement() {
         {uploadingLogo && <p className="text-xs text-yellow-400 mt-1">⏳ Carregando logo...</p>}
         {!uploadingLogo && data.logo_url && (
           <div className="mt-2 bg-[#0B0B0D] rounded p-2 inline-block border border-[#1F222B]">
-            <img src={data.logo_url} alt="Preview" className="max-h-14 object-contain" />
+            <SafeImage 
+              src={data.logo_url} 
+              alt="Preview" 
+              fit="contain" 
+              allowEnlarge={true} 
+              enlargeTitle="Abrir logo em nova guia"
+              containerClassName="h-14 w-28" 
+            />
           </div>
         )}
       </div>
@@ -973,11 +1058,15 @@ function SponsorsManagement() {
         {[...sponsors].sort((a, b) => (a.order || 0) - (b.order || 0)).map((sponsor) => (
           <div key={sponsor.id} className="bg-[#111217] border border-[#1F222B] rounded-xl p-4 flex flex-col gap-3">
             <div className="w-full h-20 bg-[#0B0B0D] rounded-lg flex items-center justify-center p-2 border border-[#1F222B]">
-              {sponsor.logo_url ? (
-                <img src={sponsor.logo_url} alt={sponsor.name} className="max-w-full max-h-full object-contain" />
-              ) : (
-                <span className="text-gray-600 text-xs text-center">{sponsor.name}</span>
-              )}
+              <SafeImage 
+                src={sponsor.logo_url} 
+                alt={sponsor.name} 
+                fit="contain" 
+                allowEnlarge={true} 
+                enlargeTitle="Abrir logo em nova guia"
+                containerClassName="w-full h-full"
+                fallbackIcon={<span className="text-gray-600 text-xs text-center">{sponsor.name}</span>}
+              />
             </div>
             <div>
               <p className="text-xs text-[#E10600] font-bold uppercase mb-0.5">{sponsor.category}</p>
@@ -1000,7 +1089,16 @@ function SponsorsManagement() {
       </div>
 
       {/* Create Dialog */}
-      <Dialog open={showForm} onOpenChange={(o) => { setShowForm(o); if (!o) setForm(emptyForm); }}>
+      <Dialog 
+        open={showForm} 
+        onOpenChange={(o) => { 
+          setShowForm(o); 
+          if (!o) {
+            setForm(emptyForm); 
+            clearAdminDraft('sponsors');
+          }
+        }}
+      >
         <DialogContent className="bg-[#111217] border-[#1F222B]">
           <DialogHeader><DialogTitle>Novo Patrocinador</DialogTitle></DialogHeader>
           <SponsorForm data={form} setData={setForm} onSubmit={() => createSponsor.mutate(form)} submitLabel="Adicionar Patrocinador" />
@@ -1008,7 +1106,15 @@ function SponsorsManagement() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editingSponsor} onOpenChange={(o) => { if (!o) setEditingSponsor(null); }}>
+      <Dialog 
+        open={!!editingSponsor} 
+        onOpenChange={(o) => { 
+          if (!o) {
+            setEditingSponsor(null); 
+            clearAdminDraft('sponsors');
+          }
+        }}
+      >
         <DialogContent className="bg-[#111217] border-[#1F222B]">
           <DialogHeader><DialogTitle>Editar Patrocinador</DialogTitle></DialogHeader>
           {editingSponsor && (
@@ -1027,11 +1133,44 @@ function SponsorsManagement() {
 
 function ProjectsManagement() {
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [editingProject, setEditingProject] = useState(null);
-  const [form, setForm] = useState({ title: '', description: '', date_period: '', tags: [], link: '', status: 'active' });
+  const savedDraft = loadAdminDraft('projects');
+  const [showForm, setShowForm] = useState(Boolean(savedDraft?.isOpen && savedDraft?.mode === 'create'));
+  const [editingProject, setEditingProject] = useState(
+    savedDraft?.isOpen && savedDraft?.mode === 'edit' && savedDraft?.recordId
+      ? { id: savedDraft.recordId, ...(savedDraft.data || {}) }
+      : null
+  );
+  const [form, setForm] = useState(
+    savedDraft?.mode === 'create' && savedDraft?.data
+      ? savedDraft.data
+      : { title: '', description: '', date_period: '', tags: [], link: '', status: 'active' }
+  );
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState(
+    savedDraft?.mode === 'create' && savedDraft?.images ? savedDraft.images : []
+  );
+
+  useEffect(() => {
+    if (editingProject) {
+      saveAdminDraft('projects', {
+        isOpen: true,
+        mode: 'edit',
+        recordId: editingProject.id,
+        data: editingProject,
+        images: editingProject.images || []
+      });
+    } else if (showForm) {
+      saveAdminDraft('projects', {
+        isOpen: true,
+        mode: 'create',
+        recordId: null,
+        data: form,
+        images
+      });
+    } else {
+      clearAdminDraft('projects');
+    }
+  }, [showForm, editingProject, form, images]);
 
   const TAG_OPTIONS = ['Educação', 'Engenharia', 'Impacto Social', 'Tecnologia'];
 
@@ -1044,6 +1183,7 @@ function ProjectsManagement() {
     mutationFn: (data) => base44.entities.Project.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-projects'] });
+      clearAdminDraft('projects');
       setShowForm(false);
       setForm({ title: '', description: '', date_period: '', tags: [], link: '', status: 'active' });
       setImages([]);
@@ -1059,6 +1199,7 @@ function ProjectsManagement() {
     mutationFn: ({ id, data }) => base44.entities.Project.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-projects'] });
+      clearAdminDraft('projects');
       setEditingProject(null);
       setImages([]);
       toast.success('Projeto atualizado!');
@@ -1131,17 +1272,17 @@ function ProjectsManagement() {
           <div key={project.id} className="bg-[#111217] border border-[#1F222B] rounded-xl overflow-hidden flex flex-col group hover:border-[#E10600]/50 transition-all">
             <div className="relative pt-8 pb-6 px-4 flex items-center justify-center bg-[#0B0B0D]/50 border-b border-[#1F222B]/60">
               <div className="w-40 h-40 sm:w-44 sm:h-44 rounded-full overflow-hidden bg-[#111217] border-2 border-[#1F222B] group-hover:border-[#E10600] transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_25px_rgba(225,6,0,0.25)] flex items-center justify-center flex-shrink-0">
-                {project.images?.[0] ? (
-                  <img 
-                    src={project.images[0]} 
-                    alt={project.title} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <FolderOpen className="w-12 h-12 text-[#1F222B]" />
-                  </div>
-                )}
+                <SafeImage 
+                  src={project.images?.[0]} 
+                  alt={project.title} 
+                  fit="cover"
+                  position="center"
+                  allowEnlarge={true}
+                  enlargeTitle="Abrir imagem do projeto em nova guia"
+                  containerClassName="w-full h-full"
+                  rounded="rounded-full"
+                  fallbackIcon={<FolderOpen className="w-12 h-12 text-[#1F222B]" />}
+                />
               </div>
               {project.images?.length > 1 && (
                 <div className="absolute top-3 right-3 px-2.5 py-1 bg-[#111217]/90 border border-[#1F222B] rounded-full text-xs text-[#B8BDC7] backdrop-blur-sm">
@@ -1179,7 +1320,16 @@ function ProjectsManagement() {
       </div>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editingProject} onOpenChange={(open) => { if (!open) { setEditingProject(null); setImages([]); } }}>
+      <Dialog 
+        open={!!editingProject} 
+        onOpenChange={(open) => { 
+          if (!open) { 
+            setEditingProject(null); 
+            setImages([]); 
+            clearAdminDraft('projects');
+          } 
+        }}
+      >
         <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Projeto</DialogTitle>
@@ -1217,9 +1367,9 @@ function ProjectsManagement() {
                   <div className="flex gap-2 mt-2 flex-wrap">
                     {(editingProject.images || []).map((url, i) => (
                       <div key={i} className="relative group">
-                        <img src={url} alt="" className="w-16 h-16 object-cover rounded-lg" />
+                        <SafeImage src={url} alt="" fit="cover" containerClassName="w-16 h-16 rounded-lg" allowEnlarge={true} />
                         <button type="button" onClick={() => setEditingProject(prev => ({ ...prev, images: prev.images.filter((_, idx) => idx !== i) }))}
-                          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs hidden group-hover:flex items-center justify-center">×</button>
+                          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs hidden group-hover:flex items-center justify-center z-20">×</button>
                       </div>
                     ))}
                   </div>
@@ -1230,7 +1380,18 @@ function ProjectsManagement() {
                 <Input value={editingProject.link || ''} onChange={(e) => setEditingProject({ ...editingProject, link: e.target.value })} placeholder="https://..." className="bg-[#0B0B0D] border-[#1F222B] text-white" />
               </div>
               <div className="flex gap-3">
-                <Button type="button" variant="outline" onClick={() => { setEditingProject(null); setImages([]); }} className="flex-1 border-[#1F222B]">Cancelar</Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => { 
+                    setEditingProject(null); 
+                    setImages([]); 
+                    clearAdminDraft('projects');
+                  }} 
+                  className="flex-1 border-[#1F222B]"
+                >
+                  Cancelar
+                </Button>
                 <Button type="submit" className="flex-1 bg-[#E10600] hover:bg-[#E10600]/90" disabled={updateProject.isPending}>
                   {updateProject.isPending ? 'Salvando...' : 'Salvar'}
                 </Button>
@@ -1240,7 +1401,17 @@ function ProjectsManagement() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showForm} onOpenChange={setShowForm}>
+      <Dialog 
+        open={showForm} 
+        onOpenChange={(o) => {
+          setShowForm(o);
+          if (!o) {
+            setForm({ title: '', description: '', date_period: '', tags: [], link: '', status: 'active' });
+            setImages([]);
+            clearAdminDraft('projects');
+          }
+        }}
+      >
         <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Projeto</DialogTitle>
@@ -1284,7 +1455,7 @@ function ProjectsManagement() {
               {images.length > 0 && (
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {images.map((url, i) => (
-                    <img key={i} src={url} alt="" className="w-16 h-16 object-cover rounded-lg" />
+                    <SafeImage key={i} src={url} alt="" fit="cover" containerClassName="w-16 h-16 rounded-lg" allowEnlarge={true} />
                   ))}
                 </div>
               )}
@@ -1434,18 +1605,41 @@ function SeasonCloseManagement() {
 
 function ProductsManagement() {
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [form, setForm] = useState({ 
-    name: '', 
-    description: '', 
-    price: 0, 
-    category: 'Camisetas', 
-    image_url: '', 
-    available: true 
-  });
+
+  // Recupera rascunho salvo no sessionStorage se a página for recarregada ou aba alternada
+  const savedDraft = loadAdminDraft('products');
+  const [showForm, setShowForm] = useState(Boolean(savedDraft?.isOpen));
+  const [editingProduct, setEditingProduct] = useState(
+    savedDraft?.mode === 'edit' && savedDraft?.recordId
+      ? { id: savedDraft.recordId, ...(savedDraft.data || {}) }
+      : null
+  );
+  const [form, setForm] = useState(
+    savedDraft?.data || { 
+      name: '', 
+      description: '', 
+      price: 0, 
+      category: 'Camisetas', 
+      image_url: '', 
+      available: true 
+    }
+  );
 
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Sincroniza rascunho da sessão sempre que os dados do formulário mudarem
+  useEffect(() => {
+    if (showForm) {
+      saveAdminDraft('products', {
+        isOpen: true,
+        mode: editingProduct ? 'edit' : 'create',
+        recordId: editingProduct?.id || null,
+        data: form
+      });
+    } else {
+      clearAdminDraft('products');
+    }
+  }, [showForm, editingProduct, form]);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['admin-products'],
@@ -1471,27 +1665,30 @@ function ProductsManagement() {
   };
 
   const openEdit = (product) => {
-    setEditingProduct(product);
-    setForm({
+    const editData = {
       name: product.name || '',
       description: product.description || '',
       price: product.price !== undefined ? product.price : 0,
       category: product.category || 'Camisetas',
       image_url: product.image_url || '',
       available: product.available !== undefined ? Boolean(product.available) : (product.in_stock !== undefined ? Boolean(product.in_stock) : true)
-    });
+    };
+    setEditingProduct(product);
+    setForm(editData);
     setShowForm(true);
   };
 
   const closeForm = () => {
     setShowForm(false);
     resetForm();
+    clearAdminDraft('products');
   };
 
   const createProduct = useMutation({
     mutationFn: (data) => base44.entities.Product.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      clearAdminDraft('products');
       closeForm();
       toast.success('Produto adicionado com sucesso!');
     },
@@ -1505,6 +1702,7 @@ function ProductsManagement() {
     mutationFn: ({ id, data }) => base44.entities.Product.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      clearAdminDraft('products');
       closeForm();
       toast.success('Produto atualizado com sucesso!');
     },
@@ -1635,24 +1833,22 @@ function ProductsManagement() {
 
             return (
               <div key={product.id} className="bg-[#111217] border border-[#1F222B] rounded-xl overflow-hidden flex flex-col justify-between hover:border-[#1F222B]/80 transition-all">
-                <div className="relative">
-                  {product.image_url ? (
-                    <img 
-                      src={product.image_url} 
-                      alt={product.name} 
-                      className="w-full h-36 object-cover bg-[#0B0B0D]" 
-                    />
-                  ) : (
-                    <div className="w-full h-36 bg-[#0B0B0D] flex items-center justify-center">
-                      <Package className="w-10 h-10 text-[#1F222B]" />
-                    </div>
-                  )}
-                  <div className="absolute top-2 left-2 flex gap-1">
+                <div className="relative w-full h-40 bg-[#0B0B0D]">
+                  <SafeImage 
+                    src={product.image_url} 
+                    alt={product.name} 
+                    fit="contain"
+                    allowEnlarge={true}
+                    enlargeTitle="Clique para abrir a imagem do produto em nova guia"
+                    containerClassName="w-full h-40 p-2"
+                    fallbackIcon={<Package className="w-10 h-10 text-[#1F222B]" />}
+                  />
+                  <div className="absolute top-2 left-2 flex gap-1 pointer-events-none">
                     <Badge className="bg-[#111217]/90 backdrop-blur-sm border-[#1F222B] text-xs">
                       {product.category}
                     </Badge>
                   </div>
-                  <div className="absolute top-2 right-2 flex gap-1">
+                  <div className="absolute top-2 right-2 flex gap-1 pointer-events-none">
                     {hasDriveImg && (
                       <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 backdrop-blur-sm" title="Imagem armazenada no Google Drive institucional">
                         <HardDrive className="w-3 h-3" />
@@ -1807,11 +2003,16 @@ function ProductsManagement() {
               {form.image_url ? (
                 <div className="p-3 bg-[#0B0B0D] border border-[#1F222B] rounded-lg space-y-3">
                   <div className="flex items-center gap-3">
-                    <img 
-                      src={form.image_url} 
-                      alt="Pré-visualização" 
-                      className="w-16 h-16 object-cover rounded-md border border-[#1F222B] bg-[#111217]"
-                    />
+                    <div className="w-16 h-16 shrink-0 relative rounded-md overflow-hidden border border-[#1F222B] bg-[#111217]">
+                      <SafeImage 
+                        src={form.image_url} 
+                        alt="Pré-visualização" 
+                        fit="contain"
+                        allowEnlarge={true}
+                        enlargeTitle="Abrir imagem em nova guia"
+                        containerClassName="w-full h-full p-1"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         {isDriveImage(form.image_url) ? (
@@ -1825,9 +2026,16 @@ function ProductsManagement() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-zinc-400 truncate" title={form.image_url}>
-                        {form.image_url}
-                      </p>
+                      <a 
+                        href={form.image_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs text-[#E10600] hover:underline flex items-center gap-1 truncate"
+                        title="Abrir imagem original em nova guia"
+                      >
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{form.image_url}</span>
+                      </a>
                     </div>
                     <Button 
                       type="button" 
@@ -1859,20 +2067,31 @@ function ProductsManagement() {
                   </div>
                 </div>
               ) : (
-                <div className="p-4 bg-[#0B0B0D] border border-dashed border-[#1F222B] rounded-lg text-center space-y-2 hover:border-zinc-600 transition-colors">
-                  <div className="w-10 h-10 rounded-full bg-[#111217] border border-[#1F222B] mx-auto flex items-center justify-center text-zinc-400">
-                    <ImageIcon className="w-5 h-5" />
+                <div className="border border-dashed border-[#1F222B] rounded-lg p-6 text-center bg-[#0B0B0D] hover:border-zinc-500 transition-colors">
+                  <div className="w-12 h-12 rounded-full bg-[#111217] border border-[#1F222B] flex items-center justify-center mx-auto mb-3">
+                    <ImageIcon className="w-6 h-6 text-zinc-400" />
                   </div>
-                  <div>
-                    <Label htmlFor="product-img-input" className="cursor-pointer text-sm font-medium text-white hover:text-[#E10600] transition-colors">
-                      Clique para selecionar uma imagem do computador
-                    </Label>
-                    <p className="text-xs text-zinc-500 mt-1">
-                      JPG, PNG, WebP, GIF ou SVG (máx. 15MB). Salva diretamente no Google Drive institucional.
-                    </p>
-                  </div>
+                  <p className="text-sm font-medium text-white mb-1">Upload para Google Drive institucional</p>
+                  <p className="text-xs text-[#B8BDC7] mb-3">Selecione uma imagem (PNG, JPG, WebP, GIF, SVG - até 15MB)</p>
+                  
+                  <Label 
+                    htmlFor="product-img-upload" 
+                    className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#111217] border border-[#1F222B] text-white hover:bg-zinc-800 text-sm font-medium transition-colors ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    {uploadingImage ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-[#E10600]" />
+                        Enviando ao Drive...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 text-[#E10600]" />
+                        Selecionar Imagem do Computador
+                      </>
+                    )}
+                  </Label>
                   <input 
-                    id="product-img-input" 
+                    id="product-img-upload" 
                     type="file" 
                     accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" 
                     onChange={handleImageUpload} 
@@ -1881,41 +2100,33 @@ function ProductsManagement() {
                   />
                 </div>
               )}
-
-              {uploadingImage && (
-                <div className="flex items-center gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-md text-xs text-emerald-400">
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>Enviando imagem para o Google Drive institucional (02. Produtos)... Aguarde.</span>
-                </div>
-              )}
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#1F222B]">
+            {/* Botões do Formulário */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#1F222B]">
               <Button 
                 type="button" 
-                variant="ghost" 
+                variant="outline" 
                 onClick={closeForm}
-                disabled={createProduct.isPending || updateProduct.isPending || uploadingImage}
-                className="text-zinc-400 hover:text-white"
+                disabled={uploadingImage || createProduct.isPending || updateProduct.isPending}
+                className="border-[#1F222B] text-[#B8BDC7] hover:text-white"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
-                disabled={createProduct.isPending || updateProduct.isPending || uploadingImage} 
-                className="bg-[#E10600] hover:bg-[#E10600]/90 text-white font-medium"
+                disabled={uploadingImage || createProduct.isPending || updateProduct.isPending}
+                className="bg-[#E10600] hover:bg-[#E10600]/90 text-white font-medium min-w-[120px]"
               >
-                {createProduct.isPending || updateProduct.isPending ? (
+                {(createProduct.isPending || updateProduct.isPending) ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Salvando...
                   </>
-                ) : uploadingImage ? (
-                  'Aguardando upload...'
                 ) : editingProduct ? (
                   'Salvar Alterações'
                 ) : (
-                  'Adicionar Produto'
+                  'Cadastrar Produto'
                 )}
               </Button>
             </div>
