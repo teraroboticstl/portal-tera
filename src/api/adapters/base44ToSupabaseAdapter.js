@@ -30,8 +30,8 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       const createdYear = item.created_at ? new Date(item.created_at).getFullYear() : null;
       const imagesArray = Array.isArray(item.images) ? item.images : [];
 
-      mapped.year = item.year || seasonYear || createdYear || new Date().getFullYear();
-      mapped.season_name = item.season_name || item.seasons?.theme || (seasonYear ? `Temporada ${seasonYear}` : '');
+      mapped.year = item.year || seasonYear || (item.specs && item.specs.year) || createdYear || new Date().getFullYear();
+      mapped.season_name = item.season_name || item.seasons?.theme || (item.specs && item.specs.season_name) || (seasonYear ? `Temporada ${seasonYear}` : '');
       mapped.cad_url = item.cad_url || item.cad_link || '';
       mapped.image_url = item.image_url || imagesArray[0] || '';
       mapped.extra_images = item.extra_images || (imagesArray.length > 1 ? imagesArray.slice(1) : []);
@@ -253,12 +253,13 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         if (sanitized.image_url && (!sanitized.images || sanitized.images.length === 0)) {
           sanitized.images = [sanitized.image_url, ...(sanitized.extra_images || [])].filter(Boolean);
         }
-        if (sanitized.game_objective) {
-          sanitized.specs = {
-            ...(typeof sanitized.specs === 'object' && sanitized.specs !== null ? sanitized.specs : {}),
-            game_objective: sanitized.game_objective
-          };
-        }
+        const existingSpecs = (typeof sanitized.specs === 'object' && sanitized.specs !== null) ? sanitized.specs : {};
+        sanitized.specs = {
+          ...existingSpecs,
+          ...(sanitized.game_objective !== undefined ? { game_objective: sanitized.game_objective } : {}),
+          ...(sanitized.year !== undefined ? { year: sanitized.year } : {}),
+          ...(sanitized.season_name !== undefined ? { season_name: sanitized.season_name } : {})
+        };
         delete sanitized.year;
         delete sanitized.season_name;
         delete sanitized.cad_url;
@@ -427,12 +428,13 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         if (sanitized.image_url !== undefined && (!sanitized.images || sanitized.images.length === 0)) {
           sanitized.images = [sanitized.image_url, ...(sanitized.extra_images || [])].filter(Boolean);
         }
-        if (sanitized.game_objective !== undefined) {
-          sanitized.specs = {
-            ...(typeof sanitized.specs === 'object' && sanitized.specs !== null ? sanitized.specs : {}),
-            game_objective: sanitized.game_objective
-          };
-        }
+        const existingSpecs = (typeof sanitized.specs === 'object' && sanitized.specs !== null) ? sanitized.specs : {};
+        sanitized.specs = {
+          ...existingSpecs,
+          ...(sanitized.game_objective !== undefined ? { game_objective: sanitized.game_objective } : {}),
+          ...(sanitized.year !== undefined ? { year: sanitized.year } : {}),
+          ...(sanitized.season_name !== undefined ? { season_name: sanitized.season_name } : {})
+        };
         delete sanitized.year;
         delete sanitized.season_name;
         delete sanitized.cad_url;
@@ -444,7 +446,13 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       }
 
       if (actualTableName === 'seasons') {
-        const extraFields = {};
+        let existingDescription = {};
+        if (sanitized.description && typeof sanitized.description === 'string' && sanitized.description.startsWith('{')) {
+          try {
+            existingDescription = JSON.parse(sanitized.description);
+          } catch (e) {}
+        }
+        const extraFields = { ...existingDescription };
         if (sanitized.game_name !== undefined) extraFields.game_name = sanitized.game_name;
         if (sanitized.kickoff_date !== undefined) extraFields.kickoff_date = sanitized.kickoff_date;
         if (sanitized.competition_date !== undefined) extraFields.competition_date = sanitized.competition_date;
@@ -457,9 +465,19 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         if (sanitized.endgame_options !== undefined) extraFields.endgame_options = sanitized.endgame_options;
         if (sanitized.team_objectives !== undefined) extraFields.team_objectives = sanitized.team_objectives;
 
-        if (Object.keys(extraFields).length > 0 || (sanitized.description && !sanitized.description.startsWith('{'))) {
-          extraFields.custom_description = (sanitized.description && !sanitized.description.startsWith('{')) ? sanitized.description : '';
-          sanitized.description = JSON.stringify(extraFields);
+        if (sanitized.custom_description !== undefined) {
+          extraFields.custom_description = sanitized.custom_description;
+        } else if (sanitized.description && !sanitized.description.startsWith('{')) {
+          extraFields.custom_description = sanitized.description;
+        }
+
+        sanitized.description = JSON.stringify(extraFields);
+
+        if (sanitized.season_name && !sanitized.theme) {
+          sanitized.theme = sanitized.season_name;
+        }
+        if (sanitized.year !== undefined) {
+          sanitized.year = parseInt(sanitized.year, 10) || new Date().getFullYear();
         }
 
         delete sanitized.is_active;
@@ -475,6 +493,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         delete sanitized.scoring_zones;
         delete sanitized.endgame_options;
         delete sanitized.team_objectives;
+        delete sanitized.custom_description;
       }
 
       if (actualTableName === 'products') {
