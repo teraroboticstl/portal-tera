@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { verifyMediaAccess, isFileReferencedInDb } from '../api/lib/mediaSecurity.js';
 import fs from 'node:fs';
+import ts from 'typescript';
+import { transformWithEsbuild } from 'vite';
 
 test('1. Segurança de Mídia: IDs externos ao acervo institucional são rejeitados com 403', async () => {
   const fakeDrive = {
@@ -569,3 +571,106 @@ test('19. Regressão Código Fonte: isFileReferencedInDb não possui catch retor
   assert.equal(catchBody.includes('isReferenced: false'), false, 'O bloco catch NUNCA deve retornar isReferenced: false');
   assert.match(catchBody, /conclusive:\s*false/, 'O bloco catch deve retornar conclusive: false');
 });
+
+test('20. Regressão Frontend Admin: Todos os hooks React (useRef, useState, etc.) utilizados em componentes administrativos estão explicitamente importados', () => {
+  const criticalComponents = [
+    'RobotsManagement.jsx',
+    'ProjectsManagement.jsx',
+    'ProductsManagement.jsx',
+    'SponsorsManagement.jsx',
+    'TournamentSettings.jsx',
+    'UsersManagement.jsx',
+    'SeasonCloseManagement.jsx',
+    'GoogleDriveTestManagement.jsx'
+  ];
+
+  const reactHookNames = new Set([
+    'useRef', 'useState', 'useEffect', 'useMemo', 'useCallback',
+    'useContext', 'useReducer', 'useId', 'useLayoutEffect', 'useImperativeHandle'
+  ]);
+
+  for (const compFile of criticalComponents) {
+    const filePath = `src/components/admin/${compFile}`;
+    const code = fs.readFileSync(filePath, 'utf-8');
+    const sf = ts.createSourceFile(filePath, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.JSX);
+
+    const reactImports = new Set();
+    const hookCalls = new Set();
+
+    function visit(node) {
+      if (ts.isImportDeclaration(node)) {
+        const moduleSpecifier = node.moduleSpecifier.text;
+        if (moduleSpecifier === 'react') {
+          const importClause = node.importClause;
+          if (importClause) {
+            if (importClause.name) {
+              reactImports.add(importClause.name.text);
+            }
+            if (importClause.namedBindings && ts.isNamedImports(importClause.namedBindings)) {
+              for (const el of importClause.namedBindings.elements) {
+                reactImports.add(el.name.text);
+              }
+            }
+          }
+        }
+      }
+
+      if (ts.isCallExpression(node)) {
+        if (ts.isIdentifier(node.expression)) {
+          const name = node.expression.text;
+          if (reactHookNames.has(name)) {
+            hookCalls.add(name);
+          }
+        }
+      }
+
+      ts.forEachChild(node, visit);
+    }
+
+    visit(sf);
+
+    // Garante que nenhum hook do React seja chamado sem import explícito
+    for (const hook of hookCalls) {
+      assert.ok(
+        reactImports.has(hook),
+        `Em ${filePath}: o hook '${hook}' é chamado no código mas NÃO está importado de 'react'! Isso causaria ReferenceError em runtime.`
+      );
+    }
+
+    // Validações específicas para os formulários com rastreamento de upload temporário
+    if (['RobotsManagement.jsx', 'ProjectsManagement.jsx', 'ProductsManagement.jsx', 'SponsorsManagement.jsx'].includes(compFile)) {
+      assert.ok(
+        reactImports.has('useRef'),
+        `Em ${filePath}: useRef deve estar obrigatoriamente importado para tempUploadedFileIds`
+      );
+      assert.ok(
+        code.includes('tempUploadedFileIds = useRef(new Set())'),
+        `Em ${filePath}: o rastreamento tempUploadedFileIds = useRef(new Set()) deve ser preservado`
+      );
+    }
+  }
+});
+
+test('21. Regressão Frontend Admin: Componentes administrativos críticos compilam perfeitamente sem falhas de sintaxe JSX', async () => {
+  const criticalComponents = [
+    'RobotsManagement.jsx',
+    'ProjectsManagement.jsx',
+    'ProductsManagement.jsx',
+    'SponsorsManagement.jsx'
+  ];
+
+  for (const compFile of criticalComponents) {
+    const filePath = `src/components/admin/${compFile}`;
+    const code = fs.readFileSync(filePath, 'utf-8');
+
+    // Transforma JSX via Vite/esbuild exatamente como no pipeline de build
+    const result = await transformWithEsbuild(code, compFile, {
+      loader: 'jsx',
+      jsx: 'transform'
+    });
+
+    assert.ok(result && result.code, `Falha na compilação esbuild de ${filePath}`);
+    assert.ok(result.code.length > 1000, `Código compilado de ${filePath} inesperadamente vazio`);
+  }
+});
+
