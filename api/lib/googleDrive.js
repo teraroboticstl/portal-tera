@@ -160,7 +160,9 @@ export async function uploadBufferToDrive({
   fileName,
   mimeType,
   folderId,
-  isPublic = true
+  context = 'test',
+  isPublic = false,
+  uploaderId = null
 }) {
   const stream = new Readable();
   stream.push(buffer);
@@ -168,7 +170,19 @@ export async function uploadBufferToDrive({
 
   const fileMetadata = {
     name: fileName,
-    parents: [folderId]
+    parents: [folderId],
+    description: `portal_tera:${context}:${isPublic ? 'public' : 'private'}`,
+    appProperties: {
+      app: 'portal_tera',
+      context: context,
+      visibility: isPublic ? 'public' : 'private',
+      uploaderId: uploaderId || 'unknown'
+    },
+    properties: {
+      app: 'portal_tera',
+      context: context,
+      visibility: isPublic ? 'public' : 'private'
+    }
   };
 
   const media = {
@@ -179,7 +193,7 @@ export async function uploadBufferToDrive({
   const uploadRes = await drive.files.create({
     requestBody: fileMetadata,
     media: media,
-    fields: 'id, name, mimeType, size, webViewLink, webContentLink, parents'
+    fields: 'id, name, mimeType, size, webViewLink, webContentLink, parents, appProperties, properties, description'
   });
 
   const file = uploadRes.data;

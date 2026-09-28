@@ -18,12 +18,16 @@ const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com
  * @param {string} authHeader - Cabeçalho "Bearer <token>"
  * @returns {Promise<{ user: object, profile: object }>}
  */
-export async function validateUserAuth(authHeader) {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new Error('Cabeçalho de autorização ausente ou malformatado (esperado: "Bearer <token>").');
+export async function validateUserAuth(authHeaderOrToken) {
+  if (!authHeaderOrToken || typeof authHeaderOrToken !== 'string') {
+    throw new Error('Cabeçalho de autorização ausente ou malformatado.');
   }
 
-  const token = authHeader.split(' ')[1]?.trim();
+  let token = authHeaderOrToken.trim();
+  if (token.startsWith('Bearer ')) {
+    token = token.substring(7).trim();
+  }
+
   if (!token) {
     throw new Error('Token JWT ausente na requisição.');
   }

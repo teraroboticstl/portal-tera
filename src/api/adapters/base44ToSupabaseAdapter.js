@@ -80,6 +80,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       mapped.link = item.website || item.link || '';
       mapped.website = mapped.link;
     } else if (['daily_logs', 'meeting_notes', 'priorities', 'prototype_tests'].includes(actualTableName)) {
+      mapped.program = item.program || item.category || 'Geral';
       const textToCheck = item.content || item.description || item.title || '';
       const tagMatch = textToCheck.match(/\[season_tag:([^\]]+)\]/);
       if (tagMatch) {
@@ -179,6 +180,11 @@ export const createEntityAdapter = (entityName, tableName = '') => {
           cleanFilters.website = cleanFilters.link;
           delete cleanFilters.link;
         }
+      }
+
+      if (['daily_logs', 'priorities', 'prototype_tests'].includes(actualTableName) && cleanFilters.program !== undefined) {
+        cleanFilters.category = cleanFilters.program;
+        delete cleanFilters.program;
       }
 
       // Aplicar filtros simples de igualdade

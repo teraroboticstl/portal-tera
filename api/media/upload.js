@@ -143,40 +143,76 @@ export default async function handler(req, res) {
     // 9. Sanitização do nome do arquivo
     const safeFileName = sanitizeFileName(file.filename);
 
-    // 10. Upload do buffer para o Google Drive institucional (conta teraroboticstl@gmail.com)
-    const uploadedFile = await uploadBufferToDrive({
-      drive,
-      buffer: file.buffer,
-      fileName: safeFileName,
-      mimeType: file.mimeType,
-      folderId: targetFolderId,
-      isPublic: true // Permissão de visualização pública para renderização web
-    });
+    // Contextos estritamente públicos para vitrine web
+    const PUBLIC_CONTEXTS = new Set([
+      'products',
+      'projects',
+      'robots',
+      'sponsors',
+      'featured-news',
+      'events',
+      'memorial',
+      'tir'
+    ]);
+    const isPublic = PUBLIC_CONTEXTS.has(context);
 
-    // 11. Resposta com metadados estruturados
-    const metadata = {
-      provider: 'google_drive',
-      fileId: uploadedFile.id,
-      name: uploadedFile.name,
-      mimeType: uploadedFile.mimeType,
-      size: file.size,
-      context: context,
-      folderId: targetFolderId,
-      webViewLink: uploadedFile.webViewLink || `https://drive.google.com/file/d/${uploadedFile.id}/view`,
-      directUrl: `/api/media/${uploadedFile.id}`,
-      downloadUrl: uploadedFile.webContentLink || `https://drive.google.com/uc?export=download&id=${uploadedFile.id}`,
-      uploaded_by: {
-        id: authenticatedUser.id,
-        email: authenticatedUser.email,
-        name: authenticatedUser.profile?.full_name || authenticatedUser.email
-      },
-      created_at: new Date().toISOString()
-    };
+    // 10. Upload do buffer para o Google Drive institucional com metadados e tags de segurança
+    let uploadedFile;
+    try {
+      uploadedFile = await uploadBufferToDrive({
+        drive,
+        buffer: file.buffer,
+        fileName: safeFileName,
+        mimeType: file.mimeType,
+        folderId: targetFolderId,
+        context,
+        isPublic,
+        uploaderId: authenticatedUser.id
+      });
+    } catch (uploadDriveErr) {
+      console.error('[API /api/media/upload] Erro no upload para o Google Drive:', uploadDriveErr);
+      return res.status(502).json({
+        error: 'Falha ao gravar arquivo no Google Drive',
+        message: uploadDriveErr.message
+      });
+    }
 
-    return res.status(200).json({
-      success: true,
-      data: metadata
-    });
+    // 11. Resposta com metadados estruturados (com salvaguarda contra arquivo órfão)
+    try {
+      const metadata = {
+        provider: 'google_drive',
+        fileId: uploadedFile.id,
+        name: uploadedFile.name,
+        mimeType: uploadedFile.mimeType,
+        size: file.size,
+        context: context,
+        is_public: isPublic,
+        folderId: targetFolderId,
+        webViewLink: uploadedFile.webViewLink || `https://drive.google.com/file/d/${uploadedFile.id}/view`,
+        directUrl: `/api/media/${uploadedFile.id}`,
+        downloadUrl: uploadedFile.webContentLink || `https://drive.google.com/uc?export=download&id=${uploadedFile.id}`,
+        uploaded_by: {
+          id: authenticatedUser.id,
+          email: authenticatedUser.email,
+          name: authenticatedUser.profile?.full_name || authenticatedUser.email
+        },
+        created_at: new Date().toISOString()
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: metadata
+      });
+    } catch (postUploadErr) {
+      // Se ocorrer falha após criação no Drive, limpar arquivo órfão para não poluir o armazenamento
+      console.warn(`[Upload Cleanup] Removendo arquivo órfão ${uploadedFile.id} do Google Drive após falha no pós-processamento...`);
+      try {
+        await drive.files.delete({ fileId: uploadedFile.id });
+      } catch (cleanErr) {
+        console.warn(`[Upload Cleanup] Falha ao excluir arquivo órfão ${uploadedFile.id}:`, cleanErr.message);
+      }
+      throw postUploadErr;
+    }
 
   } catch (error) {
     console.error('[API /api/media/upload] Erro inesperado:', error);

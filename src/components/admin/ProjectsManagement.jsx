@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { uploadToGoogleDrive } from '@/api/googleDriveClient';
+import { uploadToGoogleDrive, deleteFromGoogleDrive } from '@/api/googleDriveClient';
 import { 
   FolderOpen, Plus, Edit2, Trash2, HardDrive, 
   Upload, Loader2, AlertTriangle, 
@@ -39,10 +39,19 @@ export default function ProjectsManagement() {
     status: 'active'
   };
 
-  const [form, setForm] = useState(savedDraft?.data || emptyForm);
+  const [form, setForm] = useState(() => ({ ...emptyForm, ...(savedDraft?.data || {}) }));
   const [images, setImages] = useState(savedDraft?.images || []);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState(null);
+
+  // Lista explícita de IDs de arquivos temporários criados nesta sessão do formulário
+  const tempUploadedFileIds = useRef(new Set());
+
+  const extractFileId = (url) => {
+    if (!url || typeof url !== 'string' || !url.startsWith('/api/media/')) return null;
+    const id = url.replace('/api/media/', '').split('/')[0].split('?')[0];
+    return /^[a-zA-Z0-9_-]{10,100}$/.test(id) ? id : null;
+  };
 
   // Sincroniza rascunho de sessão
   useEffect(() => {
@@ -72,11 +81,13 @@ export default function ProjectsManagement() {
   };
 
   const openCreate = () => {
+    tempUploadedFileIds.current.clear();
     resetForm();
     setShowForm(true);
   };
 
   const openEdit = (project) => {
+    tempUploadedFileIds.current.clear();
     const editData = {
       title: project.title || '',
       description: project.description || '',
@@ -91,7 +102,44 @@ export default function ProjectsManagement() {
     setShowForm(true);
   };
 
-  const closeForm = () => {
+  /**
+   * Fluxo de cancelamento: exclui APENAS arquivos temporários desta sessão não vinculados
+   */
+  const handleCancel = () => {
+    tempUploadedFileIds.current.forEach(tempId => {
+      deleteFromGoogleDrive(tempId).catch(delErr =>
+        console.warn('[ProjectsManagement] Aviso ao limpar foto temporária não salva:', delErr.message)
+      );
+    });
+    tempUploadedFileIds.current.clear();
+
+    setShowForm(false);
+    resetForm();
+    clearAdminDraft('projects');
+  };
+
+  /**
+   * Fluxo de salvamento bem-sucedido: preserva fotos salvas no projeto
+   */
+  const handleSaveSuccess = (savedImagesArray = []) => {
+    // 1. Remove da lista de temporários todos os arquivos que foram salvos no projeto
+    const list = Array.isArray(savedImagesArray) ? savedImagesArray : [savedImagesArray];
+    list.forEach(imgUrl => {
+      const savedId = extractFileId(imgUrl);
+      if (savedId) {
+        tempUploadedFileIds.current.delete(savedId);
+      }
+    });
+
+    // 2. Limpa mídias que foram enviadas nesta sessão mas descartadas antes de salvar
+    tempUploadedFileIds.current.forEach(discardedId => {
+      deleteFromGoogleDrive(discardedId).catch(delErr =>
+        console.warn('[ProjectsManagement] Aviso ao limpar mídia descartada:', delErr.message)
+      );
+    });
+    tempUploadedFileIds.current.clear();
+
+    // 3. Apenas fecha o formulário e limpa o rascunho
     setShowForm(false);
     resetForm();
     clearAdminDraft('projects');
@@ -101,8 +149,7 @@ export default function ProjectsManagement() {
     mutationFn: (data) => base44.entities.Project.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-projects'] });
-      clearAdminDraft('projects');
-      closeForm();
+      handleSaveSuccess(images);
       toast.success('Projeto social criado com sucesso!');
     },
     onError: (err) => {
@@ -115,8 +162,7 @@ export default function ProjectsManagement() {
     mutationFn: ({ id, data }) => base44.entities.Project.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-projects'] });
-      clearAdminDraft('projects');
-      closeForm();
+      handleSaveSuccess(images);
       toast.success('Projeto atualizado com sucesso!');
     },
     onError: (err) => {
@@ -166,6 +212,11 @@ export default function ProjectsManagement() {
         throw new Error('Servidor não retornou o identificador direto da mídia.');
       }
 
+      const uploadedId = uploadResult.fileId || extractFileId(uploadResult.directUrl);
+      if (uploadedId) {
+        tempUploadedFileIds.current.add(uploadedId);
+      }
+
       setImages(prev => [...prev, uploadResult.directUrl]);
       toast.success('Foto salva no Google Drive com sucesso!', { id: toastId });
     } catch (err) {
@@ -179,7 +230,7 @@ export default function ProjectsManagement() {
 
   const handleRemoveImageByIndex = (indexToRemove) => {
     setImages(prev => prev.filter((_, idx) => idx !== indexToRemove));
-    toast.info('Imagem removida do projeto.');
+    toast.info('Imagem desvinculada do formulário. Salve as alterações para confirmar.');
   };
 
   const toggleTag = (tag) => {
@@ -368,7 +419,7 @@ export default function ProjectsManagement() {
       )}
 
       {/* Modal Unificado: Criar / Editar Projeto */}
-      <Dialog open={showForm} onOpenChange={(open) => { if (!open) closeForm(); }}>
+      <Dialog open={showForm} onOpenChange={(open) => { if (!open) handleCancel(); }}>
         <DialogContent className="bg-[#111217] border-[#1F222B] max-w-xl max-h-[90vh] overflow-y-auto text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">
@@ -532,7 +583,7 @@ export default function ProjectsManagement() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={closeForm}
+                onClick={handleCancel}
                 disabled={uploadingImage || createProject.isPending || updateProject.isPending}
                 className="border-[#1F222B] text-[#B8BDC7] hover:text-white"
               >

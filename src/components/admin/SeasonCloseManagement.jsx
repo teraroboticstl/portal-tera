@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { 
   Archive, AlertTriangle, 
-  Loader2, RefreshCw 
+  Loader2, RefreshCw, FileText, ShieldCheck
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,9 @@ export default function SeasonCloseManagement() {
   const [confirm, setConfirm] = useState(false);
   const [counting, setCounting] = useState(false);
   const [previewCounts, setPreviewCounts] = useState(null);
+  const [countError, setCountError] = useState(null);
+  const [atomicError, setAtomicError] = useState(null);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   const selectedPrograms = Object.entries(programs).filter(([, v]) => v).map(([k]) => k);
 
@@ -27,20 +30,44 @@ export default function SeasonCloseManagement() {
       return;
     }
     setCounting(true);
+    setCountError(null);
+    setAtomicError(null);
+
     try {
-      const [logs, priorities, prototypes, meetings] = await Promise.all([
-        base44.entities.DailyLog.list('-date', 1000).catch(() => []),
-        base44.entities.Priority.list('-created_date', 1000).catch(() => []),
-        base44.entities.PrototypeTest.list('-date', 1000).catch(() => []),
-        base44.entities.MeetingNote.list('-date', 1000).catch(() => []),
+      // Consultas de contagem exata no Supabase sem limite de 1.000 registros
+      // Critério lógico 100% idêntico à RPC PostgreSQL: (campo IS NULL OR campo NOT LIKE '%[season_tag:%')
+      const [resLogs, resPriorities, resPrototypes, resMeetings] = await Promise.all([
+        supabase
+          .from('daily_logs')
+          .select('id', { count: 'exact', head: true })
+          .in('category', selectedPrograms)
+          .or('content.is.null,content.not.ilike.%[season_tag:%'),
+        supabase
+          .from('priorities')
+          .select('id', { count: 'exact', head: true })
+          .in('category', selectedPrograms)
+          .or('title.is.null,title.not.ilike.%[season_tag:%'),
+        supabase
+          .from('prototype_tests')
+          .select('id', { count: 'exact', head: true })
+          .in('category', selectedPrograms)
+          .or('conclusion.is.null,conclusion.not.ilike.%[season_tag:%'),
+        supabase
+          .from('meeting_notes')
+          .select('id', { count: 'exact', head: true })
+          .in('program', selectedPrograms)
+          .or('content.is.null,content.not.ilike.%[season_tag:%')
       ]);
 
-      const toTag = (items) => items.filter(r => !r.season_tag && selectedPrograms.includes(r.program));
+      if (resLogs.error) throw new Error(`Falha ao auditar Daily Logs: ${resLogs.error.message}`);
+      if (resPriorities.error) throw new Error(`Falha ao auditar Prioridades: ${resPriorities.error.message}`);
+      if (resPrototypes.error) throw new Error(`Falha ao auditar Protótipos: ${resPrototypes.error.message}`);
+      if (resMeetings.error) throw new Error(`Falha ao auditar Atas: ${resMeetings.error.message}`);
 
-      const countLogs = toTag(logs).length;
-      const countPriorities = toTag(priorities).length;
-      const countPrototypes = toTag(prototypes).length;
-      const countMeetings = toTag(meetings).length;
+      const countLogs = resLogs.count ?? 0;
+      const countPriorities = resPriorities.count ?? 0;
+      const countPrototypes = resPrototypes.count ?? 0;
+      const countMeetings = resMeetings.count ?? 0;
 
       setPreviewCounts({
         logs: countLogs,
@@ -49,14 +76,22 @@ export default function SeasonCloseManagement() {
         meetings: countMeetings,
         total: countLogs + countPriorities + countPrototypes + countMeetings
       });
+      toast.success('Auditoria de contagem concluída com sucesso!');
     } catch (e) {
-      console.error('Erro ao verificar registros:', e);
-      toast.error('Erro ao calcular registros ativos.');
+      console.error('Erro na auditoria de contagem:', e);
+      setPreviewCounts(null);
+      setCountError(e.message || 'Erro ao auditar registros ativos.');
+      toast.error('Erro ao auditar registros: ' + (e.message || 'Falha de comunicação.'));
     } finally {
       setCounting(false);
     }
   };
 
+  /**
+   * Encerramento estritamente transacional e atômico via RPC PostgreSQL
+   * Qualquer falha aciona ROLLBACK imediato no banco, impedindo alterações parciais.
+   * Não executa fallback sequencial permissivo.
+   */
   const handleArchive = async () => {
     const trimmedTag = seasonTag.trim();
     if (!trimmedTag) {
@@ -69,34 +104,41 @@ export default function SeasonCloseManagement() {
       return;
     }
 
+    if (countError) {
+      toast.error('Não é possível arquivar enquanto houver erros na contagem de registros.');
+      return;
+    }
+
     setLoading(true);
-    const toastId = toast.loading(`Arquivando registros como "${trimmedTag}"...`);
+    setAtomicError(null);
+    const toastId = toast.loading(`Executando transação atômica da temporada "${trimmedTag}" no PostgreSQL...`);
 
     try {
-      // 1. Busca todos os registros ativos dos programas selecionados
-      const [allLogs, allPriorities, allPrototypes, allMeetings] = await Promise.all([
-        base44.entities.DailyLog.list('-date', 1000).catch(() => []),
-        base44.entities.Priority.list('-created_date', 1000).catch(() => []),
-        base44.entities.PrototypeTest.list('-date', 1000).catch(() => []),
-        base44.entities.MeetingNote.list('-date', 1000).catch(() => []),
-      ]);
+      // Chamada obrigatória da função transacional close_season_atomic
+      const { data: rpcData, error: rpcError } = await supabase.rpc('close_season_atomic', {
+        p_season_tag: trimmedTag,
+        p_programs: selectedPrograms
+      });
 
-      const toTag = (items) => items.filter(r => !r.season_tag && selectedPrograms.includes(r.program));
+      if (rpcError) {
+        const isFuncMissing = rpcError.code === 'PGRST202' || rpcError.message?.toLowerCase().includes('close_season_atomic');
+        if (isFuncMissing) {
+          throw new Error(
+            'A função transacional "close_season_atomic" não está instalada no Supabase. ' +
+            'O encerramento foi BLOQUEADO por segurança para impedir alterações parciais no banco de dados. ' +
+            'Para autorizar e instalar, execute a migração oficial "supabase/migrations/20260925_close_season_atomic.sql" no SQL Editor do Supabase.'
+          );
+        }
+        throw new Error(`Falha na transação atômica do PostgreSQL: ${rpcError.message}`);
+      }
 
-      const logsToTag = toTag(allLogs);
-      const prioritiesToTag = toTag(allPriorities);
-      const prototypesToTag = toTag(allPrototypes);
-      const meetingsToTag = toTag(allMeetings);
+      if (!rpcData || !rpcData.success) {
+        throw new Error('A transação atômica do PostgreSQL não confirmou o encerramento da temporada.');
+      }
 
-      // 2. Marcar registros com a tag da temporada
-      await Promise.all([
-        ...logsToTag.map(r => base44.entities.DailyLog.update(r.id, { season_tag: trimmedTag })),
-        ...prioritiesToTag.map(r => base44.entities.Priority.update(r.id, { season_tag: trimmedTag })),
-        ...prototypesToTag.map(r => base44.entities.PrototypeTest.update(r.id, { season_tag: trimmedTag })),
-        ...meetingsToTag.map(r => base44.entities.MeetingNote.update(r.id, { season_tag: trimmedTag })),
-      ]);
+      const totalArchived = rpcData.total_archived ?? 0;
 
-      // 3. Atualizar queries no cache
+      // Atualizar caches do React Query
       queryClient.invalidateQueries({ queryKey: ['daily-logs'] });
       queryClient.invalidateQueries({ queryKey: ['priorities'] });
       queryClient.invalidateQueries({ queryKey: ['prototype-tests'] });
@@ -106,15 +148,20 @@ export default function SeasonCloseManagement() {
       queryClient.invalidateQueries({ queryKey: ['archive-prototypes'] });
       queryClient.invalidateQueries({ queryKey: ['archive-meetings'] });
 
-      const total = logsToTag.length + prioritiesToTag.length + prototypesToTag.length + meetingsToTag.length;
-      toast.success(`Temporada "${trimmedTag}" arquivada com sucesso! (${total} registros catalogados)`, { id: toastId });
+      toast.success(
+        `Temporada "${trimmedTag}" arquivada com sucesso de forma 100% transacional! (${totalArchived} registros catalogados)`,
+        { id: toastId, duration: 6000 }
+      );
       
       setConfirm(false);
       setSeasonTag('');
       setPreviewCounts(null);
+      setCountError(null);
+      setAtomicError(null);
     } catch (e) {
-      console.error('Erro ao arquivar temporada:', e);
-      toast.error('Erro ao arquivar temporada: ' + (e.message || 'Tente novamente.'), { id: toastId });
+      console.error('[SeasonClose] Encerramento transacional interrompido:', e);
+      setAtomicError(e.message);
+      toast.error('Falha no encerramento: ' + (e.message || 'Tente novamente.'), { id: toastId, duration: 10000 });
     } finally {
       setLoading(false);
     }
@@ -123,21 +170,70 @@ export default function SeasonCloseManagement() {
   return (
     <div className="max-w-2xl space-y-6">
       <div className="bg-[#111217] border border-[#1F222B] rounded-2xl p-6 sm:p-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-[#E10600]/10 border border-[#E10600]/20 flex items-center justify-center text-[#E10600]">
-            <Archive className="w-5 h-5" />
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#E10600]/10 border border-[#E10600]/20 flex items-center justify-center text-[#E10600]">
+              <Archive className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">Encerrar e Arquivar Temporada</h2>
+              <p className="text-xs text-[#B8BDC7]">Transição atômica obrigatória e integridade transacional</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-white">Encerrar e Arquivar Temporada</h2>
-            <p className="text-xs text-[#B8BDC7]">Transição de ciclo anual e preservação de histórico</p>
-          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowInstructions(!showInstructions)}
+            className="text-xs border-[#1F222B] text-[#B8BDC7] hover:text-white"
+          >
+            <FileText className="w-3.5 h-3.5 mr-1" />
+            Instruções RPC
+          </Button>
         </div>
 
         <p className="text-[#B8BDC7] text-sm mb-6 leading-relaxed">
           Esta rotina administrativa agrupa e <strong className="text-white">arquiva</strong> todos os Logs Diários, Prioridades do Kanban, Testes de Protótipos e Atas de Reuniões ativos dos programas selecionados. 
           <br />
-          <span className="text-emerald-400 font-medium">Nenhum dado é apagado</span> — tudo fica permanentemente consultável no Arquivo Histórico de Temporadas.
+          <span className="text-emerald-400 font-medium">Operação atômica no PostgreSQL:</span> se houver qualquer erro durante o processamento, todas as alterações sofrem rollback automático, garantindo que nenhum registro seja modificado parcialmente.
         </p>
+
+        {showInstructions && (
+          <div className="mb-6 p-4 bg-[#0B0B0D] border border-blue-500/30 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-blue-400 flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4" />
+                Migração Oficial do Banco de Dados
+              </span>
+            </div>
+            <p className="text-xs text-[#B8BDC7] leading-relaxed">
+              O encerramento é obrigatoriamente transacional e requer a função PostgreSQL <code className="text-blue-300 font-mono">close_season_atomic</code>.
+            </p>
+            <div className="p-3 bg-[#111217] rounded-lg border border-[#1F222B] text-xs text-zinc-300 space-y-2">
+              <p className="font-semibold text-white">Como instalar no Supabase:</p>
+              <ol className="list-decimal list-inside space-y-1 text-zinc-400 text-[11px]">
+                <li>Abra o Supabase Dashboard e selecione o projeto do Portal Tera.</li>
+                <li>No menu lateral, acesse <strong>SQL Editor</strong> e crie uma nova query.</li>
+                <li>Execute o arquivo oficial da migração: <code className="text-white font-mono bg-[#0B0B0D] px-1.5 py-0.5 rounded">supabase/migrations/20260925_close_season_atomic.sql</code>.</li>
+                <li>Pronto! A função estará ativa e concedida para administradores autenticados.</li>
+              </ol>
+            </div>
+          </div>
+        )}
+
+        {atomicError && (
+          <div className="mb-6 p-4 bg-red-950/40 border border-red-800/60 rounded-xl flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-red-200 uppercase tracking-wide">
+                Encerramento Bloqueado por Segurança
+              </p>
+              <p className="text-xs text-red-300 leading-relaxed">
+                {atomicError}
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-5">
           {/* Identificador da Temporada */}
@@ -147,7 +243,10 @@ export default function SeasonCloseManagement() {
             </Label>
             <Input
               value={seasonTag}
-              onChange={e => setSeasonTag(e.target.value)}
+              onChange={e => {
+                setSeasonTag(e.target.value);
+                setAtomicError(null);
+              }}
               placeholder="Ex: FRC-REEFSCAPE-2025 ou FTC-DECODE-2024"
               className="bg-[#0B0B0D] border-[#1F222B] text-white font-mono text-sm"
             />
@@ -169,6 +268,8 @@ export default function SeasonCloseManagement() {
                   onClick={() => {
                     setPrograms(prev => ({ ...prev, [p]: !prev[p] }));
                     setPreviewCounts(null);
+                    setCountError(null);
+                    setAtomicError(null);
                   }}
                   className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
                     programs[p] 
@@ -186,7 +287,7 @@ export default function SeasonCloseManagement() {
           <div className="p-4 bg-[#0B0B0D] border border-[#1F222B] rounded-xl space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-[#B8BDC7] uppercase tracking-wider">
-                Auditoria de Registros Ativos
+                Auditoria de Registros Ativos (Exata e Ilimitada)
               </span>
               <Button
                 type="button"
@@ -199,7 +300,7 @@ export default function SeasonCloseManagement() {
                 {counting ? (
                   <>
                     <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                    Calculando...
+                    Auditando...
                   </>
                 ) : (
                   <>
@@ -209,6 +310,16 @@ export default function SeasonCloseManagement() {
                 )}
               </Button>
             </div>
+
+            {countError && (
+              <div className="p-3 bg-red-950/40 border border-red-800/50 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-red-300">Falha na verificação de contagem</p>
+                  <p className="text-xs text-red-400 mt-0.5">{countError}</p>
+                </div>
+              </div>
+            )}
 
             {previewCounts ? (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-1">
@@ -229,9 +340,9 @@ export default function SeasonCloseManagement() {
                   <p className="text-[10px] text-[#B8BDC7]">Atas</p>
                 </div>
               </div>
-            ) : (
+            ) : !countError && (
               <p className="text-xs text-zinc-500">
-                Clique em "Verificar contagem" para ver quantos registros serão catalogados.
+                Clique em "Verificar contagem" para ver exatamente quantos registros serão catalogados.
               </p>
             )}
           </div>
@@ -240,6 +351,7 @@ export default function SeasonCloseManagement() {
           {!confirm ? (
             <Button
               type="button"
+              disabled={Boolean(countError) || loading}
               onClick={() => {
                 if (!seasonTag.trim()) {
                   toast.error('Informe o nome/identificador da temporada antes de prosseguir.');
@@ -251,7 +363,7 @@ export default function SeasonCloseManagement() {
                 }
                 setConfirm(true);
               }}
-              className="w-full bg-[#E10600] hover:bg-[#E10600]/90 text-white font-bold py-3 rounded-xl transition-colors"
+              className="w-full bg-[#E10600] hover:bg-[#E10600]/90 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
             >
               Arquivar e Limpar Temporada Ativa
             </Button>
@@ -261,11 +373,11 @@ export default function SeasonCloseManagement() {
                 <AlertTriangle className="w-5 h-5 text-[#E10600] shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-semibold text-white">
-                    Confirmar arquivamento da temporada "{seasonTag.trim()}"?
+                    Confirmar arquivamento atômico da temporada "{seasonTag.trim()}"?
                   </p>
                   <p className="text-xs text-[#B8BDC7] mt-1 leading-relaxed">
                     Programas selecionados: <strong className="text-white">{selectedPrograms.join(', ')}</strong>.
-                    Os dados ativos serão etiquetados e transferidos para o acervo histórico. A área de trabalho começará limpa para a próxima temporada.
+                    A operação será executada de forma atômica no PostgreSQL. Se a função RPC não estiver instalada, o encerramento será bloqueado para proteção do histórico.
                   </p>
                 </div>
               </div>
@@ -289,10 +401,10 @@ export default function SeasonCloseManagement() {
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Arquivando...
+                      Executando Transação...
                     </>
                   ) : (
-                    'Sim, Arquivar Agora'
+                    'Sim, Arquivar Atômico'
                   )}
                 </Button>
               </div>

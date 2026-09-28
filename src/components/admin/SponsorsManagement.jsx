@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { uploadToGoogleDrive } from '@/api/googleDriveClient';
+import { uploadToGoogleDrive, deleteFromGoogleDrive } from '@/api/googleDriveClient';
 import { 
   Building2, Plus, Edit2, Trash2, HardDrive, 
   ExternalLink, Upload, ImageIcon, Loader2, 
@@ -36,9 +36,18 @@ export default function SponsorsManagement() {
     order: 0
   };
 
-  const [form, setForm] = useState(savedDraft?.data || emptyForm);
+  const [form, setForm] = useState(() => ({ ...emptyForm, ...(savedDraft?.data || {}) }));
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState(null);
+
+  // Lista explícita de IDs de arquivos temporários criados nesta sessão
+  const tempUploadedFileIds = useRef(new Set());
+
+  const extractFileId = (url) => {
+    if (!url || typeof url !== 'string' || !url.startsWith('/api/media/')) return null;
+    const id = url.replace('/api/media/', '').split('/')[0].split('?')[0];
+    return /^[a-zA-Z0-9_-]{10,100}$/.test(id) ? id : null;
+  };
 
   // Sincroniza rascunho de sessão
   useEffect(() => {
@@ -66,11 +75,13 @@ export default function SponsorsManagement() {
   };
 
   const openCreate = () => {
+    tempUploadedFileIds.current.clear();
     resetForm();
     setShowForm(true);
   };
 
   const openEdit = (sponsor) => {
+    tempUploadedFileIds.current.clear();
     const editData = {
       name: sponsor.name || '',
       category: sponsor.category || sponsor.tier || 'Gold',
@@ -83,7 +94,40 @@ export default function SponsorsManagement() {
     setShowForm(true);
   };
 
-  const closeForm = () => {
+  /**
+   * Fluxo de cancelamento: exclui APENAS arquivos temporários não vinculados
+   */
+  const handleCancel = () => {
+    tempUploadedFileIds.current.forEach(tempId => {
+      deleteFromGoogleDrive(tempId).catch(delErr =>
+        console.warn('[SponsorsManagement] Aviso ao limpar logo temporária:', delErr.message)
+      );
+    });
+    tempUploadedFileIds.current.clear();
+
+    setShowForm(false);
+    resetForm();
+    clearAdminDraft('sponsors');
+  };
+
+  /**
+   * Fluxo de salvamento bem-sucedido: preserva a logo salva no patrocinador
+   */
+  const handleSaveSuccess = (savedLogoUrl) => {
+    // 1. Remove da lista de temporários o arquivo que foi salvo
+    const savedId = extractFileId(savedLogoUrl);
+    if (savedId) {
+      tempUploadedFileIds.current.delete(savedId);
+    }
+
+    // 2. Limpa mídias que foram substituídas/descartadas nesta sessão
+    tempUploadedFileIds.current.forEach(discardedId => {
+      deleteFromGoogleDrive(discardedId).catch(delErr =>
+        console.warn('[SponsorsManagement] Aviso ao limpar mídia descartada:', delErr.message)
+      );
+    });
+    tempUploadedFileIds.current.clear();
+
     setShowForm(false);
     resetForm();
     clearAdminDraft('sponsors');
@@ -91,10 +135,9 @@ export default function SponsorsManagement() {
 
   const createSponsor = useMutation({
     mutationFn: (data) => base44.entities.Sponsor.create(data),
-    onSuccess: () => {
+    onSuccess: (savedData, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-sponsors'] });
-      clearAdminDraft('sponsors');
-      closeForm();
+      handleSaveSuccess(variables.logo_url || savedData?.logo_url);
       toast.success('Patrocinador adicionado com sucesso!');
     },
     onError: (err) => {
@@ -105,10 +148,9 @@ export default function SponsorsManagement() {
 
   const updateSponsor = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Sponsor.update(id, data),
-    onSuccess: () => {
+    onSuccess: (savedData, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-sponsors'] });
-      clearAdminDraft('sponsors');
-      closeForm();
+      handleSaveSuccess(variables.data?.logo_url || savedData?.logo_url);
       toast.success('Patrocinador atualizado com sucesso!');
     },
     onError: (err) => {
@@ -158,6 +200,11 @@ export default function SponsorsManagement() {
         throw new Error('Servidor não retornou o identificador direto da mídia.');
       }
 
+      const uploadedId = uploadResult.fileId || extractFileId(uploadResult.directUrl);
+      if (uploadedId) {
+        tempUploadedFileIds.current.add(uploadedId);
+      }
+
       setForm(prev => ({
         ...prev,
         logo_url: uploadResult.directUrl
@@ -175,7 +222,7 @@ export default function SponsorsManagement() {
 
   const handleRemoveLogo = () => {
     setForm(prev => ({ ...prev, logo_url: '' }));
-    toast.info('Logo removida do formulário.');
+    toast.info('Logo desvinculada do formulário. Salve para confirmar.');
   };
 
   const handleSubmit = (e) => {
@@ -337,7 +384,7 @@ export default function SponsorsManagement() {
       )}
 
       {/* Modal Unificado: Criar / Editar Patrocinador */}
-      <Dialog open={showForm} onOpenChange={(open) => { if (!open) closeForm(); }}>
+      <Dialog open={showForm} onOpenChange={(open) => { if (!open) handleCancel(); }}>
         <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg max-h-[90vh] overflow-y-auto text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">
@@ -521,7 +568,7 @@ export default function SponsorsManagement() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={closeForm}
+                onClick={handleCancel}
                 disabled={uploadingLogo || createSponsor.isPending || updateSponsor.isPending}
                 className="border-[#1F222B] text-[#B8BDC7] hover:text-white"
               >

@@ -43,7 +43,11 @@ export function devApiMiddleware(req, res, next) {
   }
 
   if (pathname.startsWith('/api/media/') && pathname !== '/api/media/upload') {
-    req.query = { id: pathname.replace('/api/media/', '').split('/')[0] };
+    const rawId = pathname.replace('/api/media/', '').split('/')[0];
+    req.query = {
+      ...Object.fromEntries(url.searchParams.entries()),
+      id: rawId
+    };
     return mediaStreamHandler(req, res);
   }
 

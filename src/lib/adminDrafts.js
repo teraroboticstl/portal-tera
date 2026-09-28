@@ -8,8 +8,8 @@ const DRAFT_PREFIX = 'portal_tera_admin_draft_';
 
 /**
  * Salva o rascunho de um formulário no sessionStorage
- * @param {string} entity - Identificador da entidade ('products', 'robots', 'projects', 'sponsors')
- * @param {object} draft - Objeto contendo { isOpen, mode: 'create'|'edit', recordId, data }
+ * @param {string} entity - Identificador da entidade ('products', 'robots', 'projects', 'sponsors', 'tournament')
+ * @param {object} draft - Objeto contendo { isOpen, mode: 'create'|'edit', recordId, seasonId, data, images }
  */
 export function saveAdminDraft(entity, draft) {
   if (typeof window === 'undefined' || !window.sessionStorage) return;
@@ -23,8 +23,9 @@ export function saveAdminDraft(entity, draft) {
     const payload = {
       isOpen: Boolean(draft.isOpen),
       mode: draft.mode === 'edit' ? 'edit' : 'create',
-      recordId: draft.recordId || null,
+      recordId: draft.recordId || draft.seasonId || null,
       data: draft.data || {},
+      images: Array.isArray(draft.images) ? draft.images : undefined,
       updatedAt: Date.now()
     };
 
@@ -55,7 +56,9 @@ export function loadAdminDraft(entity) {
       isOpen: Boolean(parsed.isOpen),
       mode: parsed.mode === 'edit' ? 'edit' : 'create',
       recordId: parsed.recordId || null,
-      data: parsed.data || {}
+      seasonId: parsed.recordId || null,
+      data: parsed.data || {},
+      images: Array.isArray(parsed.images) ? parsed.images : []
     };
   } catch (err) {
     console.warn(`[adminDrafts] Erro ao carregar rascunho de ${entity}:`, err);

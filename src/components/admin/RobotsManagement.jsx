@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { uploadToGoogleDrive } from '@/api/googleDriveClient';
+import { uploadToGoogleDrive, deleteFromGoogleDrive } from '@/api/googleDriveClient';
 import { 
   Bot, Plus, Edit2, Trash2, HardDrive, 
   ExternalLink, Upload, ImageIcon, Loader2, 
@@ -44,9 +44,18 @@ export default function RobotsManagement() {
     is_current: false
   };
 
-  const [form, setForm] = useState(savedDraft?.data || emptyForm);
+  const [form, setForm] = useState(() => ({ ...emptyForm, ...(savedDraft?.data || {}) }));
   const [uploadingImage, setUploadingImage] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState(null);
+
+  // Lista explícita de IDs de arquivos temporários criados nesta sessão do formulário
+  const tempUploadedFileIds = useRef(new Set());
+
+  const extractFileId = (url) => {
+    if (!url || typeof url !== 'string' || !url.startsWith('/api/media/')) return null;
+    const id = url.replace('/api/media/', '').split('/')[0].split('?')[0];
+    return /^[a-zA-Z0-9_-]{10,100}$/.test(id) ? id : null;
+  };
 
   // Sincroniza rascunho de sessão para evitar perdas acidentais
   useEffect(() => {
@@ -79,11 +88,13 @@ export default function RobotsManagement() {
   };
 
   const openCreate = () => {
+    tempUploadedFileIds.current.clear();
     resetForm();
     setShowForm(true);
   };
 
   const openEdit = (robot) => {
+    tempUploadedFileIds.current.clear();
     const editData = {
       name: robot.name || '',
       category: robot.category || 'FRC',
@@ -101,7 +112,41 @@ export default function RobotsManagement() {
     setShowForm(true);
   };
 
-  const closeForm = () => {
+  /**
+   * Fluxo de cancelamento: exclui APENAS arquivos temporários criados nesta sessão
+   */
+  const handleCancel = () => {
+    tempUploadedFileIds.current.forEach(tempId => {
+      deleteFromGoogleDrive(tempId).catch(delErr =>
+        console.warn('[RobotsManagement] Aviso ao limpar foto temporária não salva:', delErr.message)
+      );
+    });
+    tempUploadedFileIds.current.clear();
+
+    setShowForm(false);
+    resetForm();
+    clearAdminDraft('robots');
+  };
+
+  /**
+   * Fluxo de salvamento bem-sucedido: preserva a foto salva no robô
+   */
+  const handleSaveSuccess = (savedImageUrl) => {
+    // 1. Remove da lista de temporários o arquivo que foi efetivamente salvo no robô
+    const savedId = extractFileId(savedImageUrl);
+    if (savedId) {
+      tempUploadedFileIds.current.delete(savedId);
+    }
+
+    // 2. Limpa mídias que foram substituídas/descartadas nesta sessão
+    tempUploadedFileIds.current.forEach(discardedId => {
+      deleteFromGoogleDrive(discardedId).catch(delErr =>
+        console.warn('[RobotsManagement] Aviso ao limpar mídia descartada:', delErr.message)
+      );
+    });
+    tempUploadedFileIds.current.clear();
+
+    // 3. Apenas fecha o formulário e limpa o rascunho
     setShowForm(false);
     resetForm();
     clearAdminDraft('robots');
@@ -109,10 +154,9 @@ export default function RobotsManagement() {
 
   const createRobot = useMutation({
     mutationFn: (data) => base44.entities.Robot.create(data),
-    onSuccess: () => {
+    onSuccess: (savedData, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-robots'] });
-      clearAdminDraft('robots');
-      closeForm();
+      handleSaveSuccess(variables.image_url || savedData?.image_url);
       toast.success('Robô cadastrado com sucesso!');
     },
     onError: (err) => {
@@ -123,10 +167,9 @@ export default function RobotsManagement() {
 
   const updateRobot = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Robot.update(id, data),
-    onSuccess: () => {
+    onSuccess: (savedData, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-robots'] });
-      clearAdminDraft('robots');
-      closeForm();
+      handleSaveSuccess(variables.data?.image_url || savedData?.image_url);
       toast.success('Robô atualizado com sucesso!');
     },
     onError: (err) => {
@@ -176,6 +219,11 @@ export default function RobotsManagement() {
         throw new Error('Servidor não retornou o identificador direto da mídia.');
       }
 
+      const uploadedId = uploadResult.fileId || extractFileId(uploadResult.directUrl);
+      if (uploadedId) {
+        tempUploadedFileIds.current.add(uploadedId);
+      }
+
       setForm(prev => ({
         ...prev,
         image_url: uploadResult.directUrl
@@ -193,7 +241,7 @@ export default function RobotsManagement() {
 
   const handleRemoveImage = () => {
     setForm(prev => ({ ...prev, image_url: '' }));
-    toast.info('Foto removida do formulário. Salve as alterações para confirmar.');
+    toast.info('Foto desvinculada do formulário. Salve as alterações para confirmar.');
   };
 
   const handleSubmit = (e) => {
@@ -373,7 +421,7 @@ export default function RobotsManagement() {
       )}
 
       {/* Modal Unificado: Criar / Editar Robô */}
-      <Dialog open={showForm} onOpenChange={(open) => { if (!open) closeForm(); }}>
+      <Dialog open={showForm} onOpenChange={(open) => { if (!open) handleCancel(); }}>
         <DialogContent className="bg-[#111217] border-[#1F222B] max-w-xl max-h-[90vh] overflow-y-auto text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">
@@ -634,7 +682,7 @@ export default function RobotsManagement() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={closeForm}
+                onClick={handleCancel}
                 disabled={uploadingImage || createRobot.isPending || updateRobot.isPending}
                 className="border-[#1F222B] text-[#B8BDC7] hover:text-white"
               >

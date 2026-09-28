@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { uploadToGoogleDrive } from '@/api/googleDriveClient';
+import { uploadToGoogleDrive, deleteFromGoogleDrive } from '@/api/googleDriveClient';
 import { 
   Package, Plus, Edit2, Trash2, HardDrive, 
   Upload, ImageIcon, Loader2, AlertTriangle, 
@@ -40,9 +40,18 @@ export default function ProductsManagement() {
     available: true
   };
 
-  const [form, setForm] = useState(savedDraft?.data || emptyForm);
+  const [form, setForm] = useState(() => ({ ...emptyForm, ...(savedDraft?.data || {}) }));
   const [uploadingImage, setUploadingImage] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState(null);
+
+  // Lista explícita de IDs de arquivos temporários criados nesta sessão de formulário
+  const tempUploadedFileIds = useRef(new Set());
+
+  const extractFileId = (url) => {
+    if (!url || typeof url !== 'string' || !url.startsWith('/api/media/')) return null;
+    const id = url.replace('/api/media/', '').split('/')[0].split('?')[0];
+    return /^[a-zA-Z0-9_-]{10,100}$/.test(id) ? id : null;
+  };
 
   // Sincroniza rascunho de sessão
   useEffect(() => {
@@ -70,11 +79,13 @@ export default function ProductsManagement() {
   };
 
   const openCreate = () => {
+    tempUploadedFileIds.current.clear();
     resetForm();
     setShowForm(true);
   };
 
   const openEdit = (product) => {
+    tempUploadedFileIds.current.clear();
     const editData = {
       name: product.name || '',
       description: product.description || '',
@@ -88,7 +99,41 @@ export default function ProductsManagement() {
     setShowForm(true);
   };
 
-  const closeForm = () => {
+  /**
+   * Fluxo de cancelamento: exclui APENAS arquivos temporários comprovadamente não vinculados
+   */
+  const handleCancel = () => {
+    tempUploadedFileIds.current.forEach(tempId => {
+      deleteFromGoogleDrive(tempId).catch(delErr =>
+        console.warn('[ProductsManagement] Aviso ao limpar mídia temporária não salva:', delErr.message)
+      );
+    });
+    tempUploadedFileIds.current.clear();
+
+    setShowForm(false);
+    resetForm();
+    clearAdminDraft('products');
+  };
+
+  /**
+   * Fluxo de salvamento bem-sucedido: fecha o formulário sem excluir a imagem vinculada
+   */
+  const handleSaveSuccess = (savedImageUrl) => {
+    // 1. Remove da lista de temporários o arquivo que foi efetivamente salvo no produto
+    const savedId = extractFileId(savedImageUrl);
+    if (savedId) {
+      tempUploadedFileIds.current.delete(savedId);
+    }
+
+    // 2. Limpa apenas arquivos que foram substituídos/descartados durante a edição
+    tempUploadedFileIds.current.forEach(discardedId => {
+      deleteFromGoogleDrive(discardedId).catch(delErr =>
+        console.warn('[ProductsManagement] Aviso ao limpar mídia descartada:', delErr.message)
+      );
+    });
+    tempUploadedFileIds.current.clear();
+
+    // 3. Apenas fecha o formulário e limpa o rascunho
     setShowForm(false);
     resetForm();
     clearAdminDraft('products');
@@ -96,10 +141,9 @@ export default function ProductsManagement() {
 
   const createProduct = useMutation({
     mutationFn: (data) => base44.entities.Product.create(data),
-    onSuccess: () => {
+    onSuccess: (savedData, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      clearAdminDraft('products');
-      closeForm();
+      handleSaveSuccess(variables.image_url || savedData?.image_url);
       toast.success('Produto adicionado à TeraShop!');
     },
     onError: (err) => {
@@ -110,10 +154,9 @@ export default function ProductsManagement() {
 
   const updateProduct = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Product.update(id, data),
-    onSuccess: () => {
+    onSuccess: (savedData, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      clearAdminDraft('products');
-      closeForm();
+      handleSaveSuccess(variables.data?.image_url || savedData?.image_url);
       toast.success('Produto atualizado com sucesso!');
     },
     onError: (err) => {
@@ -163,6 +206,11 @@ export default function ProductsManagement() {
         throw new Error('Servidor não retornou o identificador direto da mídia.');
       }
 
+      const uploadedId = uploadResult.fileId || extractFileId(uploadResult.directUrl);
+      if (uploadedId) {
+        tempUploadedFileIds.current.add(uploadedId);
+      }
+
       setForm(prev => ({
         ...prev,
         image_url: uploadResult.directUrl
@@ -180,7 +228,7 @@ export default function ProductsManagement() {
 
   const handleRemoveImage = () => {
     setForm(prev => ({ ...prev, image_url: '' }));
-    toast.info('Imagem removida do produto.');
+    toast.info('Imagem desvinculada do formulário. Salve as alterações para confirmar.');
   };
 
   const handleSubmit = (e) => {
@@ -328,7 +376,7 @@ export default function ProductsManagement() {
       )}
 
       {/* Modal Unificado: Criar / Editar Produto */}
-      <Dialog open={showForm} onOpenChange={(open) => { if (!open) closeForm(); }}>
+      <Dialog open={showForm} onOpenChange={(open) => { if (!open) handleCancel(); }}>
         <DialogContent className="bg-[#111217] border-[#1F222B] max-w-xl max-h-[90vh] overflow-y-auto text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">
@@ -529,7 +577,7 @@ export default function ProductsManagement() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={closeForm}
+                onClick={handleCancel}
                 disabled={uploadingImage || createProduct.isPending || updateProduct.isPending}
                 className="border-[#1F222B] text-[#B8BDC7] hover:text-white"
               >

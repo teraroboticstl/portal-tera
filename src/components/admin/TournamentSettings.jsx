@@ -21,24 +21,27 @@ export default function TournamentSettings() {
   const savedDraft = loadAdminDraft('tournament');
 
   const [isEditing, setIsEditing] = useState(Boolean(savedDraft?.isOpen));
-  const [formData, setFormData] = useState(
-    savedDraft?.data || {
-      season_name: '',
-      year: new Date().getFullYear(),
-      game_name: '',
-      kickoff_date: '',
-      competition_date: '',
-      robot_name: '',
-      robot_weight: 0,
-      game_manual_a: '',
-      game_manual_b: '',
-      scoring_zones: '',
-      endgame_options: '',
-      team_objectives: '',
-      custom_description: '',
-      awards_targeted: []
-    }
-  );
+  const defaultFormData = {
+    season_name: '',
+    year: new Date().getFullYear(),
+    game_name: '',
+    kickoff_date: '',
+    competition_date: '',
+    robot_name: '',
+    robot_weight: 0,
+    game_manual_a: '',
+    game_manual_b: '',
+    scoring_zones: '',
+    endgame_options: '',
+    team_objectives: '',
+    custom_description: '',
+    awards_targeted: []
+  };
+
+  const [formData, setFormData] = useState(() => ({
+    ...defaultFormData,
+    ...(savedDraft?.data || {})
+  }));
   const [newAward, setNewAward] = useState('');
 
   const { data: seasons = [], isLoading } = useQuery({
