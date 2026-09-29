@@ -18,7 +18,9 @@ const KNOWN_PUBLIC_FOLDER_NAMES = new Set([
   '04. Torneios & Eventos',
   'Galeria de Eventos',
   'TIR',
-  'Robôs'
+  'Robôs',
+  'FLL BIOGLOW',
+  'Missões'
 ]);
 
 // Nomes de pastas reconhecidamente restritas/privadas do Portal Tera
@@ -66,7 +68,8 @@ export async function isFileReferencedInDb(fileId) {
       mediasRes,
       tirRes,
       robotsRes,
-      memorialsRes
+      memorialsRes,
+      fllMissionsRes
     ] = await Promise.all([
       supabaseServer.from('products').select('id', { head: true, count: 'exact' }).ilike('image_url', searchPattern),
       supabaseServer.from('projects').select('id', { head: true, count: 'exact' }).or(`image_url.ilike.${searchPattern},links->>extra_images.ilike.${searchPattern}`),
@@ -75,7 +78,8 @@ export async function isFileReferencedInDb(fileId) {
       supabaseServer.from('event_medias').select('id', { head: true, count: 'exact' }).ilike('media_url', searchPattern),
       supabaseServer.from('tir_fotos').select('id', { head: true, count: 'exact' }).ilike('url', searchPattern),
       supabaseServer.from('robots').select('id, images, specs'),
-      supabaseServer.from('tournament_memorials').select('id, images')
+      supabaseServer.from('tournament_memorials').select('id, images'),
+      supabaseServer.from('fll_missions').select('id', { head: true, count: 'exact' }).ilike('image_url', searchPattern)
     ]);
 
     // FAIL-CLOSED: Verificação explícita do result.error de cada consulta individual
@@ -87,7 +91,8 @@ export async function isFileReferencedInDb(fileId) {
       { name: 'mídias de eventos', res: mediasRes },
       { name: 'fotos TIR', res: tirRes },
       { name: 'robôs', res: robotsRes },
-      { name: 'memoriais de torneio', res: memorialsRes }
+      { name: 'memoriais de torneio', res: memorialsRes },
+      { name: 'missões FLL', res: fllMissionsRes }
     ];
 
     for (const check of queryChecks) {
@@ -109,6 +114,7 @@ export async function isFileReferencedInDb(fileId) {
     if (galleriesRes?.count && galleriesRes.count > 0) entities.push('galerias de eventos');
     if (mediasRes?.count && mediasRes.count > 0) entities.push('mídias de eventos');
     if (tirRes?.count && tirRes.count > 0) entities.push('fotos TIR');
+    if (fllMissionsRes?.count && fllMissionsRes.count > 0) entities.push('missões FLL');
 
     // Validação de array TEXT[] e JSONB em robôs
     const hasRobotRef = Array.isArray(robotsRes?.data) && robotsRes.data.some(r => {
@@ -181,7 +187,8 @@ export async function isFileInPublicRecords(fileId) {
       eventMedias,
       tir,
       robots,
-      memorials
+      memorials,
+      fllMissions
     ] = await Promise.all([
       supabaseServer.from('products').select('id', { head: true, count: 'exact' }).ilike('image_url', searchPattern),
       supabaseServer.from('projects').select('id', { head: true, count: 'exact' }).or(`image_url.ilike.${searchPattern},links->>extra_images.ilike.${searchPattern}`),
@@ -190,7 +197,8 @@ export async function isFileInPublicRecords(fileId) {
       supabaseServer.from('event_medias').select('id', { head: true, count: 'exact' }).eq('is_public', true).ilike('media_url', searchPattern),
       supabaseServer.from('tir_fotos').select('id', { head: true, count: 'exact' }).ilike('url', searchPattern),
       supabaseServer.from('robots').select('id, images, specs'),
-      supabaseServer.from('tournament_memorials').select('id, images')
+      supabaseServer.from('tournament_memorials').select('id, images'),
+      supabaseServer.from('fll_missions').select('id', { head: true, count: 'exact' }).ilike('image_url', searchPattern)
     ]);
 
     const hasRobotPublic = Array.isArray(robots?.data) && robots.data.some(r => {
@@ -210,6 +218,7 @@ export async function isFileInPublicRecords(fileId) {
       (galleries?.count && galleries.count > 0) ||
       (eventMedias?.count && eventMedias.count > 0) ||
       (tir?.count && tir.count > 0) ||
+      (fllMissions?.count && fllMissions.count > 0) ||
       hasRobotPublic ||
       hasMemorialPublic
     );

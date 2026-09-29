@@ -66,6 +66,8 @@ const AuthenticatedApp = () => {
       } />
       <Route path="/Home" element={<Navigate to="/" replace />} />
       <Route path="/Museum" element={<Navigate to="/Memoria" replace />} />
+      <Route path="/simulador-fll" element={<Navigate to="/SimuladorFLL" replace />} />
+      <Route path="/fll-bioglow" element={<Navigate to="/SimuladorFLL" replace />} />
       {Object.entries(Pages).map(([path, Page]) => (
         <Route
           key={path}

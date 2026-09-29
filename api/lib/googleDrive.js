@@ -99,6 +99,7 @@ export async function resolveTargetFolder(drive, context, extraMeta = {}) {
     'events': ['04. Torneios & Eventos', 'Galeria de Eventos'],
     'memorial': ['01. Institucional & Marketing', 'Memorial Histórico'],
     'tir': ['04. Torneios & Eventos', 'TIR'],
+    'fll-missions': ['04. Torneios & Eventos', 'FLL BIOGLOW', 'Missões'],
     'test': ['99. Testes do Sistema']
   };
 

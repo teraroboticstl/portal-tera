@@ -27,6 +27,7 @@ const ALLOWED_CONTEXTS = new Set([
   'tir',
   'seasons',
   'attachments',
+  'fll-missions',
   'test'
 ]);
 
@@ -152,7 +153,8 @@ export default async function handler(req, res) {
       'featured-news',
       'events',
       'memorial',
-      'tir'
+      'tir',
+      'fll-missions'
     ]);
     const isPublic = PUBLIC_CONTEXTS.has(context);
 

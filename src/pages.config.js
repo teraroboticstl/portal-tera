@@ -93,6 +93,7 @@ import InternalAuditLog from './pages/InternalAuditLog';
 import InternalRiskAnalysis from './pages/InternalRiskAnalysis';
 import InternalProjectsDashboard from './pages/InternalProjectsDashboard';
 import Memoria from './pages/Memoria.jsx';
+import SimuladorFLL from './pages/SimuladorFLL.jsx';
 import __Layout from './Layout.jsx';
 
 
@@ -143,6 +144,7 @@ export const PAGES = {
     "InternalRiskAnalysis": InternalRiskAnalysis,
     "InternalProjectsDashboard": InternalProjectsDashboard,
     "Memoria": Memoria,
+    "SimuladorFLL": SimuladorFLL,
 }
 
 export const pagesConfig = {

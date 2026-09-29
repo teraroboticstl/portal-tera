@@ -20,6 +20,8 @@ import ProjectsManagement from '@/components/admin/ProjectsManagement';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import SeasonCloseManagement from '@/components/admin/SeasonCloseManagement';
 import GoogleDriveTestManagement from '@/components/admin/GoogleDriveTestManagement';
+import FllMissionsManagement from '@/components/admin/FllMissionsManagement';
+import { Bot } from 'lucide-react';
 
 // E-mail dos admins seed (bootstrap admin) - sempre autorizados
 const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com'];
@@ -32,6 +34,7 @@ const VALID_ADMIN_TABS = [
   'sponsors',
   'projects',
   'products',
+  'fll_missions',
   'season_close',
   'google_drive'
 ];
@@ -185,6 +188,10 @@ export default function AdminPanel() {
                 <Package className="w-4 h-4 mr-1.5" />
                 Produtos
               </TabsTrigger>
+              <TabsTrigger value="fll_missions" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
+                <Bot className="w-4 h-4 mr-1.5" />
+                Missões FLL
+              </TabsTrigger>
               <TabsTrigger value="season_close" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
                 <Archive className="w-4 h-4 mr-1.5" />
                 Encerrar Temporada
@@ -213,6 +220,9 @@ export default function AdminPanel() {
           </TabsContent>
           <TabsContent value="products">
             <ProductsManagement />
+          </TabsContent>
+          <TabsContent value="fll_missions">
+            <FllMissionsManagement />
           </TabsContent>
           <TabsContent value="season_close">
             <SeasonCloseManagement />

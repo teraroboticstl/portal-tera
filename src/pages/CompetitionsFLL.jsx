@@ -61,10 +61,15 @@ export default function CompetitionsFLL() {
               se divertem e fazem a diferença no mundo.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link to={createPageUrl('Memoria')}>
-                <Button className="bg-yellow-500 hover:bg-yellow-600 text-black">
-                  Ver Projetos FLL
+              <Link to={createPageUrl('SimuladorFLL')}>
+                <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold">
+                  Simulador BIOGLOW 2026–2027
                   <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </Link>
+              <Link to={createPageUrl('Memoria')}>
+                <Button variant="outline" className="border-white/10 hover:bg-white/10 text-white">
+                  Ver Projetos FLL
                 </Button>
               </Link>
             </div>

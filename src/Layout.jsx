@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { useAuth } from '@/lib/AuthContext';
 import UserAvatar from '@/components/common/UserAvatar';
-import { Menu, X, ChevronDown, LogOut, Settings, LayoutDashboard, Calendar } from 'lucide-react';
+import { Menu, X, ChevronDown, ChevronRight, LogOut, Settings, LayoutDashboard, Calendar } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -37,7 +37,14 @@ const PUBLIC_NAV_ITEMS = [
     label: 'PROGRAMAS',
     children: [
       { label: 'Visão Geral', path: 'Competitions' },
-      { label: 'FIRST LEGO League (FLL)', path: 'CompetitionsFLL' },
+      {
+        label: 'FIRST LEGO League (FLL)',
+        path: 'CompetitionsFLL',
+        children: [
+          { label: 'Visão Geral FLL', path: 'CompetitionsFLL' },
+          { label: 'Simulador Bioglow', path: 'SimuladorFLL' },
+        ],
+      },
       { label: 'FIRST Tech Challenge (FTC)', path: 'CompetitionsFTC' },
       { label: 'FIRST Robotics Competition (FRC)', path: 'CompetitionsFRC' },
     ],
@@ -77,13 +84,146 @@ const PUBLIC_NAV_ITEMS = [
   },
 ];
 
+// Item do submenu desktop com suporte a flyout flutuante para filhos aninhados
+function NavSubDropdownItem({ sub, currentPageName, onCloseParent }) {
+  const [subOpen, setSubOpen] = useState(false);
+  const timeoutRef = useRef(null);
+  const containerRef = useRef(null);
+
+  const hasChildren = sub.children && sub.children.length > 0;
+  const isDirectActive = sub.path === currentPageName;
+  const isSubActive = isDirectActive || (hasChildren && sub.children.some(c => c.path === currentPageName));
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setSubOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setSubOpen(false);
+    }, 180);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  if (!hasChildren) {
+    return (
+      <Link
+        key={sub.path}
+        to={createPageUrl(sub.path)}
+        role="menuitem"
+        onClick={onCloseParent}
+        className={`w-full px-3.5 py-2 text-xs transition-colors flex items-center justify-between rounded-md cursor-pointer ${
+          isDirectActive
+            ? 'text-white bg-black font-bold shadow-sm'
+            : 'text-white hover:text-white hover:bg-black font-medium'
+        }`}
+      >
+        <span>{sub.label}</span>
+        {isDirectActive && (
+          <span className="w-1.5 h-1.5 rounded-full bg-white ml-2 flex-shrink-0" />
+        )}
+      </Link>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div
+        className={`w-full flex items-center justify-between rounded-md transition-colors cursor-pointer ${
+          isSubActive || subOpen
+            ? 'text-white bg-black font-bold shadow-sm'
+            : 'text-white hover:text-white hover:bg-black font-medium'
+        }`}
+      >
+        <Link
+          to={createPageUrl(sub.path)}
+          role="menuitem"
+          onClick={onCloseParent}
+          className="flex-1 px-3.5 py-2 text-xs flex items-center justify-between"
+        >
+          <span>{sub.label}</span>
+          {isDirectActive && (
+            <span className="w-1.5 h-1.5 rounded-full bg-white ml-2 flex-shrink-0" />
+          )}
+        </Link>
+        <button
+          type="button"
+          aria-expanded={subOpen}
+          aria-haspopup="true"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSubOpen((prev) => !prev);
+          }}
+          className="px-2 py-2 text-white/80 hover:text-white focus:outline-none"
+          title="Ver submenu"
+        >
+          <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-150 ${subOpen ? 'translate-x-0.5' : ''}`} />
+        </button>
+      </div>
+
+      {subOpen && (
+        <div
+          className="absolute left-full top-0 pl-1.5 z-50 animate-in fade-in-0 zoom-in-95 duration-150"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div
+            role="menu"
+            aria-orientation="vertical"
+            className="bg-[#E10600] border border-black/20 shadow-2xl rounded-lg py-1.5 px-1.5 min-w-[210px]"
+          >
+            {sub.children.map((child) => {
+              const isChildActive = child.path === currentPageName;
+              return (
+                <Link
+                  key={child.path}
+                  to={createPageUrl(child.path)}
+                  role="menuitem"
+                  onClick={onCloseParent}
+                  className={`w-full px-3.5 py-2 text-xs transition-colors flex items-center justify-between rounded-md cursor-pointer ${
+                    isChildActive
+                      ? 'text-white bg-black font-bold shadow-sm'
+                      : 'text-white hover:text-white hover:bg-black font-medium'
+                  }`}
+                >
+                  <span>{child.label}</span>
+                  {isChildActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-white ml-2 flex-shrink-0" />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Submenu dropdown para desktop com suporte contínuo a hover, clique e teclado
 function NavDropdown({ item, currentPageName }) {
   const [open, setOpen] = useState(false);
   const timeoutRef = useRef(null);
   const containerRef = useRef(null);
 
-  const isGroupActive = item.children.some(c => c.path === currentPageName);
+  const isGroupActive = item.children?.some(c =>
+    c.path === currentPageName || (c.children && c.children.some(sub => sub.path === currentPageName))
+  );
 
   const handleMouseEnter = () => {
     if (timeoutRef.current) {
@@ -185,28 +325,75 @@ function NavDropdown({ item, currentPageName }) {
             aria-orientation="vertical"
             className="bg-[#E10600] border border-black/20 shadow-2xl rounded-lg py-1.5 px-1.5 min-w-[220px]"
           >
-            {item.children.map((sub) => {
-              const isSubActive = sub.path === currentPageName;
-              return (
-                <Link
-                  key={sub.path}
-                  to={createPageUrl(sub.path)}
-                  role="menuitem"
-                  onClick={() => setOpen(false)}
-                  className={`w-full px-3.5 py-2 text-xs transition-colors flex items-center justify-between rounded-md cursor-pointer ${
-                    isSubActive
-                      ? 'text-white bg-black font-bold shadow-sm'
-                      : 'text-white hover:text-white hover:bg-black font-medium'
-                  }`}
-                >
-                  <span>{sub.label}</span>
-                  {isSubActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-white ml-2 flex-shrink-0" />
-                  )}
-                </Link>
-              );
-            })}
+            {item.children.map((sub) => (
+              <NavSubDropdownItem
+                key={sub.label}
+                sub={sub}
+                currentPageName={currentPageName}
+                onCloseParent={() => setOpen(false)}
+              />
+            ))}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Submenu expansível no mobile
+function MobileSubGroup({ child, currentPageName, onClose, initialExpanded = false }) {
+  const [nestedExpanded, setNestedExpanded] = useState(initialExpanded);
+  const isDirectActive = child.path === currentPageName;
+
+  return (
+    <div className="space-y-1">
+      <div className={`flex items-center justify-between py-1.5 px-2.5 rounded transition-colors ${
+        nestedExpanded ? 'bg-white/5' : ''
+      }`}>
+        <Link
+          to={createPageUrl(child.path)}
+          onClick={onClose}
+          className={`flex-1 text-xs font-semibold ${
+            isDirectActive ? 'text-[#E10600]' : 'text-gray-200 hover:text-white'
+          }`}
+        >
+          {child.label}
+        </Link>
+        <button
+          type="button"
+          onClick={() => setNestedExpanded(!nestedExpanded)}
+          className="p-1.5 text-gray-400 hover:text-white focus:outline-none"
+        >
+          <ChevronDown
+            className={`w-3.5 h-3.5 transition-transform duration-200 ${
+              nestedExpanded ? 'rotate-180 text-[#E10600]' : ''
+            }`}
+          />
+        </button>
+      </div>
+
+      {nestedExpanded && (
+        <div className="pl-3 pr-1 py-1 space-y-1 border-l-2 border-[#E10600]/40 ml-2">
+          {child.children.map((subChild) => {
+            const isSelected = subChild.path === currentPageName;
+            return (
+              <Link
+                key={subChild.path}
+                to={createPageUrl(subChild.path)}
+                onClick={onClose}
+                className={`flex items-center justify-between py-2 px-3 text-xs rounded transition-colors ${
+                  isSelected
+                    ? 'text-white bg-[#E10600] font-bold shadow-[0_0_12px_rgba(225,6,0,0.3)]'
+                    : 'text-gray-300 hover:text-white hover:bg-white/5 font-medium'
+                }`}
+              >
+                <span>{subChild.label}</span>
+                {isSelected && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-white ml-2 flex-shrink-0" />
+                )}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
@@ -215,7 +402,9 @@ function NavDropdown({ item, currentPageName }) {
 
 // Seção expansível do menu mobile
 function MobileNavGroup({ item, currentPageName, onClose }) {
-  const isChildActive = item.children.some(c => c.path === currentPageName);
+  const isChildActive = item.children?.some(c =>
+    c.path === currentPageName || (c.children && c.children.some(sub => sub.path === currentPageName))
+  );
   const [expanded, setExpanded] = useState(isChildActive);
 
   return (
@@ -246,6 +435,20 @@ function MobileNavGroup({ item, currentPageName, onClose }) {
       {expanded && (
         <div className="bg-white/[0.02] py-1 pl-4 pr-3 border-l-2 border-[#E10600]/40 ml-5 mr-4 mb-2 space-y-1 rounded-r">
           {item.children.map((child) => {
+            const hasNested = child.children && child.children.length > 0;
+            if (hasNested) {
+              const isNestedActive = child.path === currentPageName || child.children.some(c => c.path === currentPageName);
+              return (
+                <MobileSubGroup
+                  key={child.label}
+                  child={child}
+                  currentPageName={currentPageName}
+                  onClose={onClose}
+                  initialExpanded={isNestedActive}
+                />
+              );
+            }
+
             const isSelected = child.path === currentPageName;
             return (
               <Link
