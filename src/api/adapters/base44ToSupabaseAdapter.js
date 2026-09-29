@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+import { supabase } from '../supabaseClient.js';
 
 /**
  * Tradutor e adaptador de chamadas CRUD NoSQL para SQL (Supabase).
@@ -49,7 +49,27 @@ export const createEntityAdapter = (entityName, tableName = '') => {
           // Mantém original se não for JSON válido
         }
       }
-      mapped.season_name = mapped.theme || mapped.season_name || `Temporada ${mapped.year}`;
+      mapped.program = item.program || mapped.program || 'FRC';
+      mapped.season_name = item.theme || mapped.season_name || `Temporada ${mapped.year}`;
+      mapped.theme = mapped.season_name;
+      // Compatibilidade retroativa de datas de competição
+      if (mapped.competition_date && !mapped.regional_date && !mapped.national_date && !mapped.international_date) {
+        mapped.regional_date = mapped.competition_date;
+      }
+      // Compatibilidade retroativa de manuais antigos em important_links
+      if (!Array.isArray(mapped.important_links) || mapped.important_links.length === 0) {
+        const legacyLinks = [];
+        if (mapped.game_manual_a) {
+          legacyLinks.push({ description: 'Game Manual (Parte 1)', url: mapped.game_manual_a });
+        }
+        if (mapped.game_manual_b) {
+          legacyLinks.push({ description: 'Game Manual (Parte 2)', url: mapped.game_manual_b });
+        }
+        mapped.important_links = legacyLinks;
+      }
+      if (!Array.isArray(mapped.awards_targeted)) {
+        mapped.awards_targeted = [];
+      }
     } else if (actualTableName === 'projects') {
       const baseImages = Array.isArray(item.images) ? item.images : (item.image_url ? [item.image_url] : []);
       const extraImages = Array.isArray(item.links?.extra_images) ? item.links.extra_images : [];
@@ -157,8 +177,12 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         cleanFilters.is_active = cleanFilters.is_current;
         delete cleanFilters.is_current;
       }
+      let programFilter = null;
       if (actualTableName === 'seasons') {
         delete cleanFilters.is_active;
+        if (cleanFilters.program !== undefined) {
+          cleanFilters.program = String(cleanFilters.program).toUpperCase();
+        }
       }
       if (actualTableName === 'projects' && cleanFilters.status === 'active') {
         cleanFilters.status = 'Ativo';
@@ -217,7 +241,11 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         console.error(`[Supabase Adapter] Erro ao filtrar no Supabase (${entityName}):`, error);
         throw error;
       }
-      return mapItems(data) || [];
+      let items = mapItems(data) || [];
+      if (programFilter) {
+        items = items.filter(item => item.program === programFilter);
+      }
+      return items;
     },
 
     /**
@@ -277,28 +305,47 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       }
 
       if (actualTableName === 'seasons') {
+        const allowedPrograms = ['OBR', 'FLL', 'FTC', 'FRC'];
+        const selectedProg = sanitized.program ? String(sanitized.program).trim().toUpperCase() : 'FRC';
+        sanitized.program = allowedPrograms.includes(selectedProg) ? selectedProg : 'FRC';
+
         sanitized.year = parseInt(sanitized.year, 10) || new Date().getFullYear();
-        sanitized.theme = sanitized.theme || sanitized.season_name || `Temporada ${sanitized.year}`;
+        sanitized.theme = (sanitized.theme || sanitized.season_name || `Temporada ${sanitized.year}`).trim();
+
+        const importantLinks = Array.isArray(sanitized.important_links) ? sanitized.important_links : [];
+        const manualA = sanitized.game_manual_a || importantLinks[0]?.url || '';
+        const manualB = sanitized.game_manual_b || importantLinks[1]?.url || '';
 
         const extraFields = {
-          game_name: sanitized.game_name,
-          kickoff_date: sanitized.kickoff_date,
-          competition_date: sanitized.competition_date,
-          robot_name: sanitized.robot_name,
-          robot_weight: sanitized.robot_weight,
-          awards_targeted: sanitized.awards_targeted,
-          game_manual_a: sanitized.game_manual_a,
-          game_manual_b: sanitized.game_manual_b,
-          scoring_zones: sanitized.scoring_zones,
-          endgame_options: sanitized.endgame_options,
-          team_objectives: sanitized.team_objectives,
-          custom_description: (sanitized.description && !sanitized.description.startsWith('{')) ? sanitized.description : ''
+          program: sanitized.program,
+          game_name: sanitized.game_name || sanitized.season_name || sanitized.theme,
+          kickoff_date: sanitized.kickoff_date || null,
+          regional_date: sanitized.regional_date || null,
+          national_date: sanitized.national_date || null,
+          international_date: sanitized.international_date || null,
+          competition_date: sanitized.regional_date || sanitized.competition_date || sanitized.national_date || sanitized.international_date || null,
+          robot_name: sanitized.robot_name || '',
+          robot_weight: (sanitized.robot_weight !== undefined && sanitized.robot_weight !== null && sanitized.robot_weight !== '') ? Number(sanitized.robot_weight) : null,
+          awards_targeted: Array.isArray(sanitized.awards_targeted) ? sanitized.awards_targeted : [],
+          important_links: importantLinks,
+          game_manual_a: manualA,
+          game_manual_b: manualB,
+          scoring_zones: sanitized.scoring_zones || '',
+          endgame_options: sanitized.endgame_options || '',
+          team_objectives: sanitized.team_objectives || '',
+          custom_description: (sanitized.custom_description !== undefined) ? sanitized.custom_description : ((sanitized.description && !sanitized.description.startsWith('{')) ? sanitized.description : '')
         };
         sanitized.description = JSON.stringify(extraFields);
 
+        // Remove rigorosamente todas as propriedades que NÃO são colunas físicas da tabela seasons no PostgreSQL
+        // As colunas físicas de public.seasons são: id, program, year, theme, description, created_at, updated_at
         delete sanitized.is_active;
         delete sanitized.competition_date;
+        delete sanitized.regional_date;
+        delete sanitized.national_date;
+        delete sanitized.international_date;
         delete sanitized.awards_targeted;
+        delete sanitized.important_links;
         delete sanitized.kickoff_date;
         delete sanitized.game_name;
         delete sanitized.season_name;
@@ -309,6 +356,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         delete sanitized.scoring_zones;
         delete sanitized.endgame_options;
         delete sanitized.team_objectives;
+        delete sanitized.custom_description;
       }
 
       if (actualTableName === 'products') {
@@ -459,12 +507,34 @@ export const createEntityAdapter = (entityName, tableName = '') => {
           } catch (e) {}
         }
         const extraFields = { ...existingDescription };
+        if (sanitized.program !== undefined) {
+          const allowedPrograms = ['OBR', 'FLL', 'FTC', 'FRC'];
+          const prog = String(sanitized.program).trim().toUpperCase();
+          sanitized.program = allowedPrograms.includes(prog) ? prog : 'FRC';
+          extraFields.program = sanitized.program;
+        }
         if (sanitized.game_name !== undefined) extraFields.game_name = sanitized.game_name;
         if (sanitized.kickoff_date !== undefined) extraFields.kickoff_date = sanitized.kickoff_date;
-        if (sanitized.competition_date !== undefined) extraFields.competition_date = sanitized.competition_date;
+        if (sanitized.regional_date !== undefined) extraFields.regional_date = sanitized.regional_date;
+        if (sanitized.national_date !== undefined) extraFields.national_date = sanitized.national_date;
+        if (sanitized.international_date !== undefined) extraFields.international_date = sanitized.international_date;
+        if (sanitized.regional_date !== undefined || sanitized.competition_date !== undefined || sanitized.national_date !== undefined || sanitized.international_date !== undefined) {
+          extraFields.competition_date = sanitized.regional_date || sanitized.competition_date || sanitized.national_date || sanitized.international_date || extraFields.competition_date || null;
+        }
         if (sanitized.robot_name !== undefined) extraFields.robot_name = sanitized.robot_name;
-        if (sanitized.robot_weight !== undefined) extraFields.robot_weight = sanitized.robot_weight;
+        if (sanitized.robot_weight !== undefined) {
+          extraFields.robot_weight = (sanitized.robot_weight !== '' && sanitized.robot_weight !== null) ? Number(sanitized.robot_weight) : null;
+        }
         if (sanitized.awards_targeted !== undefined) extraFields.awards_targeted = sanitized.awards_targeted;
+        if (sanitized.important_links !== undefined) {
+          extraFields.important_links = sanitized.important_links;
+          if (sanitized.important_links.length > 0) {
+            extraFields.game_manual_a = sanitized.important_links[0]?.url || extraFields.game_manual_a || '';
+          }
+          if (sanitized.important_links.length > 1) {
+            extraFields.game_manual_b = sanitized.important_links[1]?.url || extraFields.game_manual_b || '';
+          }
+        }
         if (sanitized.game_manual_a !== undefined) extraFields.game_manual_a = sanitized.game_manual_a;
         if (sanitized.game_manual_b !== undefined) extraFields.game_manual_b = sanitized.game_manual_b;
         if (sanitized.scoring_zones !== undefined) extraFields.scoring_zones = sanitized.scoring_zones;
@@ -486,9 +556,15 @@ export const createEntityAdapter = (entityName, tableName = '') => {
           sanitized.year = parseInt(sanitized.year, 10) || new Date().getFullYear();
         }
 
+        // Remove rigorosamente todas as propriedades que NÃO são colunas físicas da tabela seasons no PostgreSQL
+        // As colunas físicas de public.seasons são: id, program, year, theme, description, created_at, updated_at
         delete sanitized.is_active;
         delete sanitized.competition_date;
+        delete sanitized.regional_date;
+        delete sanitized.national_date;
+        delete sanitized.international_date;
         delete sanitized.awards_targeted;
+        delete sanitized.important_links;
         delete sanitized.kickoff_date;
         delete sanitized.game_name;
         delete sanitized.season_name;
