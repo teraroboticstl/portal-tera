@@ -2,6 +2,8 @@ import uploadHandler from './media/upload.js';
 import mediaStreamHandler from './media/[id].js';
 import authUrlHandler from './auth/google/url.js';
 import authCallbackHandler from './auth/google/callback.js';
+import fllAudioConfigHandler from './fll/config.js';
+import fllAudioStreamHandler from './fll/audio.js';
 
 /**
  * Middleware para emular Vercel Serverless Functions durante o desenvolvimento no Vite
@@ -49,6 +51,20 @@ export function devApiMiddleware(req, res, next) {
       id: rawId
     };
     return mediaStreamHandler(req, res);
+  }
+
+  if (pathname === '/api/fll/audio/config' || pathname === '/api/fll/config') {
+    req.query = Object.fromEntries(url.searchParams.entries());
+    return fllAudioConfigHandler(req, res);
+  }
+
+  if (pathname === '/api/fll/audio' || pathname.startsWith('/api/fll/audio/')) {
+    const rawSlot = pathname.replace('/api/fll/audio/', '').split('/')[0];
+    req.query = {
+      ...Object.fromEntries(url.searchParams.entries()),
+      slot: rawSlot || url.searchParams.get('slot')
+    };
+    return fllAudioStreamHandler(req, res);
   }
 
   if (pathname === '/api/auth/google/url') {

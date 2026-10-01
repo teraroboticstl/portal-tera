@@ -20,7 +20,8 @@ const KNOWN_PUBLIC_FOLDER_NAMES = new Set([
   'TIR',
   'Robôs',
   'FLL BIOGLOW',
-  'Missões'
+  'Missões',
+  'Áudios'
 ]);
 
 // Nomes de pastas reconhecidamente restritas/privadas do Portal Tera

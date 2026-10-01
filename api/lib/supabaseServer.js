@@ -79,7 +79,7 @@ export function validateUploadPermission(user, context) {
   }
 
   // Contextos puramente administrativos
-  const adminOnlyContexts = ['products', 'robots', 'sponsors', 'featured-news', 'fll-missions', 'test'];
+  const adminOnlyContexts = ['products', 'robots', 'sponsors', 'featured-news', 'fll-missions', 'fll-audio', 'test'];
   if (adminOnlyContexts.includes(context) && !isAdmin) {
     throw new Error(`Permissão insuficiente: o contexto "${context}" exige privilégios de administrador.`);
   }

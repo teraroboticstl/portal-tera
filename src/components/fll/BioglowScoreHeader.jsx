@@ -1,9 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Play, Pause, RotateCcw, Bookmark, Share2, Clock, Trophy 
+  Play, Pause, RotateCcw, Bookmark, Share2, Clock, Trophy, Volume2, VolumeX, AlertCircle 
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { playStartWhistle, playEndgameWarning, playBuzzer } from '@/lib/fllAudio';
+import { 
+  playStartRoundSound, 
+  playEndRoundSound, 
+  playCountdownPip, 
+  stopAllAudio, 
+  setSoundMuted, 
+  getSoundMuted, 
+  preloadFllAudio,
+  isAudioFileUnavailable
+} from '@/lib/fllAudio';
 
 export default function BioglowScoreHeader({
   score = 0,
@@ -14,47 +23,84 @@ export default function BioglowScoreHeader({
 }) {
   const [secondsLeft, setSecondsLeft] = useState(150);
   const [isRunning, setIsRunning] = useState(false);
+  const [soundMuted, setSoundMutedState] = useState(getSoundMuted());
+  const [audioUnavailable, setAudioUnavailable] = useState(false);
+
   const timerRef = useRef(null);
+  const beepedSecondsRef = useRef(new Set());
+  const hasPlayedEndSoundRef = useRef(false);
+
+  // Pré-carregamento dos arquivos MP3 permanentes ao montar o componente
+  useEffect(() => {
+    preloadFllAudio();
+    if (isAudioFileUnavailable()) {
+      setAudioUnavailable(true);
+    }
+  }, []);
 
   // Sincroniza reset quando o usuário confirma zerar a simulação
   useEffect(() => {
     if (resetTrigger > 0) {
       if (timerRef.current) clearInterval(timerRef.current);
+      stopAllAudio();
       setIsRunning(false);
       setSecondsLeft(150);
+      beepedSecondsRef.current.clear();
+      hasPlayedEndSoundRef.current = false;
     }
   }, [resetTrigger]);
 
-  // Limpeza de timers na desmontagem
+  // Limpeza de timers e áudios na desmontagem
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      stopAllAudio();
     };
   }, []);
 
-  // Formatação estrita MM:SS (ex: 02:30)
+  // Formatação estrita MM:SS (ex: 02:30, 00:10, 00:00)
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
   const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-  // Controle de som e contagem do cronômetro oficial
+  // Controle de som e contagem precisa do cronômetro oficial
   const handleTick = (prev) => {
     if (prev <= 1) {
-      try { playBuzzer(); } catch {}
+      // Ao atingir 00:00: reproduz exclusivamente o Som final de Round.MP3 uma única vez sem bip
+      if (!hasPlayedEndSoundRef.current) {
+        hasPlayedEndSoundRef.current = true;
+        playEndRoundSound();
+      }
       setIsRunning(false);
+      if (timerRef.current) clearInterval(timerRef.current);
       return 0;
     }
+
     const next = prev - 1;
-    if (next === 30) {
-      try { playEndgameWarning(); } catch {}
+
+    // Nos últimos dez segundos (00:10 até 00:01): emite um bip curto a cada segundo (10 bips total)
+    if (next >= 1 && next <= 10) {
+      if (!beepedSecondsRef.current.has(next)) {
+        beepedSecondsRef.current.add(next);
+        playCountdownPip();
+      }
     }
-    return next;
+
+    return Math.max(0, next);
   };
 
   const startTimer = () => {
     setIsRunning(true);
     if (timerRef.current) clearInterval(timerRef.current);
-    try { playStartWhistle(); } catch {}
+
+    // Se estiver iniciando um novo round de 02:30, toca o Som inicio de round.MP3 uma única vez
+    // O cronômetro inicia simultaneamente sem esperar o áudio terminar
+    if (secondsLeft === 150) {
+      beepedSecondsRef.current.clear();
+      hasPlayedEndSoundRef.current = false;
+      playStartRoundSound();
+    }
+
     timerRef.current = setInterval(() => {
       setSecondsLeft(handleTick);
     }, 1000);
@@ -63,11 +109,14 @@ export default function BioglowScoreHeader({
   const pauseTimer = () => {
     setIsRunning(false);
     if (timerRef.current) clearInterval(timerRef.current);
+    // Pausar interrompe imediatamente qualquer áudio em reprodução
+    stopAllAudio();
   };
 
   const resumeTimer = () => {
     setIsRunning(true);
     if (timerRef.current) clearInterval(timerRef.current);
+    // Retomar continua do tempo restante SEM repetir som de início nem bips já emitidos
     timerRef.current = setInterval(() => {
       setSecondsLeft(handleTick);
     }, 1000);
@@ -79,12 +128,26 @@ export default function BioglowScoreHeader({
       pauseTimer();
     } else if (secondsLeft === 0) {
       setSecondsLeft(150);
-      startTimer();
+      beepedSecondsRef.current.clear();
+      hasPlayedEndSoundRef.current = false;
+      // Inicia novo round do 02:30
+      setIsRunning(true);
+      playStartRoundSound();
+      timerRef.current = setInterval(() => {
+        setSecondsLeft(handleTick);
+      }, 1000);
     } else if (secondsLeft < 150) {
       resumeTimer();
     } else {
       startTimer();
     }
+  };
+
+  // Alternador discreto de Som Ativado / Desativado
+  const handleToggleSound = () => {
+    const nextMuted = !soundMuted;
+    setSoundMutedState(nextMuted);
+    setSoundMuted(nextMuted);
   };
 
   const isPaused = !isRunning && secondsLeft < 150 && secondsLeft > 0;
@@ -101,7 +164,7 @@ export default function BioglowScoreHeader({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5">
         
         {/* Layout Desktop: 1 linha contínua (Título à esquerda, Controles ao centro, Cronômetro e Pontos à direita) */}
-        <div className="hidden lg:flex items-center justify-between gap-4 h-11">
+        <div className="hidden lg:flex items-center justify-between gap-3 h-11">
           
           {/* Título Oficial */}
           <div className="flex items-center gap-2.5 shrink-0">
@@ -114,7 +177,7 @@ export default function BioglowScoreHeader({
             </div>
           </div>
 
-          {/* Controles Centralizados: Iniciar/Pausar/Retomar, Zerar, Salvar, Compartilhar */}
+          {/* Controles Centralizados: Iniciar/Pausar/Retomar, Zerar, Salvar, Compartilhar, Som On/Off */}
           <div className="flex items-center justify-center gap-2">
             <Button
               type="button"
@@ -182,6 +245,44 @@ export default function BioglowScoreHeader({
               <Share2 className="w-3.5 h-3.5 text-gray-400" />
               <span>Compartilhar</span>
             </Button>
+
+            {/* Controle Discreto Som Ativado/Desativado */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleToggleSound}
+              className={`h-9 px-2.5 rounded-lg flex items-center gap-1.5 transition-colors border ${
+                soundMuted
+                  ? 'bg-red-500/10 hover:bg-red-500/20 text-gray-400 border-red-500/30'
+                  : 'bg-white/5 hover:bg-white/10 text-gray-200 hover:text-white border-white/10'
+              }`}
+              title={soundMuted ? 'Som desativado (clique para ativar)' : 'Som ativado (clique para desativar)'}
+              aria-label={soundMuted ? 'Som desativado' : 'Som ativado'}
+            >
+              {soundMuted ? (
+                <>
+                  <VolumeX className="w-3.5 h-3.5 text-red-400" />
+                  <span className="text-[11px] text-red-400 font-semibold hidden xl:inline">Mudo</span>
+                </>
+              ) : (
+                <>
+                  <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[11px] text-gray-300 font-semibold hidden xl:inline">Som</span>
+                </>
+              )}
+            </Button>
+
+            {/* Alerta discreto caso os MP3s não estejam disponíveis no dispositivo */}
+            {audioUnavailable && (
+              <span 
+                className="text-[10px] text-amber-400/80 flex items-center gap-1 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-md"
+                title="Áudio do round indisponível (configure no painel administrativo)"
+              >
+                <AlertCircle className="w-3 h-3" />
+                <span className="hidden 2xl:inline">Áudio indisponível</span>
+              </span>
+            )}
           </div>
 
           {/* Destaques à Direita: Cronômetro (02:30) e Pontuação Total (Pontos) */}
@@ -209,8 +310,8 @@ export default function BioglowScoreHeader({
         {/* Layout Mobile / Tablet: 2 linhas compactas sem rolagem horizontal */}
         <div className="lg:hidden flex flex-col gap-2">
           
-          {/* Linha 1: Título à esquerda + Destaques (Cronômetro e Pontos) à direita */}
-          <div className="flex items-center justify-between gap-2">
+          {/* Linha 1: Título + Controle de Som + Cronômetro e Pontos */}
+          <div className="flex items-center justify-between gap-1.5">
             <div className="flex items-center gap-1.5 min-w-0 pr-1">
               <Trophy className="w-4 h-4 text-[#E10600] shrink-0" />
               <span className="font-black text-xs sm:text-sm tracking-tight text-white leading-tight truncate">
@@ -219,6 +320,21 @@ export default function BioglowScoreHeader({
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
+              {/* Controle discreto de som no mobile */}
+              <button
+                type="button"
+                onClick={handleToggleSound}
+                className={`p-1.5 rounded-lg border transition-colors ${
+                  soundMuted
+                    ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                    : 'bg-white/5 border-white/10 text-emerald-400'
+                }`}
+                title={soundMuted ? 'Som desativado' : 'Som ativado'}
+                aria-label={soundMuted ? 'Som desativado' : 'Som ativado'}
+              >
+                {soundMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+              </button>
+
               {/* Cronômetro Mobile */}
               <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/50 border border-white/10">
                 <Clock className="w-3.5 h-3.5 text-[#E10600] shrink-0" />

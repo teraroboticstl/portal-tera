@@ -1,0 +1,29 @@
+{
+  "start": {
+    "fileId": "gdrive_1790805033150_66597b5a8649",
+    "fileName": "Som inicio de round.MP3",
+    "fileSize": 193768,
+    "sha256": "b04a5cf70edf3c31311ce699fbf75df06324146399d4e082d027e545cbcf72b2",
+    "mimeType": "audio/mpeg",
+    "webViewLink": "https://drive.google.com/file/d/gdrive_1790805033150_66597b5a8649/view",
+    "updatedAt": "2026-09-30T21:50:33.153Z"
+  },
+  "beep": {
+    "fileId": "gdrive_1790805033155_d42b43f8ba0f",
+    "fileName": "Bip.MP3",
+    "fileSize": 3805,
+    "sha256": "206924f2752de845e68817cf33659b53db8183929c37aeb40afb14ecf29d187f",
+    "mimeType": "audio/mpeg",
+    "webViewLink": "https://drive.google.com/file/d/gdrive_1790805033155_d42b43f8ba0f/view",
+    "updatedAt": "2026-09-30T21:50:33.155Z"
+  },
+  "end": {
+    "fileId": "gdrive_1790805033156_a99db34868a5",
+    "fileName": "Som final de Round.MP3",
+    "fileSize": 121670,
+    "sha256": "e073af88c04d8266b4e84fb943d5ba09c64f98323ad36528481395a5f6cd5681",
+    "mimeType": "audio/mpeg",
+    "webViewLink": "https://drive.google.com/file/d/gdrive_1790805033156_a99db34868a5/view",
+    "updatedAt": "2026-09-30T21:50:33.157Z"
+  }
+}

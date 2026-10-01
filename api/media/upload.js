@@ -1,6 +1,8 @@
+import crypto from 'crypto';
 import { validateUserAuth, validateUploadPermission } from '../lib/supabaseServer.js';
 import { getGoogleDriveClient, resolveTargetFolder, sanitizeFileName, uploadBufferToDrive } from '../lib/googleDrive.js';
 import { parseMultipart } from '../lib/multipart.js';
+import { cacheAudioBytes } from '../lib/fllAudioStorage.js';
 
 // Mime types permitidos
 const ALLOWED_MIME_TYPES = new Set([
@@ -12,7 +14,11 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/pdf',
   'video/mp4',
   'video/webm',
-  'video/quicktime'
+  'video/quicktime',
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/x-wav'
 ]);
 
 // Contextos permitidos
@@ -28,6 +34,7 @@ const ALLOWED_CONTEXTS = new Set([
   'seasons',
   'attachments',
   'fll-missions',
+  'fll-audio',
   'test'
 ]);
 
@@ -154,9 +161,11 @@ export default async function handler(req, res) {
       'events',
       'memorial',
       'tir',
-      'fll-missions'
+      'fll-missions',
+      'fll-audio'
     ]);
     const isPublic = PUBLIC_CONTEXTS.has(context);
+    const fileSha256 = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
     // 10. Upload do buffer para o Google Drive institucional com metadados e tags de segurança
     let uploadedFile;
@@ -179,6 +188,15 @@ export default async function handler(req, res) {
       });
     }
 
+    // Se for áudio oficial do simulador FLL, cachear imediatamente os bytes originais idênticos
+    if (context === 'fll-audio') {
+      try {
+        cacheAudioBytes(uploadedFile.id, file.buffer);
+      } catch (cacheErr) {
+        console.warn('[API /api/media/upload] Aviso ao cachear áudio localmente:', cacheErr.message);
+      }
+    }
+
     // 11. Resposta com metadados estruturados (com salvaguarda contra arquivo órfão)
     try {
       const metadata = {
@@ -187,6 +205,7 @@ export default async function handler(req, res) {
         name: uploadedFile.name,
         mimeType: uploadedFile.mimeType,
         size: file.size,
+        sha256: fileSha256,
         context: context,
         is_public: isPublic,
         folderId: targetFolderId,
