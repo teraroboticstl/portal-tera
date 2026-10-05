@@ -45,6 +45,8 @@ export const createEntityAdapter = (entityName, tableName = '') => {
           const parsed = JSON.parse(item.description);
           Object.assign(mapped, parsed);
           mapped.description = parsed.custom_description || '';
+          mapped.fll_missions = parsed.fll_missions || {};
+          mapped.fll_audios = parsed.fll_audios || {};
         } catch (e) {
           // Mantém original se não for JSON válido
         }
@@ -52,6 +54,8 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       mapped.program = item.program || mapped.program || 'FRC';
       mapped.season_name = item.theme || mapped.season_name || `Temporada ${mapped.year}`;
       mapped.theme = mapped.season_name;
+      mapped.fll_missions = mapped.fll_missions || {};
+      mapped.fll_audios = mapped.fll_audios || {};
       // Compatibilidade retroativa de datas de competição
       if (mapped.competition_date && !mapped.regional_date && !mapped.national_date && !mapped.international_date) {
         mapped.regional_date = mapped.competition_date;
@@ -316,7 +320,14 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         const manualA = sanitized.game_manual_a || importantLinks[0]?.url || '';
         const manualB = sanitized.game_manual_b || importantLinks[1]?.url || '';
 
+        // Preservar metadados existentes da descrição se já existiam
+        let existingExtra = {};
+        if (sanitized.description && typeof sanitized.description === 'string' && sanitized.description.startsWith('{')) {
+          try { existingExtra = JSON.parse(sanitized.description); } catch {}
+        }
+
         const extraFields = {
+          ...existingExtra,
           program: sanitized.program,
           game_name: sanitized.game_name || sanitized.season_name || sanitized.theme,
           kickoff_date: sanitized.kickoff_date || null,
@@ -333,7 +344,9 @@ export const createEntityAdapter = (entityName, tableName = '') => {
           scoring_zones: sanitized.scoring_zones || '',
           endgame_options: sanitized.endgame_options || '',
           team_objectives: sanitized.team_objectives || '',
-          custom_description: (sanitized.custom_description !== undefined) ? sanitized.custom_description : ((sanitized.description && !sanitized.description.startsWith('{')) ? sanitized.description : '')
+          custom_description: (sanitized.custom_description !== undefined) ? sanitized.custom_description : ((sanitized.description && !sanitized.description.startsWith('{')) ? sanitized.description : ''),
+          fll_missions: sanitized.fll_missions !== undefined ? sanitized.fll_missions : (existingExtra.fll_missions || {}),
+          fll_audios: sanitized.fll_audios !== undefined ? sanitized.fll_audios : (existingExtra.fll_audios || {})
         };
         sanitized.description = JSON.stringify(extraFields);
 
@@ -357,6 +370,8 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         delete sanitized.endgame_options;
         delete sanitized.team_objectives;
         delete sanitized.custom_description;
+        delete sanitized.fll_missions;
+        delete sanitized.fll_audios;
       }
 
       if (actualTableName === 'products') {
@@ -547,6 +562,13 @@ export const createEntityAdapter = (entityName, tableName = '') => {
           extraFields.custom_description = sanitized.description;
         }
 
+        if (sanitized.fll_missions !== undefined) {
+          extraFields.fll_missions = sanitized.fll_missions;
+        }
+        if (sanitized.fll_audios !== undefined) {
+          extraFields.fll_audios = sanitized.fll_audios;
+        }
+
         sanitized.description = JSON.stringify(extraFields);
 
         if (sanitized.season_name && !sanitized.theme) {
@@ -576,6 +598,8 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         delete sanitized.endgame_options;
         delete sanitized.team_objectives;
         delete sanitized.custom_description;
+        delete sanitized.fll_missions;
+        delete sanitized.fll_audios;
       }
 
       if (actualTableName === 'products') {

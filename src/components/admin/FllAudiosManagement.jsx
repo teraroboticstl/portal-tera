@@ -12,9 +12,15 @@ import {
   uploadFllAudio, 
   getSlotAudioUrl 
 } from '@/api/fllAudioClient';
+import { fetchActiveFllSeason } from '@/api/fllSeasonClient';
 
 export default function FllAudiosManagement({ user }) {
-  const [configs, setConfigs] = useState({ start: null, beep: null, end: null });
+  const [activeSeason, setActiveSeason] = useState({
+    theme: 'BIOGLOW',
+    year: 2026,
+    season_name: 'BIOGLOW 2026–2027'
+  });
+  const [configs, setConfigs] = useState({});
   const [loading, setLoading] = useState(true);
   const [uploadingSlot, setUploadingSlot] = useState(null);
   const [playingSlot, setPlayingSlot] = useState(null);
@@ -22,18 +28,28 @@ export default function FllAudiosManagement({ user }) {
   const [duration, setDuration] = useState({});
   const audioRefs = useRef({});
 
-  // Carregar dados na montagem
+  // Carregar temporada e dados na montagem
   useEffect(() => {
-    loadConfig();
+    loadSeasonAndConfig();
   }, []);
 
-  const loadConfig = async () => {
+  const loadSeasonAndConfig = async () => {
     setLoading(true);
     try {
-      const data = await fetchFllAudioConfig();
+      const seasonData = await fetchActiveFllSeason();
+      if (seasonData) {
+        setActiveSeason({
+          id: seasonData.id,
+          theme: seasonData.theme || 'BIOGLOW',
+          year: seasonData.year || 2026,
+          season_name: seasonData.season_name || `${seasonData.theme} ${seasonData.year}`
+        });
+      }
+      const data = await fetchFllAudioConfig(seasonData?.theme);
       setConfigs(data || {});
     } catch (err) {
-      toast.error('Erro ao carregar configurações de áudio.');
+      console.error('[FLL Audios Admin] Erro ao carregar:', err);
+      toast.error('Erro ao carregar configurações de áudio da temporada.');
     } finally {
       setLoading(false);
     }
@@ -48,24 +64,32 @@ export default function FllAudiosManagement({ user }) {
       return;
     }
 
+    const slotInfo = FLL_AUDIO_SLOTS.find(s => s.id === slotId || s.canonicalId === slotId || s.legacyId === slotId);
     setUploadingSlot(slotId);
-    toast.info(`Iniciando upload de "${file.name}" para o Google Drive institucional...`);
+    toast.info(`Iniciando upload de "${file.name}" para a pasta oficial no Google Drive...`);
 
     try {
       const result = await uploadFllAudio({
         file,
-        slot: slotId
+        slot: slotId,
+        season: activeSeason.theme
       });
 
-      // Atualizar estado
+      // Atualizar estado em múltiplos aliases para reatividade imediata
+      const canonicalSlot = slotInfo?.canonicalId || slotId;
+      const legacySlot = slotInfo?.legacyId || slotId;
+      const newEntry = result.config || {
+        fileName: file.name,
+        fileSize: file.size,
+        fileId: result.fileId,
+        sha256: result.sha256
+      };
+
       setConfigs(prev => ({
         ...prev,
-        [slotId]: result.config || {
-          fileName: file.name,
-          fileSize: file.size,
-          fileId: result.fileId,
-          sha256: result.sha256
-        }
+        [slotId]: newEntry,
+        [canonicalSlot]: newEntry,
+        [legacySlot]: newEntry
       }));
 
       // Interromper qualquer prévia ativa desse slot
@@ -74,13 +98,12 @@ export default function FllAudiosManagement({ user }) {
         audioRefs.current[slotId].load();
       }
 
-      toast.success(`Áudio para "${FLL_AUDIO_SLOTS.find(s => s.id === slotId)?.label}" salvo com sucesso no Google Drive!`);
+      toast.success(`Áudio para "${slotInfo?.label || slotId}" salvo com sucesso no Google Drive e vinculado à temporada ${activeSeason.theme}!`);
     } catch (err) {
       console.error('[FLL Audio Upload] Erro:', err);
-      toast.error(err.message || 'Falha ao enviar arquivo de áudio.');
+      toast.error(err.message || 'Falha ao enviar arquivo de áudio para o Google Drive.');
     } finally {
       setUploadingSlot(null);
-      // Limpar o input file para permitir selecionar o mesmo arquivo se desejado
       e.target.value = '';
     }
   };
@@ -130,17 +153,41 @@ export default function FllAudiosManagement({ user }) {
     <div className="space-y-8 max-w-5xl">
       {/* Cabeçalho da Seção */}
       <div className="bg-[#111217] border border-[#1F222B] rounded-2xl p-6">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-[#E10600]/10 border border-[#E10600]/30 flex items-center justify-center text-[#E10600]">
-            <Volume2 className="w-5 h-5" />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#E10600]/10 border border-[#E10600]/30 flex items-center justify-center text-[#E10600]">
+              <Volume2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-[#E10600]/20 text-red-400 border border-[#E10600]/30">
+                  FLL · {activeSeason.theme} ({activeSeason.year})
+                </span>
+                <span className="text-xs text-emerald-400 flex items-center gap-1 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Temporada Ativa
+                </span>
+              </div>
+              <h2 className="text-xl font-bold text-white">Áudios do Simulador FLL {activeSeason.theme}</h2>
+              <p className="text-sm text-[#B8BDC7]">
+                Armazenamento dos MP3 originais no Google Drive institucional (04. Torneios &amp; Eventos / FLL {activeSeason.theme} / Áudios)
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-white">Áudios do Simulador FLL BIOGLOW</h2>
-            <p className="text-sm text-[#B8BDC7]">
-              Armazenamento dos MP3 originais no Google Drive institucional (04. Torneios &amp; Eventos / FLL BIOGLOW / Áudios)
-            </p>
-          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={loadSeasonAndConfig}
+            disabled={loading}
+            className="border-white/10 text-gray-300 hover:text-white hover:bg-white/5 text-xs h-9"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Atualizar</span>
+          </Button>
         </div>
+
         <p className="text-sm text-[#B8BDC7] leading-relaxed">
           Configure os três áudios oficiais da partida. Os arquivos enviados são armazenados diretamente no Google Drive, 
           preservando integralmente os bytes originais do MP3 (sem recompressão, síntese ou sintetizadores). A entrega aos visitantes é feita 
@@ -151,11 +198,11 @@ export default function FllAudiosManagement({ user }) {
       {/* Grid com os 3 Slots Independentes */}
       <div className="space-y-6">
         {FLL_AUDIO_SLOTS.map((slot) => {
-          const config = configs[slot.id];
+          const config = configs[slot.id] || configs[slot.canonicalId] || configs[slot.legacyId];
           const isConfigured = Boolean(config && config.fileId);
-          const isUploading = uploadingSlot === slot.id;
+          const isUploading = uploadingSlot === slot.id || uploadingSlot === slot.canonicalId || uploadingSlot === slot.legacyId;
           const isPlaying = playingSlot === slot.id;
-          const audioUrl = getSlotAudioUrl(slot.id, config?.sha256 || config?.updatedAt);
+          const audioUrl = getSlotAudioUrl(slot.id, config?.sha256 || config?.updatedAt, activeSeason.theme);
 
           return (
             <div 

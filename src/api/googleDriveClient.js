@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabaseClient.js';
 
 /**
  * Cliente de upload para o Google Drive institucional através do endpoint seguro
@@ -11,14 +11,16 @@ import { supabase } from './supabaseClient';
  * @param {string} [params.recordId] - ID do registro no banco (opcional)
  * @returns {Promise<{ provider: string, fileId: string, name: string, mimeType: string, size: number, context: string, folderId: string, webViewLink: string, directUrl: string, downloadUrl: string }>}
  */
-export async function uploadToGoogleDrive({
-  file,
-  context = 'test',
-  season,
-  program,
-  subfolder,
-  recordId
-}) {
+export async function uploadToGoogleDrive(params = {}) {
+  const {
+    file,
+    context = 'test',
+    season = params.extraMeta?.season || params.extraMeta?.season_name || params.extraMeta?.theme,
+    program = params.extraMeta?.program,
+    subfolder = params.extraMeta?.subfolder,
+    recordId = params.extraMeta?.recordId || params.extraMeta?.missionCode
+  } = params;
+
   if (!file) {
     throw new Error('Nenhum arquivo fornecido para upload.');
   }

@@ -16,6 +16,7 @@ import {
 
 export default function BioglowScoreHeader({
   score = 0,
+  seasonTheme = 'BIOGLOW',
   onResetClick,
   onSaveClick,
   onShareClick,
@@ -32,11 +33,11 @@ export default function BioglowScoreHeader({
 
   // Pré-carregamento dos arquivos MP3 permanentes ao montar o componente
   useEffect(() => {
-    preloadFllAudio();
+    preloadFllAudio(seasonTheme);
     if (isAudioFileUnavailable()) {
       setAudioUnavailable(true);
     }
-  }, []);
+  }, [seasonTheme]);
 
   // Sincroniza reset quando o usuário confirma zerar a simulação
   useEffect(() => {

@@ -240,6 +240,24 @@ export async function resolveTargetFolder(drive, context, extraMeta = {}) {
     'test': ['99. Testes do Sistema']
   };
 
+  if (context === 'fll-missions') {
+    const seasonName = (extraMeta.season || extraMeta.season_name || extraMeta.theme || 'BIOGLOW').toString().trim();
+    return await ensureFolderPath(drive, rootId, [
+      '04. Torneios & Eventos',
+      `FLL ${seasonName}`,
+      'Missões'
+    ]);
+  }
+
+  if (context === 'fll-audio') {
+    const seasonName = (extraMeta.season || extraMeta.season_name || extraMeta.theme || 'BIOGLOW').toString().trim();
+    return await ensureFolderPath(drive, rootId, [
+      '04. Torneios & Eventos',
+      `FLL ${seasonName}`,
+      'Áudios'
+    ]);
+  }
+
   if (context === 'seasons') {
     const seasonTag = (extraMeta.season || extraMeta.season_tag || 'Geral').toString().trim();
     const program = (extraMeta.program || 'Geral').toString().trim().toUpperCase();

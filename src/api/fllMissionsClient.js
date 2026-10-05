@@ -1,4 +1,9 @@
-import { supabase } from './supabaseClient.js';
+import { 
+  fetchActiveFllSeason, 
+  persistFllMissionImage, 
+  removeFllMissionImage, 
+  getLocalActiveFllSeason 
+} from './fllSeasonClient.js';
 
 export const FLL_MISSION_STORAGE_KEY = 'fll_bioglow_mission_images_v1';
 
@@ -27,6 +32,10 @@ export const BIOGLOW_MISSIONS_CATALOG = [
  */
 export function getLocalMissionImages() {
   try {
+    const activeSeason = getLocalActiveFllSeason();
+    if (activeSeason && activeSeason.fll_missions && Object.keys(activeSeason.fll_missions).length > 0) {
+      return activeSeason.fll_missions;
+    }
     if (typeof window !== 'undefined' && window.localStorage) {
       const stored = window.localStorage.getItem(FLL_MISSION_STORAGE_KEY);
       if (stored) {
@@ -53,122 +62,56 @@ export function saveLocalMissionImages(data) {
 }
 
 /**
- * Carrega a associação completa de imagens de missões FLL
- * Prioriza dados do Supabase e mescla com cache local para resiliência
+ * Carrega a associação completa de imagens de missões da temporada FLL ativa
  */
-export async function fetchFllMissionImages() {
+export async function fetchFllMissionImages(seasonTheme = null) {
   const localMap = getLocalMissionImages();
-
   try {
-    const { data, error } = await supabase
-      .from('fll_missions')
-      .select('id, mission_code, mission_number, title, image_url, image_alt')
-      .order('mission_number', { ascending: true });
-
-    if (error) {
-      console.warn('[FLL Missions] Consulta no Supabase retornou aviso (usando cache):', error.message);
-      return localMap;
-    }
-
-    if (Array.isArray(data) && data.length > 0) {
-      const dbMap = { ...localMap };
-      data.forEach(item => {
-        const code = item.mission_code || (item.mission_number === 0 ? 'INSPEÇÃO' : `M${String(item.mission_number).padStart(2, '0')}`);
-        if (code) {
-          dbMap[code] = {
-            id: item.id,
-            imageUrl: item.image_url || '',
-            imageAlt: item.image_alt || '',
-            title: item.title || ''
-          };
-        }
-      });
-
-      saveLocalMissionImages(dbMap);
-      return dbMap;
+    const seasonData = await fetchActiveFllSeason(seasonTheme);
+    if (seasonData && seasonData.fll_missions) {
+      saveLocalMissionImages(seasonData.fll_missions);
+      return seasonData.fll_missions;
     }
   } catch (err) {
-    console.warn('[FLL Missions] Exceção na busca remota de imagens de missões:', err);
+    console.warn('[FLL Missions] Falha na busca remota de imagens de missões (usando cache local):', err);
   }
-
   return localMap;
 }
 
 /**
- * Salva ou atualiza a referência da imagem de uma missão no Supabase e no cache local
+ * Salva ou atualiza a referência da imagem de uma missão vinculada à temporada FLL
  */
-export async function persistMissionImage({ code, imageUrl, imageAlt, title, maxScore }) {
+export async function persistMissionImage({ code, fileId, imageUrl, imageAlt, title, maxScore, season = 'BIOGLOW' }) {
   const missionInfo = BIOGLOW_MISSIONS_CATALOG.find(m => m.code === code) || {};
-  const currentLocal = getLocalMissionImages();
+  const currentLocal = { ...getLocalMissionImages() };
 
-  const nextEntry = {
-    imageUrl: imageUrl || '',
-    imageAlt: imageAlt || '',
-    title: title || missionInfo.title || code
-  };
-
-  currentLocal[code] = {
-    ...currentLocal[code],
-    ...nextEntry
-  };
-  saveLocalMissionImages(currentLocal);
-
-  try {
-    // 1. Verificar se registro da missão já existe no Supabase
-    const { data: existing } = await supabase
-      .from('fll_missions')
-      .select('id')
-      .or(`mission_code.eq.${code},mission_number.eq.${missionInfo.number ?? -1}`)
-      .limit(1);
-
-    const payload = {
-      mission_code: code,
-      mission_number: missionInfo.number ?? 0,
-      title: title || missionInfo.title || code,
-      max_score: maxScore ?? missionInfo.maxScore ?? 0,
-      image_url: imageUrl || null,
-      image_alt: imageAlt || null,
-      season: 'BIOGLOW'
-    };
-
-    if (existing && existing.length > 0) {
-      const { data: updated, error: updateErr } = await supabase
-        .from('fll_missions')
-        .update(payload)
-        .eq('id', existing[0].id)
-        .select();
-
-      if (updateErr) throw updateErr;
-      if (updated && updated[0]) {
-        currentLocal[code].id = updated[0].id;
-        saveLocalMissionImages(currentLocal);
-      }
-    } else {
-      const { data: inserted, error: insertErr } = await supabase
-        .from('fll_missions')
-        .insert([payload])
-        .select();
-
-      if (insertErr) throw insertErr;
-      if (inserted && inserted[0]) {
-        currentLocal[code].id = inserted[0].id;
-        saveLocalMissionImages(currentLocal);
-      }
-    }
-  } catch (dbErr) {
-    console.warn('[FLL Missions] Falha ao persistir no Supabase (salvo localmente):', dbErr.message);
+  // Se não foi fornecido fileId mas temos imageUrl no formato /api/media/[id]
+  let effectiveFileId = fileId;
+  if (!effectiveFileId && imageUrl && imageUrl.includes('/api/media/')) {
+    effectiveFileId = imageUrl.split('/api/media/')[1]?.split('?')[0];
   }
 
-  return currentLocal;
+  const updatedSeason = await persistFllMissionImage({
+    season,
+    code,
+    fileId: effectiveFileId,
+    imageUrl: imageUrl || (effectiveFileId ? `/api/media/${effectiveFileId}` : ''),
+    imageAlt: imageAlt || missionInfo.defaultAlt || `Modelo da missão ${code}`,
+    title: title || missionInfo.title || code,
+    maxScore: maxScore ?? missionInfo.maxScore ?? 0
+  });
+
+  const nextMissions = updatedSeason?.fll_missions || currentLocal;
+  saveLocalMissionImages(nextMissions);
+  return nextMissions;
 }
 
 /**
  * Desvincula a imagem de uma missão sem excluir do Google Drive
  */
-export async function removeMissionImageAssociation(code) {
-  return persistMissionImage({
-    code,
-    imageUrl: '',
-    imageAlt: ''
-  });
+export async function removeMissionImageAssociation(code, season = 'BIOGLOW') {
+  const updatedSeason = await removeFllMissionImage({ season, code });
+  const nextMissions = updatedSeason?.fll_missions || {};
+  saveLocalMissionImages(nextMissions);
+  return nextMissions;
 }

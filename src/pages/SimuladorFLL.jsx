@@ -29,23 +29,36 @@ import {
   encodeRoundState,
   decodeRoundState
 } from '@/lib/fllBioglowRules';
-import { fetchFllMissionImages } from '@/api/fllMissionsClient';
+import { fetchActiveFllSeason } from '@/api/fllSeasonClient';
 
 const STORAGE_KEY_CURRENT = 'fll_bioglow_current_state';
 const STORAGE_KEY_SAVED = 'fll_bioglow_saved_rounds';
 
 export default function SimuladorFLL() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [activeSeason, setActiveSeason] = useState({
+    theme: 'BIOGLOW',
+    year: 2026,
+    season_name: 'BIOGLOW 2026–2027'
+  });
   const [missionImages, setMissionImages] = useState({});
   const [showCriteriaTable, setShowCriteriaTable] = useState(false);
   const [resetTrigger, setResetTrigger] = useState(0);
 
-  // Carrega as imagens persistidas das missões (Google Drive / Supabase)
+  // Carrega as imagens persistidas das missões e temporada ativa (Google Drive / Supabase)
   useEffect(() => {
     let isMounted = true;
-    fetchFllMissionImages().then((imgs) => {
-      if (isMounted && imgs) {
-        setMissionImages(imgs);
+    fetchActiveFllSeason().then((seasonData) => {
+      if (isMounted && seasonData) {
+        setActiveSeason({
+          id: seasonData.id,
+          theme: seasonData.theme || 'BIOGLOW',
+          year: seasonData.year || 2026,
+          season_name: seasonData.season_name || 'BIOGLOW 2026–2027'
+        });
+        if (seasonData.fll_missions) {
+          setMissionImages(seasonData.fll_missions);
+        }
       }
     });
     return () => {
@@ -233,6 +246,7 @@ export default function SimuladorFLL() {
       {/* Barra de Placar, Controles e Cronômetro Fixa no Topo */}
       <BioglowScoreHeader
         score={total}
+        seasonTheme={activeSeason.theme}
         resetTrigger={resetTrigger}
         onResetClick={() => setShowResetConfirm(true)}
         onSaveClick={handleSaveRound}

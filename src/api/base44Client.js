@@ -1,5 +1,5 @@
-import { supabase } from './supabaseClient';
-import { adaptedEntities } from './adapters/base44ToSupabaseAdapter';
+import { supabase } from './supabaseClient.js';
+import { adaptedEntities } from './adapters/base44ToSupabaseAdapter.js';
 
 /**
  * SHIM DE COMPATIBILIDADE - PORTAL TERA

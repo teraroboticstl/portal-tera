@@ -2,13 +2,15 @@ import { getGoogleDriveClient } from '../lib/googleDrive.js';
 import { 
   getFllAudioConfig, 
   VALID_SLOTS, 
+  SLOT_CANONICAL_MAP,
   getCachedAudioBytes, 
   cacheAudioBytes 
 } from '../lib/fllAudioStorage.js';
 
 /**
  * Rota pública segura para entrega dos áudios oficiais do simulador FLL a partir do Google Drive
- * Rota: GET /api/fll/audio?slot=start|beep|end
+ * FONTE DE METADADOS: Supabase (public.seasons.description.fll_audios)
+ * Rota: GET /api/fll/audio?slot=round_start|countdown_beep|round_end&season=BIOGLOW
  */
 export default async function handler(req, res) {
   // CORS & cabeçalhos de controle
@@ -24,30 +26,32 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido.' });
   }
 
-  // Obter slot solicitado
-  const slot = req.query?.slot || req.query?.type || (req.url.split('?')[0].split('/').pop());
+  // Obter slot e temporada solicitados
+  const rawSlot = req.query?.slot || req.query?.type || (req.url.split('?')[0].split('/').pop());
+  const slot = SLOT_CANONICAL_MAP[rawSlot] || rawSlot;
+  const requestedSeason = req.query?.season || req.query?.theme || null;
   
-  if (!slot || !VALID_SLOTS.includes(slot)) {
+  if (!rawSlot || !VALID_SLOTS.includes(rawSlot)) {
     return res.status(400).json({
       error: 'Slot inválido',
-      message: `O parâmetro slot deve ser um de: ${VALID_SLOTS.join(', ')}.`
+      message: `O parâmetro slot deve ser um de: round_start, countdown_beep, round_end (ou aliases: start, beep, end).`
     });
   }
 
-  // 1. Obter a configuração persistente do slot
-  const config = getFllAudioConfig();
-  const slotData = config[slot];
+  // 1. Obter a configuração persistente do slot vinculada à temporada FLL a partir do Supabase
+  const config = await getFllAudioConfig(requestedSeason);
+  const slotData = config[slot] || config[rawSlot];
 
   if (!slotData || !slotData.fileId) {
     return res.status(404).json({
       error: 'Áudio não configurado',
-      message: `Nenhum arquivo de áudio foi configurado pelo administrador para o slot "${slot}".`
+      message: `Nenhum arquivo de áudio foi configurado no Supabase para o slot "${slot}".`
     });
   }
 
-  const { fileId, fileSize, sha256 } = slotData;
+  const { fileId, sha256 } = slotData;
 
-  // 2. Verificar se os bytes originais já estão em cache local de alta performance
+  // 2. Verificar se os bytes originais já estão em cache local transitório da instância
   const cachedBuffer = getCachedAudioBytes(fileId);
   if (cachedBuffer) {
     res.setHeader('Content-Type', 'audio/mpeg');
@@ -80,7 +84,7 @@ export default async function handler(req, res) {
     return res.status(200).end(cachedBuffer);
   }
 
-  // 3. Se não estiver em cache local, buscar diretamente no Google Drive institucional
+  // 3. Se não estiver em cache local transitório, buscar diretamente no Google Drive institucional
   let drive;
   try {
     drive = getGoogleDriveClient();

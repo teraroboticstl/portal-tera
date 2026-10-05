@@ -3,13 +3,31 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://dqmagpxjsdelpwuofxzz.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_SNMwsaz2myKNUpcyM18xjw_mAZOMKtd';
 
-// Cliente Supabase server-side
+// Cliente Supabase server-side com privilégios de execução
 export const supabaseServer = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
   }
 });
+
+/**
+ * Cria um cliente Supabase com o token do usuário para operações respeitando RLS
+ */
+export function createScopedUserSupabaseClient(token) {
+  if (!token) return supabaseServer;
+  return createClient(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  });
+}
 
 const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com'];
 

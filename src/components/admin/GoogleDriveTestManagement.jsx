@@ -114,7 +114,7 @@ export default function GoogleDriveTestManagement({ user }) {
 
         <p className="text-xs text-[#B8BDC7]">
           Utilize o botão acima para gerar a URL de consentimento offline e autorizar o acesso da conta <strong className="text-white">teraroboticstl@gmail.com</strong>.
-          Após a autorização, a página retornará o <code className="text-emerald-400">GOOGLE_REFRESH_TOKEN</code> para ser cadastrado na Vercel.
+          Após a autorização, a página retornará o token de atualização permanente para ser cadastrado com segurança no servidor.
         </p>
 
         {authUrl && (
@@ -213,7 +213,7 @@ export default function GoogleDriveTestManagement({ user }) {
                   <p className="text-sm font-bold text-red-400">Falha no processamento do teste</p>
                   <p className="text-xs text-gray-300 leading-relaxed">{result.message}</p>
                   <p className="text-xs text-[#B8BDC7] mt-2">
-                    Dica: Se as credenciais do Google Drive ainda não foram configuradas nas variáveis de ambiente da Vercel / servidor local, configure <code className="text-white">GOOGLE_CLIENT_ID</code>, <code className="text-white">GOOGLE_CLIENT_SECRET</code> e <code className="text-white">GOOGLE_REFRESH_TOKEN</code>.
+                    Dica: Verifique se as credenciais institucionais do Google Drive estão configuradas nas variáveis de ambiente seguras do servidor backend.
                   </p>
                 </div>
               </div>
