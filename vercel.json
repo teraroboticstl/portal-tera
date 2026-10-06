@@ -9,6 +9,14 @@
       "destination": "/api/fll/season"
     },
     {
+      "source": "/api/fll/audio/config",
+      "destination": "/api/fll/config"
+    },
+    {
+      "source": "/api/fll/audio/:slot",
+      "destination": "/api/fll/audio?slot=:slot"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

@@ -1,7 +1,7 @@
 import { validateUserAuth, createScopedUserSupabaseClient, supabaseServer } from '../_lib/supabaseServer.js';
 import { getGoogleDriveClient } from '../_lib/googleDrive.js';
-import { 
-  getActiveFllSeasonData, 
+import {
+  getActiveFllSeasonData,
   getFllAudioConfig,
   SLOT_CANONICAL_MAP,
   VALID_SLOTS,
@@ -19,8 +19,8 @@ import {
  */
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Range, Content-Type');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -37,244 +37,322 @@ export default async function handler(req, res) {
   // DOMÍNIO 1: TEMPORADA E MISSÕES FLL (season)
   // =========================================================================
   if (action === 'season') {
-    // -----------------------------------------------------------------------
-    // GET: Público - Consulta a temporada FLL ativa no Supabase
-    // -----------------------------------------------------------------------
+    // GET: Consulta pública da temporada FLL ativa (ou solicitada por theme) e suas mídias oficiais no Supabase
     if (req.method === 'GET') {
       try {
-        const preferredTheme = req.query?.season || null;
-        const seasonData = await getActiveFllSeasonData(preferredTheme);
-        return res.status(200).json({
-          success: true,
-          data: seasonData
-        });
-      } catch (err) {
-        console.error('[API /api/fll/season GET] Erro ao carregar dados:', err);
-        return res.status(500).json({
-          error: 'Falha ao consultar temporada FLL ativa no Supabase',
-          message: err.message
-        });
-      }
-    }
+        const requestedSeason = req.query?.season || req.query?.theme || null;
+        const seasonData = await getActiveFllSeasonData(requestedSeason);
 
-    // -----------------------------------------------------------------------
-    // POST: Exclusivo para administradores autenticados
-    // -----------------------------------------------------------------------
-    if (req.method === 'POST') {
-      try {
-        const authHeader = req.headers.authorization;
-        let authenticatedUser;
-        try {
-          authenticatedUser = await validateUserAuth(authHeader);
-        } catch (authErr) {
-          return res.status(401).json({
-            error: 'Autenticação requerida',
-            message: authErr.message
-          });
-        }
-
-        if (!authenticatedUser?.profile?.is_admin) {
-          return res.status(403).json({
-            error: 'Acesso negado',
-            message: 'Apenas administradores podem atualizar temporadas ou missões FLL.'
-          });
-        }
-
-        const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-        const client = createScopedUserSupabaseClient(token) || supabaseServer;
-
-        const body = req.body || {};
-        const { 
-          action: postSubAction, 
-          program = 'FLL', 
-          season: seasonTheme = 'BIOGLOW',
-          missionCode,
-          missionTitle,
-          fileId,
-          imageUrl,
-          imageAlt,
-          slot,
-          audioMetadata
-        } = body;
-
-        if (program !== 'FLL') {
-          return res.status(400).json({ error: 'Endpoint exclusivo para o programa FLL.' });
-        }
-
-        // Resolver temporada alvo no Supabase
-        let targetSeason = null;
-        if (seasonTheme) {
-          const { data, error } = await client
-            .from('seasons')
-            .select('*')
-            .eq('program', 'FLL')
-            .eq('theme', seasonTheme)
-            .maybeSingle();
-
-          if (!error && data) {
-            targetSeason = data;
-          }
-        }
-
-        if (!targetSeason) {
-          const { data: latestSeason, error: latestErr } = await client
-            .from('seasons')
-            .select('*')
-            .eq('program', 'FLL')
-            .order('year', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (!latestErr && latestSeason) {
-            targetSeason = latestSeason;
-          }
-        }
-
-        // Se ainda não existir registro físico para FLL no Supabase, criar atomicamente
-        if (!targetSeason) {
-          const initialDesc = JSON.stringify({
-            fll_missions: {},
-            fll_audios: { round_start: null, countdown_beep: null, round_end: null }
-          });
-          const { data: created, error: insertErr } = await client
-            .from('seasons')
-            .insert({
-              program: 'FLL',
-              year: 2026,
-              theme: seasonTheme || 'BIOGLOW',
-              description: initialDesc
-            })
-            .select()
-            .single();
-
-          if (insertErr) {
-            throw new Error(`Falha ao criar registro inicial no Supabase: ${insertErr.message}`);
-          }
-          if (!created) {
-            throw new Error('Registro inicial não foi retornado pelo Supabase.');
-          }
-          targetSeason = created;
-        }
-
-        // Fazer parse seguro e preservação rigorosa de description
-        let parsedDesc = {};
-        if (targetSeason.description) {
-          try {
-            parsedDesc = typeof targetSeason.description === 'string'
-              ? JSON.parse(targetSeason.description)
-              : targetSeason.description;
-          } catch {
-            parsedDesc = { custom_description: targetSeason.description };
-          }
-        }
-
-        parsedDesc.fll_missions = parsedDesc.fll_missions || {};
-        parsedDesc.fll_audios = parsedDesc.fll_audios || {};
-
-        // 1. Atualizar imagem de uma missão (MERGE SEGURO)
-        if (postSubAction === 'update_mission') {
-          if (!missionCode) {
-            return res.status(400).json({ error: 'missionCode obrigatório.' });
-          }
-
-          const existingMission = parsedDesc.fll_missions[missionCode] || {};
-          parsedDesc.fll_missions[missionCode] = {
-            ...existingMission,
-            code: missionCode,
-            title: missionTitle || existingMission.title || missionCode,
-            fileId: fileId || existingMission.fileId || '',
-            imageUrl: imageUrl || (fileId ? `/api/media/${fileId}` : existingMission.imageUrl) || '',
-            imageAlt: imageAlt || existingMission.imageAlt || `Missão ${missionCode}`,
-            updated_at: new Date().toISOString()
-          };
-        }
-
-        // 2. Remover imagem de uma missão (MERGE SEGURO)
-        else if (postSubAction === 'remove_mission_image') {
-          if (!missionCode) {
-            return res.status(400).json({ error: 'missionCode obrigatório.' });
-          }
-          if (parsedDesc.fll_missions[missionCode]) {
-            parsedDesc.fll_missions[missionCode] = {
-              ...parsedDesc.fll_missions[missionCode],
-              fileId: '',
-              imageUrl: '',
-              updated_at: new Date().toISOString()
+        // Enriquecer dados de áudios com URLs diretas de streaming
+        const enrichedAudios = {};
+        const rawAudios = seasonData.fll_audios || {};
+        for (const slotKey of ['round_start', 'countdown_beep', 'round_end']) {
+          const item = rawAudios[slotKey] || null;
+          if (item && item.fileId) {
+            enrichedAudios[slotKey] = {
+              ...item,
+              url: `/api/fll/audio?slot=${slotKey}&season=${encodeURIComponent(seasonData.theme)}&v=${encodeURIComponent(item.sha256 || item.fileId)}`
             };
+          } else {
+            enrichedAudios[slotKey] = null;
           }
         }
-
-        // 3. Atualizar slot de áudio (MERGE SEGURO)
-        else if (postSubAction === 'update_audio') {
-          const canonicalSlot = SLOT_CANONICAL_MAP[slot] || slot;
-          if (!canonicalSlot || !['round_start', 'countdown_beep', 'round_end'].includes(canonicalSlot)) {
-            return res.status(400).json({ error: `Slot de áudio inválido: ${slot}` });
-          }
-
-          parsedDesc.fll_audios[canonicalSlot] = {
-            slot: canonicalSlot,
-            fileId: fileId || '',
-            name: audioMetadata?.name || '',
-            mimeType: audioMetadata?.mimeType || 'audio/mpeg',
-            size: audioMetadata?.size || 0,
-            sha256: audioMetadata?.sha256 || '',
-            updated_at: new Date().toISOString()
-          };
-        }
-
-        // 4. Remover slot de áudio (MERGE SEGURO)
-        else if (postSubAction === 'remove_audio') {
-          const canonicalSlot = SLOT_CANONICAL_MAP[slot] || slot;
-          if (canonicalSlot && parsedDesc.fll_audios[canonicalSlot]) {
-            parsedDesc.fll_audios[canonicalSlot] = null;
-          }
-        }
-
-        // 5. Definir temporada ativa FLL
-        else if (postSubAction === 'set_active_season') {
-          parsedDesc.is_fll_active = true;
-          parsedDesc.active_updated_at = new Date().toISOString();
-        }
-
-        else {
-          return res.status(400).json({ error: `Ação inválida: ${postSubAction}` });
-        }
-
-        // Persistir no Supabase com MERGE SEGURO do campo description
-        const updatedDescriptionJson = JSON.stringify(parsedDesc);
-        const { data: updatedRecord, error: updateErr } = await client
-          .from('seasons')
-          .update({
-            description: updatedDescriptionJson,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', targetSeason.id)
-          .select()
-          .single();
-
-        if (updateErr) {
-          console.error('[API /api/fll/season POST] Falha ao atualizar Supabase:', updateErr);
-          return res.status(500).json({
-            error: 'Falha ao persistir alterações na temporada FLL no Supabase',
-            message: updateErr.message
-          });
-        }
+        // Aliases legados (start, beep, end)
+        enrichedAudios.start = enrichedAudios.round_start;
+        enrichedAudios.beep = enrichedAudios.countdown_beep;
+        enrichedAudios.end = enrichedAudios.round_end;
 
         return res.status(200).json({
           success: true,
           data: {
-            ...updatedRecord,
-            description: parsedDesc,
-            fll_missions: parsedDesc.fll_missions,
-            fll_audios: parsedDesc.fll_audios
+            ...seasonData,
+            fll_audios: enrichedAudios
           }
         });
-
       } catch (err) {
-        console.error('[API /api/fll/season POST] Erro inesperado:', err);
+        console.error('[API /api/fll/season GET] Erro:', err);
+        return res.status(500).json({ error: 'Erro ao carregar dados da temporada FLL', message: err.message });
+      }
+    }
+
+    // POST: Exclusivo para administradores autenticados com token JWT
+    if (req.method === 'POST') {
+      const authHeader = req.headers?.authorization;
+      if (!authHeader) {
+        return res.status(401).json({
+          error: 'Autenticação necessária',
+          message: 'A persistência de mídias de temporada exige autenticação de administrador.'
+        });
+      }
+
+      let authenticatedUser;
+      let userToken;
+      try {
+        authenticatedUser = await validateUserAuth(authHeader);
+        if (!authenticatedUser?.profile?.is_admin) {
+          return res.status(403).json({
+            error: 'Acesso negado',
+            message: 'Apenas administradores podem atualizar missões e áudios da temporada FLL.'
+          });
+        }
+        userToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+      } catch (authErr) {
+        return res.status(401).json({ error: 'Falha na autenticação', message: authErr.message });
+      }
+
+      try {
+        let body = req.body;
+        if (typeof body === 'string') {
+          try { body = JSON.parse(body); } catch {}
+        }
+        body = body || {};
+
+        // Aceitar também o formato introduzido pela consolidação, sem mudar o frontend.
+        const actionAliases = {
+          update_mission: 'save_mission',
+          remove_mission_image: 'remove_mission_image',
+          update_audio: 'save_audio'
+        };
+        if (actionAliases[body.action]) {
+          body = {
+            ...body,
+            action: actionAliases[body.action],
+            data: body.data || {
+              code: body.missionCode,
+              title: body.missionTitle,
+              fileId: body.fileId,
+              imageUrl: body.imageUrl,
+              imageAlt: body.imageAlt,
+              slot: body.slot,
+              fileName: body.audioMetadata?.name,
+              fileSize: body.audioMetadata?.size,
+              sha256: body.audioMetadata?.sha256,
+              mimeType: body.audioMetadata?.mimeType
+            }
+          };
+        } else if (body.action === 'remove_audio' && !body.data) {
+          body = { ...body, data: { slot: body.slot } };
+        }
+
+        const { action, season, program = 'FLL', data: payloadData = {} } = body;
+
+        // 1. Validação estrita do programa
+        if (program !== 'FLL') {
+          return res.status(400).json({
+            error: 'Programa inválido',
+            message: 'Este endpoint é exclusivo para a modalidade FLL.'
+          });
+        }
+
+        // 2. Validação da temporada alvo
+        const targetTheme = (season || 'BIOGLOW').trim().toUpperCase();
+        if (!targetTheme || targetTheme.length < 2 || targetTheme.length > 50) {
+          return res.status(400).json({
+            error: 'Identificador de temporada inválido',
+            message: 'O nome/tema da temporada deve ter entre 2 e 50 caracteres.'
+          });
+        }
+
+        // 3. Cliente Supabase do usuário autenticado (fonte canônica de dados)
+        const client = createScopedUserSupabaseClient(userToken);
+
+        // Buscar registro existente da temporada FLL correspondente no Supabase
+        const { data: existingSeasons, error: selectErr } = await client
+          .from('seasons')
+          .select('*')
+          .eq('program', 'FLL')
+          .ilike('theme', targetTheme)
+          .order('year', { ascending: false })
+          .limit(1);
+
+        if (selectErr) {
+          console.error('[API /api/fll/season POST] Erro ao consultar Supabase:', selectErr);
+          return res.status(500).json({
+            error: 'Falha ao consultar registro no Supabase',
+            message: selectErr.message
+          });
+        }
+
+        const existingRecord = existingSeasons && existingSeasons.length > 0 ? existingSeasons[0] : null;
+
+        // Decodificar metadados existentes com MERGE SEGURO (NUNCA destrói datas, links, manuais, notas)
+        let existingExtra = {};
+        if (existingRecord?.description && typeof existingRecord.description === 'string' && existingRecord.description.startsWith('{')) {
+          try {
+            existingExtra = JSON.parse(existingRecord.description);
+          } catch {}
+        }
+
+        let currentMissions = { ...(existingExtra.fll_missions || {}) };
+        let currentAudios = { ...(existingExtra.fll_audios || {}) };
+
+        // Execução da ação com validações estritas
+        if (action === 'save_mission') {
+          const { code, fileId, imageUrl, imageAlt, title, maxScore } = payloadData;
+          if (!code || typeof code !== 'string' || code.trim().length === 0) {
+            return res.status(400).json({ error: 'Código estável da missão é obrigatório (ex: M01, INSPEÇÃO).' });
+          }
+          const cleanCode = code.trim().toUpperCase();
+
+          if (!fileId && !imageUrl) {
+            return res.status(400).json({ error: 'Identificador do arquivo (fileId) ou URL é obrigatório.' });
+          }
+
+          const missionEntry = {
+            code: cleanCode,
+            fileId: fileId || null,
+            imageUrl: imageUrl || `/api/media/${fileId}`,
+            imageAlt: imageAlt || `Modelo ilustrativo da missão ${cleanCode}`,
+            title: title || cleanCode,
+            maxScore: maxScore ?? 0,
+            updatedAt: new Date().toISOString(),
+            updatedBy: authenticatedUser.email
+          };
+
+          // Preserva todas as demais missões já cadastradas
+          currentMissions[cleanCode] = missionEntry;
+
+        } else if (action === 'remove_mission') {
+          const { code } = payloadData;
+          if (!code) {
+            return res.status(400).json({ error: 'Código da missão obrigatório.' });
+          }
+          const cleanCode = code.trim().toUpperCase();
+          delete currentMissions[cleanCode];
+
+        } else if (action === 'remove_mission_image') {
+          const { code } = payloadData;
+          if (!code) return res.status(400).json({ error: 'Código da missão obrigatório.' });
+          const cleanCode = code.trim().toUpperCase();
+          if (currentMissions[cleanCode]) {
+            currentMissions[cleanCode] = {
+              ...currentMissions[cleanCode], fileId: '', imageUrl: '',
+              updated_at: new Date().toISOString()
+            };
+          }
+
+        } else if (action === 'save_audio') {
+          const { slot, fileId, fileName, fileSize, sha256, mimeType } = payloadData;
+          const canonicalSlot = SLOT_CANONICAL_MAP[slot] || slot;
+
+          if (!['round_start', 'countdown_beep', 'round_end'].includes(canonicalSlot)) {
+            return res.status(400).json({
+              error: 'Slot de áudio inválido',
+              message: 'O slot deve ser um de: round_start, countdown_beep, round_end.'
+            });
+          }
+
+          if (!fileId || typeof fileId !== 'string' || fileId.length < 5) {
+            return res.status(400).json({ error: 'fileId válido do Google Drive é obrigatório.' });
+          }
+
+          const audioEntry = {
+            slot: canonicalSlot,
+            fileId,
+            fileName: fileName || 'audio.mp3',
+            fileSize: Number(fileSize || 0),
+            sha256: sha256 || null,
+            mimeType: mimeType || 'audio/mpeg',
+            updatedAt: new Date().toISOString(),
+            updatedBy: authenticatedUser.email
+          };
+
+          // Preserva os outros 2 slots de áudio
+          currentAudios[canonicalSlot] = audioEntry;
+
+        } else if (action === 'remove_audio') {
+          const { slot } = payloadData;
+          const canonicalSlot = SLOT_CANONICAL_MAP[slot] || slot;
+          if (!['round_start', 'countdown_beep', 'round_end'].includes(canonicalSlot)) {
+            return res.status(400).json({ error: 'Slot de áudio inválido.' });
+          }
+          currentAudios[canonicalSlot] = null;
+
+        } else if (action === 'set_active_season') {
+          existingExtra.is_fll_active = true;
+          existingExtra.active_updated_at = new Date().toISOString();
+        } else {
+          return res.status(400).json({ error: `Ação "${action}" inválida ou não reconhecida.` });
+        }
+
+        // MERGE SEGURO: Preservar absolutamente todos os campos de existingExtra
+        const mergedExtra = {
+          ...existingExtra,
+          custom_description: existingExtra.custom_description || `Temporada FLL ${targetTheme}`,
+          season_name: existingExtra.season_name || targetTheme,
+          year: existingRecord?.year || existingExtra.year || 2026,
+          fll_missions: currentMissions,
+          fll_audios: currentAudios
+        };
+
+        const finalDescriptionJson = JSON.stringify(mergedExtra);
+
+        let savedRecord = null;
+
+        if (existingRecord) {
+          // UPDATE no registro existente no Supabase
+          const { data: updated, error: updateErr } = await client
+            .from('seasons')
+            .update({
+              description: finalDescriptionJson,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingRecord.id)
+            .select()
+            .single();
+
+          if (updateErr) {
+            console.error('[API /api/fll/season POST] Falha ao atualizar Supabase:', updateErr);
+            return res.status(500).json({
+              error: 'Falha ao persistir alterações no Supabase',
+              message: updateErr.message
+            });
+          }
+          savedRecord = updated;
+        } else {
+          // INSERT de novo registro FLL no Supabase
+          const { data: inserted, error: insertErr } = await client
+            .from('seasons')
+            .insert([{
+              program: 'FLL',
+              year: 2026,
+              theme: targetTheme,
+              description: finalDescriptionJson
+            }])
+            .select()
+            .single();
+
+          if (insertErr) {
+            console.error('[API /api/fll/season POST] Falha ao inserir registro no Supabase:', insertErr);
+            return res.status(500).json({
+              error: 'Falha ao criar registro de temporada no Supabase',
+              message: insertErr.message
+            });
+          }
+          savedRecord = inserted;
+        }
+
+        const responseData = {
+          id: savedRecord.id,
+          program: savedRecord.program,
+          year: savedRecord.year,
+          theme: savedRecord.theme,
+          season_name: mergedExtra.season_name,
+          description: mergedExtra.custom_description,
+          fll_missions: currentMissions,
+          fll_audios: currentAudios
+        };
+
+        return res.status(200).json({
+          success: true,
+          message: 'Mídias e metadados da temporada FLL persistidos com sucesso no Supabase!',
+          data: responseData
+        });
+      } catch (saveErr) {
+        console.error('[API /api/fll/season POST] Exceção:', saveErr);
         return res.status(500).json({
-          error: 'Falha interna durante a atualização da temporada FLL',
-          message: err.message
+          error: 'Erro interno ao processar requisição',
+          message: saveErr.message
         });
       }
     }
@@ -291,8 +369,8 @@ export default async function handler(req, res) {
     }
 
     try {
-      const rawSlot = req.query?.slot || req.url.split('/').pop().split('?')[0];
-      const seasonTheme = req.query?.season || null;
+      const rawSlot = req.query?.slot || req.query?.type || req.url.split('/').pop().split('?')[0];
+      const seasonTheme = req.query?.season || req.query?.theme || null;
       const canonicalSlot = SLOT_CANONICAL_MAP[rawSlot] || rawSlot;
 
       if (!VALID_SLOTS.includes(canonicalSlot)) {
@@ -303,7 +381,7 @@ export default async function handler(req, res) {
 
       // 1. Obter metadados do áudio da fonte única da verdade (Supabase)
       const config = await getFllAudioConfig(seasonTheme);
-      const audioInfo = config[canonicalSlot];
+      const audioInfo = config[canonicalSlot] || config[rawSlot];
 
       if (!audioInfo || !audioInfo.fileId) {
         return res.status(404).json({
@@ -347,10 +425,34 @@ export default async function handler(req, res) {
 
       if (audioInfo.sha256) {
         res.setHeader('ETag', `"${audioInfo.sha256}"`);
+        res.setHeader('X-Audio-SHA256', audioInfo.sha256);
       }
 
       if (req.method === 'HEAD') {
         return res.status(200).end();
+      }
+
+      // Preservar requisições parciais usadas pelos players de áudio.
+      const range = req.headers.range;
+      if (range) {
+        const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+        let start = match?.[1] ? Number(match[1]) : 0;
+        let end = match?.[2] ? Number(match[2]) : audioBytes.length - 1;
+        if (match && !match[1] && match[2]) {
+          start = Math.max(0, audioBytes.length - Number(match[2]));
+          end = audioBytes.length - 1;
+        }
+        if (!match || (!match[1] && !match[2]) || !Number.isSafeInteger(start) ||
+            !Number.isSafeInteger(end) || start > end || start >= audioBytes.length) {
+          res.setHeader('Content-Range', `bytes */${audioBytes.length}`);
+          res.setHeader('Content-Length', 0);
+          return res.status(416).end();
+        }
+        end = Math.min(end, audioBytes.length - 1);
+        const chunk = audioBytes.subarray(start, end + 1);
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${audioBytes.length}`);
+        res.setHeader('Content-Length', chunk.length);
+        return res.status(206).end(chunk);
       }
 
       return res.status(200).end(audioBytes);
@@ -378,7 +480,7 @@ export default async function handler(req, res) {
     try {
       const season = req.query?.season || null;
       const config = await getFllAudioConfig(season);
-      
+
       const enriched = {};
       for (const slot of VALID_SLOTS) {
         const item = config[slot];
