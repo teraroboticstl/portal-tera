@@ -50,6 +50,26 @@ const audioElements = {
   round_end: null
 };
 
+// A permissão de reprodução pode ser por elemento (Safari/WebKit).
+// O mesmo reprodutor iniciado pelo clique toca também os bips e o término.
+let roundPlayer = null;
+function getRoundPlayer(slot) {
+  if (typeof window === 'undefined') return null;
+  if (!roundPlayer) {
+    roundPlayer = new Audio();
+    roundPlayer.preload = 'auto';
+    roundPlayer.hidden = true;
+    roundPlayer.setAttribute('data-fll-round-audio', '');
+    document.body.appendChild(roundPlayer);
+  }
+  const source = getCanonicalSlotUrl(slot, currentSeasonTheme);
+  if (roundPlayer.getAttribute('src') !== source) {
+    roundPlayer.src = source;
+    roundPlayer.load();
+  }
+  return roundPlayer;
+}
+
 // Estados do gerenciador
 let isSoundMuted = false;
 let audioUnavailable = false;
@@ -72,7 +92,10 @@ function toCanonical(slot) {
  */
 function getCanonicalSlotUrl(canonicalSlot, seasonTheme) {
   const theme = seasonTheme || currentSeasonTheme || 'BIOGLOW';
-  return `/api/fll/audio?slot=${canonicalSlot}&season=${encodeURIComponent(theme)}`;
+  const season = getLocalActiveFllSeason();
+  const item = season?.theme === theme ? season.fll_audios?.[canonicalSlot] : null;
+  const version = item?.sha256 || item?.fileId;
+  return `/api/fll/audio?slot=${canonicalSlot}&season=${encodeURIComponent(theme)}${version ? `&v=${encodeURIComponent(version)}` : ''}`;
 }
 
 /**
@@ -173,7 +196,7 @@ export function playStartRoundSound() {
   // Interrompe qualquer áudio prévio
   stopAllAudio();
 
-  const audio = getOrCreateAudio('round_start');
+  const audio = getRoundPlayer('round_start');
   if (!audio) return Promise.resolve(false);
 
   return new Promise((resolve) => {
@@ -204,7 +227,7 @@ export function playStartRoundSound() {
 export function playCountdownPip() {
   if (isSoundMuted) return Promise.resolve(false);
 
-  const audio = getOrCreateAudio('countdown_beep');
+  const audio = getRoundPlayer('countdown_beep');
   if (!audio) return Promise.resolve(false);
 
   return new Promise((resolve) => {
@@ -241,7 +264,7 @@ export function playEndRoundSound() {
   // Interrompe imediatamente qualquer bip ativo e outros áudios para não tocar simultâneo
   stopAllAudio();
 
-  const audio = getOrCreateAudio('round_end');
+  const audio = getRoundPlayer('round_end');
   if (!audio) return Promise.resolve(false);
 
   return new Promise((resolve) => {
@@ -270,7 +293,7 @@ export function playEndRoundSound() {
  */
 export function stopAllAudio() {
   try {
-    Object.values(audioElements).forEach((audio) => {
+    [...Object.values(audioElements), roundPlayer].forEach((audio) => {
       if (audio) {
         audio.pause();
         audio.currentTime = 0;

@@ -28,6 +28,7 @@ export default function BioglowScoreHeader({
   const [audioUnavailable, setAudioUnavailable] = useState(false);
 
   const timerRef = useRef(null);
+  const secondsLeftRef = useRef(150);
   const beepedSecondsRef = useRef(new Set());
   const hasPlayedEndSoundRef = useRef(false);
 
@@ -46,6 +47,7 @@ export default function BioglowScoreHeader({
       stopAllAudio();
       setIsRunning(false);
       setSecondsLeft(150);
+      secondsLeftRef.current = 150;
       beepedSecondsRef.current.clear();
       hasPlayedEndSoundRef.current = false;
     }
@@ -102,9 +104,14 @@ export default function BioglowScoreHeader({
       playStartRoundSound();
     }
 
-    timerRef.current = setInterval(() => {
-      setSecondsLeft(handleTick);
-    }, 1000);
+    timerRef.current = setInterval(tickTimer, 1000);
+  };
+
+  // Sons são efeitos do timer, não efeitos de um updater que React pode repetir.
+  const tickTimer = () => {
+    const next = handleTick(secondsLeftRef.current);
+    secondsLeftRef.current = next;
+    setSecondsLeft(next);
   };
 
   const pauseTimer = () => {
@@ -118,9 +125,7 @@ export default function BioglowScoreHeader({
     setIsRunning(true);
     if (timerRef.current) clearInterval(timerRef.current);
     // Retomar continua do tempo restante SEM repetir som de início nem bips já emitidos
-    timerRef.current = setInterval(() => {
-      setSecondsLeft(handleTick);
-    }, 1000);
+    timerRef.current = setInterval(tickTimer, 1000);
   };
 
   // Alternador único: Iniciar -> Pausar -> Retomar
@@ -129,14 +134,13 @@ export default function BioglowScoreHeader({
       pauseTimer();
     } else if (secondsLeft === 0) {
       setSecondsLeft(150);
+      secondsLeftRef.current = 150;
       beepedSecondsRef.current.clear();
       hasPlayedEndSoundRef.current = false;
       // Inicia novo round do 02:30
       setIsRunning(true);
       playStartRoundSound();
-      timerRef.current = setInterval(() => {
-        setSecondsLeft(handleTick);
-      }, 1000);
+      timerRef.current = setInterval(tickTimer, 1000);
     } else if (secondsLeft < 150) {
       resumeTimer();
     } else {
