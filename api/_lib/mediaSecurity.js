@@ -80,7 +80,7 @@ export async function isFileReferencedInDb(fileId) {
       supabaseServer.from('robots').select('id, images, specs'),
       supabaseServer.from('tournament_memorials').select('id, images'),
       supabaseServer.from('seasons').select('id', { head: true, count: 'exact' }).ilike('description', searchPattern),
-      supabaseServer.from('fll_missions').select('id', { head: true, count: 'exact' }).ilike('image_url', searchPattern).catch(() => ({ data: null, error: null }))
+      Promise.resolve(supabaseServer.from('fll_missions').select('id', { head: true, count: 'exact' }).ilike('image_url', searchPattern)).catch(() => ({ data: null, error: null }))
     ]);
 
     // FAIL-CLOSED: Verificação explícita do result.error de cada consulta individual (ignorando tabela legada fll_missions se ausente)
@@ -202,7 +202,7 @@ export async function isFileInPublicRecords(fileId) {
       supabaseServer.from('robots').select('id, images, specs'),
       supabaseServer.from('tournament_memorials').select('id, images'),
       supabaseServer.from('seasons').select('id', { head: true, count: 'exact' }).ilike('description', searchPattern),
-      supabaseServer.from('fll_missions').select('id', { head: true, count: 'exact' }).ilike('image_url', searchPattern).catch(() => ({ data: null, error: null }))
+      Promise.resolve(supabaseServer.from('fll_missions').select('id', { head: true, count: 'exact' }).ilike('image_url', searchPattern)).catch(() => ({ data: null, error: null }))
     ]);
 
     const hasRobotPublic = Array.isArray(robots?.data) && robots.data.some(r => {
