@@ -76,7 +76,9 @@ export function devApiMiddleware(req, res, next) {
   }
 
   if (pathname === '/api/fll/audio' || pathname.startsWith('/api/fll/audio/')) {
-    const rawSlot = pathname.replace('/api/fll/audio/', '').split('/')[0];
+    const rawSlot = pathname.startsWith('/api/fll/audio/')
+      ? pathname.slice('/api/fll/audio/'.length).split('/')[0]
+      : '';
     req.query = {
       ...Object.fromEntries(url.searchParams.entries()),
       action: 'audio',
