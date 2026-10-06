@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { toast } from 'sonner';
 import SafeImage from '@/components/common/SafeImage';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { uploadToGoogleDrive } from '@/api/googleDriveClient';
+import { uploadToGoogleDrive, deleteFromGoogleDrive } from '@/api/googleDriveClient';
 import { fetchActiveFllSeason } from '@/api/fllSeasonClient';
 import { 
   BIOGLOW_MISSIONS_CATALOG, 
