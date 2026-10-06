@@ -51,7 +51,15 @@ export async function uploadToGoogleDrive(params = {}) {
     body: formData
   });
 
-  const result = await response.json();
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    if (response.status === 413) {
+      throw new Error('O arquivo excede o limite de envio do servidor. Selecione um arquivo menor.');
+    }
+    throw new Error('O servidor não conseguiu processar o upload. Tente novamente.');
+  }
 
   if (!response.ok) {
     const errorMsg = result.message || result.error || 'Falha ao processar upload no servidor.';
@@ -115,4 +123,3 @@ export async function deleteFromGoogleDrive(fileId) {
 
   return result;
 }
-

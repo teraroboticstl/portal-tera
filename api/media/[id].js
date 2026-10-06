@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { getGoogleDriveClient, resolveTargetFolder, sanitizeFileName, uploadBufferToDrive } from '../_lib/googleDrive.js';
+import { getDriveErrorInfo, getGoogleDriveClient, resolveTargetFolder, sanitizeFileName, uploadBufferToDrive } from '../_lib/googleDrive.js';
 import { verifyMediaAccess, isFileReferencedInDb, invalidateFileDbCache } from '../_lib/mediaSecurity.js';
 import { validateUserAuth, validateUploadPermission } from '../_lib/supabaseServer.js';
 import { parseMultipart } from '../_lib/multipart.js';
@@ -183,11 +183,9 @@ export default async function handler(req, res) {
           uploaderId: authenticatedUser.id
         });
       } catch (uploadDriveErr) {
-        console.error('[API /api/media upload] Erro no upload para o Google Drive:', uploadDriveErr);
-        return res.status(502).json({
-          error: 'Falha ao gravar arquivo no Google Drive',
-          message: uploadDriveErr.message
-        });
+        console.error('[API /api/media upload] Erro no upload para o Google Drive:', getDriveErrorInfo(uploadDriveErr).code);
+        const failure = getDriveErrorInfo(uploadDriveErr);
+        return res.status(failure.status).json({ error: failure.code, message: failure.message });
       }
 
       // Se for áudio oficial do simulador FLL, cachear imediatamente os bytes originais idênticos
@@ -238,11 +236,9 @@ export default async function handler(req, res) {
       }
 
     } catch (error) {
-      console.error('[API /api/media upload] Erro inesperado:', error);
-      return res.status(500).json({
-        error: 'Falha interna durante o processamento do upload',
-        message: error.message || 'Erro desconhecido'
-      });
+      console.error('[API /api/media upload] Erro inesperado:', getDriveErrorInfo(error).code);
+      const failure = getDriveErrorInfo(error);
+      return res.status(failure.status).json({ error: failure.code, message: failure.message });
     }
   }
 
@@ -345,7 +341,7 @@ export default async function handler(req, res) {
         fileId
       });
     } catch (delErr) {
-      console.error(`[API /api/media/${fileId}] Erro ao excluir:`, delErr);
+      console.error(`[API /api/media/${fileId}] Erro ao excluir:`, getDriveErrorInfo(delErr).code);
       const status = delErr.message?.includes('Token') || delErr.message?.includes('Autenticação') ? 401 : 500;
       return res.status(status).json({
         error: 'Falha ao excluir arquivo',
@@ -405,7 +401,7 @@ export default async function handler(req, res) {
       await new Promise((resolve, reject) => {
         streamRes.data
           .on('error', (err) => {
-            console.error('[Google Drive Stream] Erro de transmissão:', err);
+            console.error('[Google Drive Stream] Erro de transmissão:', getDriveErrorInfo(err).code);
             if (!res.headersSent) {
               res.status(500).json({ error: 'Erro ao transmitir arquivo.' });
             }
@@ -419,12 +415,13 @@ export default async function handler(req, res) {
       });
 
     } catch (error) {
-      console.error(`[API /api/media/${fileId}] Erro ao buscar arquivo:`, error);
-      const status = error.code === 404 ? 404 : 500;
+      console.error(`[API /api/media/${fileId}] Erro ao buscar arquivo:`, getDriveErrorInfo(error).code);
+      const failure = getDriveErrorInfo(error);
+      const status = failure.status;
       if (!res.headersSent) {
         return res.status(status).json({
-          error: 'Arquivo não encontrado ou inacessível no Google Drive',
-          message: error.message
+          error: failure.code,
+          message: failure.message
         });
       }
     }

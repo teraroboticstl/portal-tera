@@ -5,6 +5,23 @@ import path from 'path';
 import crypto from 'crypto';
 
 const ROOT_FOLDER_NAME = 'Portal Tera - Arquivos do Sistema';
+
+// Nunca registrar o objeto Gaxios: ele contém o corpo da requisição OAuth.
+export function getDriveErrorInfo(error) {
+  const oauthCode = error?.response?.data?.error;
+  if (oauthCode === 'invalid_grant' || error?.message === 'invalid_grant') {
+    return {
+      status: 503,
+      code: 'GOOGLE_DRIVE_REAUTH_REQUIRED',
+      message: 'A conexão com o Google Drive expirou ou foi revogada. Na aba Google Drive, renove a autorização da conta institucional e atualize a configuração segura na Vercel.'
+    };
+  }
+  return {
+    status: Number(error?.code) === 404 ? 404 : 502,
+    code: 'GOOGLE_DRIVE_UNAVAILABLE',
+    message: 'Não foi possível acessar o Google Drive. Tente novamente ou verifique a configuração da integração.'
+  };
+}
 const LOCAL_DRIVE_DIR = path.resolve(process.cwd(), 'src/config/fll-audio-store/drive_files');
 const LOCAL_DRIVE_META = path.resolve(process.cwd(), 'src/config/fll-audio-store/drive_meta.json');
 
@@ -160,6 +177,9 @@ export function getGoogleDriveClient() {
   const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
   if (!clientId || !clientSecret || !refreshToken) {
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      throw new Error('A integração Google Drive não está configurada no servidor.');
+    }
     return createLocalDriveFallback();
   }
 
