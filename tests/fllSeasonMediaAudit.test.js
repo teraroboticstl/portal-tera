@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isFileReferencedInDb } from '../api/lib/mediaSecurity.js';
-import { SLOT_CANONICAL_MAP, VALID_SLOTS } from '../api/lib/fllAudioStorage.js';
+import { isFileReferencedInDb } from '../api/_lib/mediaSecurity.js';
+import { SLOT_CANONICAL_MAP, VALID_SLOTS } from '../api/_lib/fllAudioStorage.js';
 
-test('1. Supabase é a ÚNICA fonte de verdade: Nenhuma persistência em JSON em api/lib/fllAudioStorage.js', async () => {
+test('1. Supabase é a ÚNICA fonte de verdade: Nenhuma persistência em JSON em api/_lib/fllAudioStorage.js', async () => {
   const fs = await import('node:fs');
   const path = await import('node:path');
-  const code = fs.readFileSync(path.resolve(process.cwd(), 'api/lib/fllAudioStorage.js'), 'utf-8');
+  const code = fs.readFileSync(path.resolve(process.cwd(), 'api/_lib/fllAudioStorage.js'), 'utf-8');
 
   // Não deve conter referências de leitura/escrita em fllSeasonsStore.json nem fllAudioConfig.json para persistência
   assert.equal(code.includes('fllSeasonsStore.json'), false, 'Não deve referenciar fllSeasonsStore.json');
@@ -19,7 +19,7 @@ test('1. Supabase é a ÚNICA fonte de verdade: Nenhuma persistência em JSON em
 test('2. Nenhum JSON é usado como fallback de escrita no endpoint /api/fll/season', async () => {
   const fs = await import('node:fs');
   const path = await import('node:path');
-  const code = fs.readFileSync(path.resolve(process.cwd(), 'api/fll/season.js'), 'utf-8');
+  const code = fs.readFileSync(path.resolve(process.cwd(), 'api/fll/[action].js'), 'utf-8');
 
   assert.equal(code.includes('saveFllSeasonsStore'), false, 'Não deve usar fallback de escrita em JSON');
   assert.equal(code.includes('updateFllSeasonData'), false, 'Não deve usar updateFllSeasonData de arquivo');
@@ -29,7 +29,7 @@ test('2. Nenhum JSON é usado como fallback de escrita no endpoint /api/fll/seas
 test('3. Falha no Supabase NÃO resulta em falso sucesso', async () => {
   const fs = await import('node:fs');
   const path = await import('node:path');
-  const code = fs.readFileSync(path.resolve(process.cwd(), 'api/fll/season.js'), 'utf-8');
+  const code = fs.readFileSync(path.resolve(process.cwd(), 'api/fll/[action].js'), 'utf-8');
 
   // Verifica que se updateErr ou insertErr ocorrer, o endpoint retorna HTTP 500 com erro
   assert.ok(code.includes('if (updateErr)'), 'Deve validar updateErr');
@@ -160,7 +160,7 @@ test('7. Atualizar um áudio preserva os outros dois slots', () => {
 test('8. mediaSecurity permanece FAIL-CLOSED e não autoriza apenas por nome de pasta', async () => {
   const fs = await import('node:fs');
   const path = await import('node:path');
-  const code = fs.readFileSync(path.resolve(process.cwd(), 'api/lib/mediaSecurity.js'), 'utf-8');
+  const code = fs.readFileSync(path.resolve(process.cwd(), 'api/_lib/mediaSecurity.js'), 'utf-8');
 
   // Não deve conter 'FLL BIOGLOW', 'Missões' ou 'Áudios' em KNOWN_PUBLIC_FOLDER_NAMES
   assert.equal(code.includes("'FLL BIOGLOW'"), false, 'Pasta FLL não deve ser automaticamente pública');
@@ -172,7 +172,7 @@ test('8. mediaSecurity permanece FAIL-CLOSED e não autoriza apenas por nome de 
 test('9. Escrita em /api/fll/season exige autorização de administrador', async () => {
   const fs = await import('node:fs');
   const path = await import('node:path');
-  const code = fs.readFileSync(path.resolve(process.cwd(), 'api/fll/season.js'), 'utf-8');
+  const code = fs.readFileSync(path.resolve(process.cwd(), 'api/fll/[action].js'), 'utf-8');
 
   assert.ok(code.includes('!authenticatedUser?.profile?.is_admin'), 'Deve exigir is_admin');
   assert.ok(code.includes('return res.status(403)'), 'Deve retornar 403 para não-admins');
@@ -183,7 +183,7 @@ test('10. Não existe dependência da coluna inexistente is_active no Supabase',
   const fs = await import('node:fs');
   const path = await import('node:path');
   const adapterCode = fs.readFileSync(path.resolve(process.cwd(), 'src/api/adapters/base44ToSupabaseAdapter.js'), 'utf-8');
-  const seasonApiCode = fs.readFileSync(path.resolve(process.cwd(), 'api/fll/season.js'), 'utf-8');
+  const seasonApiCode = fs.readFileSync(path.resolve(process.cwd(), 'api/fll/[action].js'), 'utf-8');
 
   assert.equal(seasonApiCode.includes(".eq('is_active'"), false, 'API não deve consultar coluna is_active');
   assert.ok(adapterCode.includes('delete sanitized.is_active;'), 'Adapter deve remover is_active antes de enviar ao Supabase');

@@ -32,7 +32,7 @@ describe('Integração de Imagens das Missões FLL BIOGLOW com Google Drive e Po
   });
 
   it('2. Resolução de pastas do Google Drive direciona missões FLL para estrutura institucional oficial', async () => {
-    const googleDriveCode = fs.readFileSync(path.resolve('./api/lib/googleDrive.js'), 'utf-8');
+    const googleDriveCode = fs.readFileSync(path.resolve('./api/_lib/googleDrive.js'), 'utf-8');
     assert.match(
       googleDriveCode,
       /'fll-missions':\s*\[\s*'04\.\s*Torneios & Eventos',\s*'FLL BIOGLOW',\s*'Missões'\s*\]/,
@@ -40,9 +40,9 @@ describe('Integração de Imagens das Missões FLL BIOGLOW com Google Drive e Po
     );
   });
 
-  it('3. api/media/upload.js inclui fll-missions em ALLOWED_CONTEXTS e PUBLIC_CONTEXTS para entrega sem login', () => {
-    const uploadCode = fs.readFileSync(path.resolve('./api/media/upload.js'), 'utf-8');
-    assert.ok(uploadCode.includes("'fll-missions'"), 'upload.js deve listar fll-missions');
+  it('3. api/media/[id].js inclui fll-missions em ALLOWED_CONTEXTS e PUBLIC_CONTEXTS para entrega sem login', () => {
+    const uploadCode = fs.readFileSync(path.resolve('./api/media/[id].js'), 'utf-8');
+    assert.ok(uploadCode.includes("'fll-missions'"), 'media/[id].js deve listar fll-missions');
     
     // Verificar que fll-missions está dentro de PUBLIC_CONTEXTS
     const publicContextsMatch = uploadCode.match(/const\s+PUBLIC_CONTEXTS\s*=\s*new\s+Set\(\[([\s\S]*?)\]\);/);
@@ -50,11 +50,10 @@ describe('Integração de Imagens das Missões FLL BIOGLOW com Google Drive e Po
     assert.ok(publicContextsMatch[1].includes("'fll-missions'"), 'PUBLIC_CONTEXTS deve conter fll-missions');
   });
 
-  it('4. api/lib/mediaSecurity.js reconhece pastas da FLL como públicas e consulta fll_missions nas tabelas ativas', () => {
-    const securityCode = fs.readFileSync(path.resolve('./api/lib/mediaSecurity.js'), 'utf-8');
-    assert.ok(securityCode.includes("'FLL BIOGLOW'"), 'mediaSecurity deve reconhecer FLL BIOGLOW');
-    assert.ok(securityCode.includes("'Missões'"), 'mediaSecurity deve reconhecer Missões');
-    assert.ok(securityCode.includes("from('fll_missions')"), 'mediaSecurity deve verificar registros em fll_missions');
+  it('4. api/_lib/mediaSecurity.js reconhece pastas da FLL como públicas e consulta seasons no Supabase', () => {
+    const securityCode = fs.readFileSync(path.resolve('./api/_lib/mediaSecurity.js'), 'utf-8');
+    assert.ok(securityCode.includes("'04. Torneios & Eventos'"), 'mediaSecurity deve reconhecer 04. Torneios & Eventos');
+    assert.ok(securityCode.includes("from('seasons')"), 'mediaSecurity deve verificar registros em seasons');
   });
 
   it('5. Validação de formato e tamanho de arquivos segue os padrões da TeraShop (15MB e tipos de imagem)', () => {
@@ -84,10 +83,10 @@ describe('Integração de Imagens das Missões FLL BIOGLOW com Google Drive e Po
 
   it('8. SimuladorFLL passa imageUrl e imageAlt para todos os cards de missões', () => {
     const pageCode = fs.readFileSync(path.resolve('./src/pages/SimuladorFLL.jsx'), 'utf-8');
-    assert.ok(pageCode.includes("fetchFllMissionImages"), 'Carrega imagens das missões');
-    assert.ok(pageCode.includes("missionImages['INSPEÇÃO']?.imageUrl"), 'Passa imageUrl para Inspeção');
-    assert.ok(pageCode.includes("missionImages['M01']?.imageUrl"), 'Passa imageUrl para M01');
-    assert.ok(pageCode.includes("missionImages['M16']?.imageUrl"), 'Passa imageUrl para M16');
+    assert.ok(pageCode.includes("fetchActiveFllSeason"), 'Carrega dados da temporada e missões');
+    assert.ok(pageCode.includes("imageUrl={missionImages['INSPEÇÃO']?.imageUrl}"), 'Passa imageUrl para Inspeção');
+    assert.ok(pageCode.includes("imageUrl={missionImages['M01']?.imageUrl}"), 'Passa imageUrl para M01');
+    assert.ok(pageCode.includes("imageUrl={missionImages['M16']?.imageUrl}"), 'Passa imageUrl para M16');
   });
 
   it('9. Tabela de Critérios & Pontuações é colapsável com botão de expandir/ocultar', () => {

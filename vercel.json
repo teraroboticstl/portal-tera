@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/api/media",
+      "destination": "/api/media/upload"
+    },
+    {
+      "source": "/api/fll",
+      "destination": "/api/fll/season"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

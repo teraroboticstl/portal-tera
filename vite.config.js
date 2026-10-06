@@ -16,7 +16,7 @@ export default defineConfig(({ command }) => {
       name: 'dev-api-middleware',
       async configureServer(server) {
         try {
-          const devMiddlewarePath = './api/devServerMiddleware.js'
+          const devMiddlewarePath = './api/_devServerMiddleware.js'
           const { devApiMiddleware } = await import(/* @vite-ignore */ devMiddlewarePath)
           server.middlewares.use(devApiMiddleware)
         } catch (err) {

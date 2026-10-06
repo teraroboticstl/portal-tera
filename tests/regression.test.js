@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { verifyMediaAccess, isFileReferencedInDb } from '../api/lib/mediaSecurity.js';
+import { verifyMediaAccess, isFileReferencedInDb } from '../api/_lib/mediaSecurity.js';
 import fs from 'node:fs';
 import ts from 'typescript';
 import { transformWithEsbuild } from 'vite';
@@ -556,7 +556,7 @@ test('18. Regressão SQL Migration: 20260925_close_season_atomic.sql contém rej
 });
 
 test('19. Regressão Código Fonte: isFileReferencedInDb não possui catch retornando isReferenced:false', () => {
-  const code = fs.readFileSync('api/lib/mediaSecurity.js', 'utf-8');
+  const code = fs.readFileSync('api/_lib/mediaSecurity.js', 'utf-8');
 
   // Extrai a função isFileReferencedInDb completa até o próximo export
   const funcMatch = code.match(/export async function isFileReferencedInDb[\s\S]*?(?=export function invalidateFileDbCache)/);
