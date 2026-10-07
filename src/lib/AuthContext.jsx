@@ -70,6 +70,8 @@ export const AuthProvider = ({ children }) => {
         member_role: memberRole,
         status,
         portal_internal: !accessError && access?.portal_internal === true,
+        portal_can_edit: !accessError && access?.portal_can_edit === true,
+        access_level: access?.access_level || 'public',
         ava_status: access?.ava_status || 'pending',
         ava_admin: !accessError && access?.ava_admin === true,
         user_metadata: authUser.user_metadata

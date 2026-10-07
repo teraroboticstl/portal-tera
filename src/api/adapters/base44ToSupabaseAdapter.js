@@ -16,6 +16,11 @@ export const createEntityAdapter = (entityName, tableName = '') => {
     .replace(/^_/, ''); // Remove leading underscore se houver
 
   const actualTableName = tableName || defaultTable;
+  async function assertWriteAccess(){
+    if(!["audit_logs","board_diaries","daily_logs","esg_initiatives","fll_attachments","fll_core_values","fll_innovation_projects","fll_judge_preps","fll_members","fll_missions","fll_tasks","frc_scouts","internal_projects","matches","meeting_notes","onshape_configs","pdi_frcs","pdis","priorities","project_risks","prototype_tests","scout_ftcs","team_knowledge_bases","team_logs","teams","tournament_configs","projects"].includes(actualTableName))return;
+    const {data,error}=await supabase.rpc('portal_can_edit');
+    if(error || data!==true)throw new Error('Seu nível permite apenas consulta. Edição restrita a membros integrados e líderes.');
+  }
 
   // Helper para mapear campos do modelo relacional e compatibilizar campos virtuais
   const mapItem = (item) => {
@@ -277,6 +282,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
      * Cria um novo registro.
      */
     async create(payload) {
+      await assertWriteAccess();
       console.log(`[Supabase Adapter] Criando registro em ${entityName} no Supabase...`, payload);
       
       const sanitized = { ...payload };
@@ -486,6 +492,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
      * Atualiza um registro existente.
      */
     async update(id, payload) {
+      await assertWriteAccess();
       console.log(`[Supabase Adapter] Atualizando ID ${id} de ${entityName} no Supabase...`, payload);
       
       const sanitized = { ...payload };
@@ -723,6 +730,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
      * Remove um registro.
      */
     async delete(id) {
+      await assertWriteAccess();
       console.log(`[Supabase Adapter] Deletando ID ${id} de ${entityName} no Supabase...`);
       const { error } = await supabase
         .from(actualTableName)

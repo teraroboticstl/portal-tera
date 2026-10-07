@@ -8,9 +8,9 @@ test('AVA-only approved profile cannot upload private internal or public project
  const user={profile:{status:'approved',member_role:'member',portal_internal:false,is_admin:false,ava_admin:false}};
  for(const context of ['projects','daily-logs','meeting-notes','prototype-tests','ava'])assert.throws(()=>validate(user,context));
 });
-test('AVA administrator can upload learning material without receiving portal management scope',()=>{
+test('AVA-only flags cannot bypass the requirement of Membro Líder for content uploads',()=>{
  const user={profile:{status:'pending',portal_internal:false,is_admin:false,ava_admin:true}};
- assert.equal(validate(user,'ava'),true);
+ assert.throws(()=>validate(user,'ava'),/Membro Líder/);
  for(const context of ['projects','fll-audio','products','test'])assert.throws(()=>validate(user,context));
 });
 test('Internal membership does not authorize AVA content uploads',()=>{

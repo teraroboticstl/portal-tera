@@ -4,6 +4,7 @@ import InternalHeader from './InternalHeader';
 import OnlineUsers from './OnlineUsers';
 import { usePresence } from './usePresence';
 import TerAIChat from '@/components/fll/TerAIChat';
+import {canEditInternal,accessLabel} from '@/lib/accessLevels';
 
 export default function InternalPageLayout({ 
   children, 
@@ -50,6 +51,7 @@ export default function InternalPageLayout({
         />
 
         <main className="p-4 lg:p-8">
+          {user?.portal_internal && !canEditInternal(user) && <p role="status" className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">{accessLabel(user)}: acesso à Área Interna somente para consulta. Alterações e envio de arquivos exigem o nível Membro Integrado ou Membro Líder.</p>}
           <div className="flex gap-6 items-start">
             <div className="flex-1 min-w-0">
               {children}

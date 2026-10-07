@@ -5,6 +5,7 @@ import { createPageUrl } from '@/utils';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { Button } from "@/components/ui/button";
 import { Clock, XCircle, Shield, LogIn } from 'lucide-react';
+import {canEditInternal} from '@/lib/accessLevels';
 
 // E-mails dos admins seed (bootstrap admins) - sempre aprovados automaticamente
 export const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com'];
@@ -17,17 +18,7 @@ export const ROLES = {
 };
 
 // Helper para verificar se pode editar (member ou admin)
-export const canEdit = (user) => {
-  if (!user) return false;
-  // Admin do sistema (role = 'admin') SEMPRE pode editar
-  if (user.role === 'admin') return true;
-  // Seed admin sempre pode editar
-  if (user.email && SEED_ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
-  // Verificar member_role para outros usuários
-  const memberRole = user.member_role || 'user';
-  // member_role pode ser 'admin' ou 'member' para permitir edição
-  return memberRole === 'member' || memberRole === 'admin';
-};
+export const canEdit = canEditInternal;
 
 // Helper para verificar se é admin
 export const isAdmin = (user) => {
@@ -51,9 +42,9 @@ export const getUserRole = (user) => {
 // Helper para obter label do role
 export const getRoleLabel = (role) => {
   const labels = {
-    user: 'Usuário (Viewer)',
-    member: 'Membro (Editor)',
-    admin: 'Administrador'
+    user: 'Aluno Membro em treinamento',
+    member: 'Membro Integrado',
+    admin: 'Membro Líder'
   };
   return labels[role] || role;
 };
@@ -127,7 +118,7 @@ export default function ProtectedRoute({
     denialReason = 'rejected';
   } else if (requireAdmin) {
     denialReason = 'admin_required';
-  } else if (requireMember && user.member_role !== 'member' && user.role !== 'mentor') {
+  } else if (requireMember && !canEditInternal(user)) {
     denialReason = 'member_required';
   } else if (requireApproved && user.status !== 'approved') {
     denialReason = 'approval_required';

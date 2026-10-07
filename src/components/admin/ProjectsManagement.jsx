@@ -1,6 +1,6 @@
 import ModalityFields, { ModalityBadges, ModalityFilter } from '@/components/common/ModalityFields';
 import { matchesProject, projectModalities, projectCategories, MODALITIES, OBR_CATEGORIES } from '@/lib/modalities';
-import {isAdmin} from '@/components/internal/ProtectedRoute';
+import {isAdmin,canEdit} from '@/components/internal/ProtectedRoute';
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -24,11 +24,12 @@ const TAG_OPTIONS = ['Educação', 'Engenharia', 'Impacto Social', 'Tecnologia',
 
 export default function ProjectsManagement({user}) {
   const queryClient = useQueryClient();
+  const editable=canEdit(user);
   const requested = new URLSearchParams(window.location.search).get('modality');
   const [modality, setModality] = useState([...MODALITIES,...OBR_CATEGORIES].includes(requested) ? requested : 'all');
   const savedDraft = loadAdminDraft('projects');
 
-  const [showForm, setShowForm] = useState(Boolean(savedDraft?.isOpen));
+  const [showForm, setShowForm] = useState(editable && Boolean(savedDraft?.isOpen));
   const [editingProject, setEditingProject] = useState(
     savedDraft?.mode === 'edit' && savedDraft?.recordId
       ? { id: savedDraft.recordId, ...(savedDraft.data || {}) }
@@ -288,10 +289,10 @@ export default function ProjectsManagement({user}) {
             Gerenciar Projetos
           </h2>
           <p className="text-sm text-[#B8BDC7]">
-            Cadastre as iniciativas comunitárias, histórico de ações e acervo de fotos no Google Drive.
+            {editable?'Cadastre as iniciativas comunitárias, histórico de ações e acervo de fotos no Google Drive.':'Você pode consultar os projetos. Edição disponível para membros integrados e líderes.'}
           </p>
         </div>
-        <Button onClick={openCreate} className="bg-[#E10600] hover:bg-[#E10600]/90 text-white font-medium">
+        <Button disabled={!editable} onClick={openCreate} className="bg-[#E10600] hover:bg-[#E10600]/90 text-white font-medium">
           <Plus className="w-4 h-4 mr-2" />
           Novo Projeto
         </Button>
@@ -404,6 +405,7 @@ export default function ProjectsManagement({user}) {
                     <Button
                       size="sm"
                       variant="outline"
+                      disabled={!editable}
                       onClick={() => openEdit(project)}
                       className="border-[#1F222B] bg-white text-zinc-900 hover:bg-zinc-100 hover:text-black flex-1 font-medium text-xs"
                     >
@@ -428,7 +430,7 @@ export default function ProjectsManagement({user}) {
       )}
 
       {/* Modal Unificado: Criar / Editar Projeto */}
-      <Dialog open={showForm} onOpenChange={(open) => { if (!open) handleCancel(); }}>
+      <Dialog open={editable && showForm} onOpenChange={(open) => { if (!open) handleCancel(); }}>
         <DialogContent className="bg-[#111217] border-[#1F222B] max-w-xl max-h-[90vh] overflow-y-auto text-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">

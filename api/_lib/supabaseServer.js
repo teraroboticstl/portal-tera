@@ -79,6 +79,8 @@ export async function validateUserAuth(authHeaderOrToken) {
       status,
       is_admin: role === 'admin' || memberRole === 'admin' || isSeedAdmin,
       portal_internal: !accessError && access?.portal_internal === true,
+      portal_can_edit: !accessError && access?.portal_can_edit === true,
+      access_level: access?.access_level || 'public',
       ava_status: access?.ava_status || 'pending',
       ava_admin: !accessError && access?.ava_admin === true
     }
@@ -95,7 +97,7 @@ export async function validateUserAuth(authHeaderOrToken) {
 export function validateUploadPermission(user, context) {
   const isAdmin = user.profile.is_admin;
   if (context === 'ava') {
-    if (!isAdmin && !user.profile.ava_admin) throw new Error('Upload restrito à administração do AVA.');
+    if (!isAdmin) throw new Error('Upload restrito à administração do AVA (Membro Líder).');
     return true;
   }
   const isApproved = (user.profile.status === 'approved' && user.profile.portal_internal !== false) || isAdmin;
@@ -104,6 +106,9 @@ export function validateUploadPermission(user, context) {
     throw new Error('Acesso negado: seu cadastro ainda aguarda aprovação da equipe.');
   }
 
+  if (!isAdmin && user.profile.portal_can_edit !== true) {
+    throw new Error('Acesso somente para consulta: este nível não permite enviar ou alterar arquivos internos.');
+  }
   // Contextos puramente administrativos
   const adminOnlyContexts = ['products', 'robots', 'sponsors', 'featured-news', 'fll-missions', 'fll-audio', 'test'];
   if (adminOnlyContexts.includes(context) && !isAdmin) {

@@ -16,7 +16,7 @@ BEGIN
   jsonb_build_object('id','check','type','checklist','items',jsonb_build_array('One','Two')),
   jsonb_build_object('id','quiz','type','quiz','min_score',70,'max_attempts',2,'questions',jsonb_build_array(jsonb_build_object('prompt','Question','options',jsonb_build_array('Wrong','Correct'),'correct',1,'feedback','Review the lesson')))));
  PERFORM public.ava_mutate('save_module',body);
- PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'ava_status','pending','portal_internal',false));
+ PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'access_level','student','status','pending'));
  PERFORM set_config('request.jwt.claim.sub',student_id::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student_id,'role','authenticated')::text,true);
  failed:=false; BEGIN PERFORM public.ava_read('dashboard'); EXCEPTION WHEN others THEN failed:=SQLERRM LIKE '%AVA_ACCESS_DENIED%'; END;
@@ -24,11 +24,11 @@ BEGIN
  IF public.portal_internal_access() THEN RAISE EXCEPTION 'External user obtained internal scope'; END IF;
  SELECT count(*) INTO rowcount FROM public.daily_logs; IF rowcount!=0 THEN RAISE EXCEPTION 'Internal RLS leaked logs'; END IF;
  SELECT count(*) INTO rowcount FROM public.profiles; IF rowcount!=1 THEN RAISE EXCEPTION 'External user can read other profiles'; END IF;
- failed:=false; BEGIN PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'ava_status','active','ava_admin',true)); EXCEPTION WHEN others THEN failed:=true; END;
+ failed:=false; BEGIN PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'access_level','leader','status','approved')); EXCEPTION WHEN others THEN failed:=true; END;
  IF NOT failed THEN RAISE EXCEPTION 'Student escalated privilege'; END IF;
  PERFORM set_config('request.jwt.claim.sub',admin_id::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
- PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'ava_status','active','portal_internal',false));
+ PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'access_level','student','status','approved'));
  PERFORM set_config('request.jwt.claim.sub',student_id::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student_id,'role','authenticated')::text,true);
  PERFORM public.ava_mutate('enroll',jsonb_build_object('track_id',track_id));
@@ -71,7 +71,7 @@ BEGIN
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
  failed:=false; BEGIN PERFORM public.ava_mutate('register_mentorship',jsonb_build_object('id',mentor_id)); EXCEPTION WHEN others THEN failed:=SQLERRM LIKE '%Vagas esgotadas%'; END;
  IF NOT failed THEN RAISE EXCEPTION 'Capacity bypassed'; END IF;
- PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'ava_status','blocked','portal_internal',false));
+ PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'access_level','student','status','rejected'));
  PERFORM set_config('request.jwt.claim.sub',student_id::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student_id,'role','authenticated')::text,true);
  failed:=false; BEGIN PERFORM public.ava_read('module',module_id); EXCEPTION WHEN others THEN failed:=SQLERRM LIKE '%AVA_ACCESS_DENIED%'; END;
