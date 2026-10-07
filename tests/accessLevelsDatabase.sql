@@ -34,6 +34,10 @@ BEGIN
    IF NOT denied THEN RAISE EXCEPTION 'Legacy scope RPC still callable'; END IF;
   END IF;
   IF target_level='student' THEN
+   denied:=false; BEGIN UPDATE profiles SET role='admin',member_role='admin' WHERE id=test_id; EXCEPTION WHEN others THEN denied:=true; END;
+   IF public.is_admin() THEN RAISE EXCEPTION 'Student escalated using direct profile update'; END IF;
+   denied:=false; BEGIN UPDATE portal_user_access SET access_level='leader' WHERE user_id=test_id; EXCEPTION WHEN insufficient_privilege THEN denied:=true; END;
+   IF NOT denied THEN RAISE EXCEPTION 'Direct access-level write allowed'; END IF;
    PERFORM ava_mutate('enroll',jsonb_build_object('track_id',track_id));
    result:=ava_mutate('progress',jsonb_build_object('module_id',module_id,'version',1,'block_id','read','value',true));
    IF NOT (result->>'completed')::boolean THEN RAISE EXCEPTION 'Student cannot save own learning'; END IF;
