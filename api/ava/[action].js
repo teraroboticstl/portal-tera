@@ -11,7 +11,7 @@ export default async function handler(req,res) {
       if(error)throw error;
       return res.status(200).json({data});
     }
-    try {await validateUserAuth(req.headers?.authorization);} catch {return res.status(401).json({error:'Faça login novamente para continuar.'});}
+    try {await validateUserAuth(req.headers?.authorization);} catch(error) {console.warn('[AVA] Falha ao validar sessão:', error?.name, error?.code, error?.message);return res.status(401).json({error:'Faça login novamente para continuar.'});}
     const token=req.headers.authorization.replace(/^Bearer\s+/i,'');
     const db=createScopedUserSupabaseClient(token);
     let result;
@@ -33,3 +33,4 @@ export default async function handler(req,res) {
     return res.status(key ? 403 : infra ? 503 : validation ? 422 : 503).json({error:key?messages[key]:infra?'AVA temporariamente indisponível. Verifique a implantação do banco.':validation?message:'Não foi possível concluir esta operação.'});
   }
 }
+
