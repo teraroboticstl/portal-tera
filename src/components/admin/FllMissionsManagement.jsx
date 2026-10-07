@@ -20,7 +20,7 @@ import {
   removeMissionImageAssociation 
 } from '@/api/fllMissionsClient';
 
-export default function FllMissionsManagement() {
+export default function FllMissionsManagement({ seasonTheme = 'BIOGLOW' }) {
   const [activeSeason, setActiveSeason] = useState({
     theme: 'BIOGLOW',
     year: 2026,
@@ -39,7 +39,8 @@ export default function FllMissionsManagement() {
   const loadSeasonAndImages = async () => {
     setLoading(true);
     try {
-      const seasonData = await fetchActiveFllSeason();
+      const seasonData = await fetchActiveFllSeason(seasonTheme);
+      if (seasonData?.theme !== seasonTheme) throw new Error('A temporada selecionada não pôde ser carregada.');
       if (seasonData) {
         setActiveSeason({
           id: seasonData.id,
@@ -49,7 +50,7 @@ export default function FllMissionsManagement() {
         });
         setMissionsImages(seasonData.fll_missions || {});
       } else {
-        const data = await fetchFllMissionImages();
+        const data = await fetchFllMissionImages(seasonTheme);
         setMissionsImages(data || {});
       }
     } catch (err) {
@@ -62,7 +63,7 @@ export default function FllMissionsManagement() {
 
   useEffect(() => {
     loadSeasonAndImages();
-  }, []);
+  }, [seasonTheme]);
 
   // Dispara o seletor de arquivos para uma missão específica
   const handleTriggerUpload = (code) => {

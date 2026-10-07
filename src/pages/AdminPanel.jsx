@@ -19,10 +19,8 @@ import SponsorsManagement from '@/components/admin/SponsorsManagement';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import SeasonCloseManagement from '@/components/admin/SeasonCloseManagement';
 import GoogleDriveTestManagement from '@/components/admin/GoogleDriveTestManagement';
-import FllMissionsManagement from '@/components/admin/FllMissionsManagement';
-import FllSimulationsManagement from '@/components/admin/FllSimulationsManagement';
-import FllAudiosManagement from '@/components/admin/FllAudiosManagement';
-import { Bot, Volume2 } from 'lucide-react';
+import FllSimulatorsManagement from '@/components/admin/FllSimulatorsManagement';
+import { Bot } from 'lucide-react';
 
 // E-mail dos admins seed (bootstrap admin) - sempre autorizados
 const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com'];
@@ -34,9 +32,7 @@ const VALID_ADMIN_TABS = [
   'robots',
   'sponsors',
   'products',
-  'fll_missions',
-  'fll_audios',
-  'fll_simulations',
+  'fll_simulators',
   'season_close',
   'google_drive'
 ];
@@ -48,10 +44,12 @@ const ADMIN_TAB_STORAGE_KEY = 'portal_tera_admin_active_tab';
  */
 function getInitialAdminTab() {
   const requested = new URLSearchParams(window.location.search).get('tab');
+  if (['fll_missions', 'fll_audios', 'fll_simulations'].includes(requested)) return 'fll_simulators';
   if (VALID_ADMIN_TABS.includes(requested)) return requested;
   try {
     if (typeof window !== 'undefined' && window.sessionStorage) {
       const savedTab = window.sessionStorage.getItem(ADMIN_TAB_STORAGE_KEY);
+      if (['fll_missions', 'fll_audios', 'fll_simulations'].includes(savedTab)) return 'fll_simulators';
       if (savedTab && VALID_ADMIN_TABS.includes(savedTab)) {
         return savedTab;
       }
@@ -192,15 +190,9 @@ export default function AdminPanel() {
                 <Package className="w-4 h-4 mr-1.5" />
                 Produtos
               </TabsTrigger>
-              <TabsTrigger value="fll_missions" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
-                <Bot className="w-4 h-4 mr-1.5" />
-                Missões FLL
+              <TabsTrigger value="fll_simulators" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
+                <Bot className="w-4 h-4 mr-1.5" />Simuladores FLL
               </TabsTrigger>
-              <TabsTrigger value="fll_audios" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
-                <Volume2 className="w-4 h-4 mr-1.5" />
-                Áudios FLL
-              </TabsTrigger>
-              <TabsTrigger value="fll_simulations" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">Simulações FLL</TabsTrigger>
               <TabsTrigger value="season_close" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
                 <Archive className="w-4 h-4 mr-1.5" />
                 Encerrar Temporada
@@ -227,13 +219,7 @@ export default function AdminPanel() {
           <TabsContent value="products">
             <ProductsManagement />
           </TabsContent>
-          <TabsContent value="fll_missions">
-            <FllMissionsManagement />
-          </TabsContent>
-          <TabsContent value="fll_audios">
-            <FllAudiosManagement user={user} />
-          </TabsContent>
-          <TabsContent value="fll_simulations"><FllSimulationsManagement /></TabsContent>
+          <TabsContent value="fll_simulators"><FllSimulatorsManagement user={user} /></TabsContent>
           <TabsContent value="season_close">
             <SeasonCloseManagement />
           </TabsContent>

@@ -14,7 +14,7 @@ import {
 } from '@/api/fllAudioClient';
 import { fetchActiveFllSeason } from '@/api/fllSeasonClient';
 
-export default function FllAudiosManagement({ user }) {
+export default function FllAudiosManagement({ user, seasonTheme = 'BIOGLOW' }) {
   const [activeSeason, setActiveSeason] = useState({
     theme: 'BIOGLOW',
     year: 2026,
@@ -31,12 +31,15 @@ export default function FllAudiosManagement({ user }) {
   // Carregar temporada e dados na montagem
   useEffect(() => {
     loadSeasonAndConfig();
-  }, []);
+    const audios = audioRefs.current;
+    return () => Object.values(audios).forEach(audio => audio?.pause());
+  }, [seasonTheme]);
 
   const loadSeasonAndConfig = async () => {
     setLoading(true);
     try {
-      const seasonData = await fetchActiveFllSeason();
+      const seasonData = await fetchActiveFllSeason(seasonTheme);
+      if (seasonData?.theme !== seasonTheme) throw new Error('A temporada selecionada não pôde ser carregada.');
       if (seasonData) {
         setActiveSeason({
           id: seasonData.id,
