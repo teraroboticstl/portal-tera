@@ -7,7 +7,19 @@ async function request(url, body) {
   return result;
 }
 export const saveFllSimulation = body => request('/api/fll/simulations',body);
-export const listFllSimulations = (admin=false) => request(`/api/fll/simulations${admin ? '?scope=admin' : ''}`);
+export async function listFllSimulations(admin=false) {
+  if (!admin) return request('/api/fll/simulations');
+  const rows=[];
+  let before='';
+  for(let page=0;page<=200;page++) {
+    const result=await request(`/api/fll/simulations?scope=admin&page=${page}${before ? `&before=${encodeURIComponent(before)}` : ''}`);
+    before=result.before;
+    rows.push(...result.simulations);
+    if (!result.hasMore) return {simulations:Array.from(new Map(rows.map(row=>[row.id,row])).values())};
+  }
+  throw new Error('Mais de 50 mil registros. A consulta exige agregação adicional no servidor.');
+}
+export const archiveFllSimulations = (ids,restore=false) => request('/api/fll/simulations',{action:restore ? 'restore' : 'archive',ids});
 export const fetchSharedSimulation = token => request(`/api/fll/simulations?share=${encodeURIComponent(token)}`);
 export const classifyTeraSimulation = (id,isTera) => request('/api/fll/simulations',{action:'classify',id,isTera});
 export function simulationForHistory(row) {

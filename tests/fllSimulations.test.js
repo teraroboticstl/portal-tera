@@ -8,7 +8,7 @@ const source=fs.readFileSync(new URL('../api/_lib/fllSimulations.js',import.meta
 function harness({user=null,authFails=false,rpcError=null,rows=[]}={}) {
   const operations=[];
   const db={from:table=>{
-    const query={select(fields){operations.push(['select',table,fields]);return query;},eq(key,value){operations.push(['eq',key,value]);return query;},order(){return query;},limit(){return query;},maybeSingle:async()=>({data:rows[0] || null,error:null}),then(resolve){return Promise.resolve({data:rows,error:null}).then(resolve);}};return query;
+    const query={select(fields){operations.push(['select',table,fields]);return query;},eq(key,value){operations.push(['eq',key,value]);return query;},is(key,value){operations.push(['is',key,value]);return query;},lte(){return query;},range(){return query;},order(){return query;},limit(){return query;},maybeSingle:async()=>({data:rows[0] || null,error:null}),then(resolve){return Promise.resolve({data:rows,error:null,count:rows.length}).then(resolve);}};return query;
   },rpc:async(name,{p_record})=>{operations.push(['rpc',p_record]);return {data:{...p_record,id:'saved',created_at:'now'},error:rpcError};}};
   const context=vm.createContext({createHash,randomBytes,Buffer,INITIAL_ROUND_STATE,calculateScores,supabaseServer:db,validateUserAuth:async()=>{if(authFails)throw Error('bad JWT');return user;},createScopedUserSupabaseClient:()=>db});
   vm.runInContext(source+';globalThis.subject={buildSimulationRecord,handleFllSimulations};',context);
@@ -56,4 +56,14 @@ test('link público projeta somente resultado, sem contato ou observações',asy
 });
 test('falha transacional e limite não informam sucesso',async()=>{
  for(const [message,code] of [['database error',503],['SIMULATION_RATE_LIMIT',429],['SIMULATION_CONFLICT',409]]) {const h=harness({rpcError:{message}});assert.equal((await call(h,{method:'POST',body})).code,code);}
+});
+test('visitantes e usuários comuns não podem excluir ou restaurar rounds',async()=>{
+ for(const action of ['archive','restore']){const h=harness();assert.equal((await call(h,{method:'POST',body:{action,ids:[body.requestId]}})).code,403);assert.equal(h.operations.length,0);}
+});
+test('somente admin pode criar simulações marcadas como teste',()=>{
+ const h=harness();assert.equal(h.buildSimulationRecord({...body,testOnly:true},null,season).is_test,false);
+ assert.equal(h.buildSimulationRecord({...body,testOnly:true},{id:'admin',profile:{is_admin:true}},season).is_test,true);
+});
+test('link compartilhado exclui registros arquivados na consulta',async()=>{
+ const h=harness();await call(h,{method:'GET',query:{share:'a'.repeat(64)}});assert.ok(h.operations.some(op=>op[0]==='is'&&op[1]==='deleted_at'&&op[2]===null));
 });

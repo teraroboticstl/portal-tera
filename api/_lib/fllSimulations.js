@@ -39,8 +39,10 @@ export function buildSimulationRecord(body, user, season) {
     season_id:season.id, season_theme:season.theme, season_year:season.year,
     team_name:state.teamName, round_name:state.roundName, state_snapshot:state,
     score:total, breakdown, rules_version:RULES_VERSION, is_portfolio:Boolean(body.portfolio), iteration_title:title, notes,
-    origin:user ? 'member' : 'guest' };
-  record.payload_hash = createHash('sha256').update(JSON.stringify(record)).digest('hex');
+    origin:user ? 'member' : 'guest', is_test:Boolean(body.testOnly && user?.profile?.is_admin) };
+  const hashed = {...record};
+  if (!record.is_test) delete hashed.is_test; // Keep existing real-round retry hashes compatible.
+  record.payload_hash = createHash('sha256').update(JSON.stringify(hashed)).digest('hex');
   record.share_token = body.share === true ? randomBytes(32).toString('hex') : null;
   return record;
 }
@@ -50,7 +52,7 @@ export async function handleFllSimulations(req, res, getSeason) {
   try {
     if (req.method === 'GET' && req.query?.share) {
       if (!/^[0-9a-f]{64}$/.test(req.query.share)) throw invalid('Link inválido.', 404);
-      const { data, error } = await supabaseServer.from('fll_round_simulations').select(PUBLIC_FIELDS).eq('share_token', req.query.share).maybeSingle();
+      const { data, error } = await supabaseServer.from('fll_round_simulations').select(PUBLIC_FIELDS).eq('share_token', req.query.share).is('deleted_at',null).maybeSingle();
       if (error) throw invalid('Não foi possível consultar a simulação.', 503);
       if (!data) throw invalid('Simulação não encontrada.', 404);
       return res.status(200).json({ simulation:data });
@@ -69,17 +71,29 @@ export async function handleFllSimulations(req, res, getSeason) {
       if (!user) throw invalid('Faça login para consultar seu histórico.', 401);
       const admin = req.query?.scope === 'admin';
       if (admin && !user.profile?.is_admin) throw invalid('Consulta restrita à administração.', 403);
-      let query = supabaseServer.from('fll_round_simulations').select(admin ? `${PUBLIC_FIELDS},user_id,origin,is_tera,is_portfolio,iteration_title,notes,fll_simulation_contacts(email)` : `${PUBLIC_FIELDS},is_portfolio,iteration_title,notes`).order('created_at', {ascending:false}).limit(100);
-      if (!admin) query = query.eq('user_id', user.id);
-      const {data,error} = await query;
+      const page = Number(req.query?.page || 0);
+      if (!Number.isInteger(page) || page<0 || page>200) throw invalid('Página inválida.');
+      const before = req.query?.before || new Date().toISOString();
+      if (!Number.isFinite(Date.parse(before))) throw invalid('Data de consulta inválida.');
+      let query = supabaseServer.from('fll_round_simulations').select(admin ? `${PUBLIC_FIELDS},user_id,origin,is_tera,is_test,deleted_at,is_portfolio,iteration_title,notes,fll_simulation_contacts(email)` : `${PUBLIC_FIELDS},is_portfolio,iteration_title,notes`, {count:'exact'}).order('created_at', {ascending:false}).order('id',{ascending:false});
+      if (!admin) query = query.eq('user_id', user.id).eq('is_test',false).is('deleted_at',null).limit(100);
+      else query = query.lte('created_at',before).range(page*250,page*250+249);
+      const {data,error,count} = await query;
       if (error) throw invalid('Não foi possível carregar o histórico.', 503);
-      return res.status(200).json({ simulations:data });
+      return res.status(200).json({ simulations:data, before, count, hasMore:admin && (page+1)*250<count });
     }
     if (req.method !== 'POST') { res.setHeader('Allow','GET, POST'); throw invalid('Método não permitido.',405); }
     const raw = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
     if (Buffer.byteLength(raw) > 24000) throw invalid('Simulação muito grande.',413);
     let body;
     try { body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body; } catch { throw invalid('Dados inválidos.',400); }
+    if (body?.action === 'archive' || body?.action === 'restore') {
+      if (!user?.profile?.is_admin) throw invalid('Exclusão e restauração restritas à administração.',403);
+      if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length>250 || body.ids.some(id=>!UUID.test(id))) throw invalid('Registros inválidos.');
+      const {data,error} = await supabaseServer.rpc('archive_fll_round_simulations',{p_ids:body.ids,p_restore:body.action==='restore'});
+      if (error) throw invalid('Não foi possível alterar a lixeira.',503);
+      return res.status(200).json({success:true,affected:data});
+    }
     if (body?.action === 'classify') {
       if (!user?.profile?.is_admin) throw invalid('Apenas administradores classificam registros Tera.',403);
       if (!UUID.test(body.id || '') || typeof body.isTera !== 'boolean') throw invalid('Classificação inválida.');
@@ -96,6 +110,7 @@ export async function handleFllSimulations(req, res, getSeason) {
     if (error) {
       if (error.message?.includes('SIMULATION_RATE_LIMIT')) throw invalid('Limite de salvamentos atingido. Tente novamente mais tarde.',429);
       if (error.message?.includes('SIMULATION_CONFLICT')) throw invalid('Este identificador já foi usado para outro resultado.',409);
+      if (error.message?.includes('SIMULATION_ARCHIVED')) throw invalid('Este round foi excluído pelo administrador. Recarregue a página para salvar um novo registro.',409);
       throw invalid('Não foi possível salvar no Supabase. Seus dados continuam no rascunho.',503);
     }
     const safe = Object.fromEntries(PUBLIC_FIELDS.split(',').map(key=>[key,data[key]]));
