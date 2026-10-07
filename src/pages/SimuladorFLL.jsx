@@ -36,6 +36,14 @@ import { saveFllSimulation, listFllSimulations, fetchSharedSimulation, simulatio
 
 const STORAGE_KEY_CURRENT = 'fll_bioglow_current_state';
 const STORAGE_KEY_SAVED = 'fll_bioglow_saved_rounds';
+// JSONB may reorder keys; compare answers in rule order when reusing a saved round.
+const stateSignature = value => JSON.stringify(Object.keys(INITIAL_ROUND_STATE).map(key => value[key] ?? INITIAL_ROUND_STATE[key]));
+const payloadSignature = (payload, userId) => JSON.stringify({
+  state: stateSignature(payload.state), userId: userId || null,
+  email: userId ? '' : payload.email.trim().toLowerCase(), portfolio: payload.portfolio,
+  title: payload.portfolio ? payload.iterationTitle.trim() : '',
+  notes: payload.portfolio ? payload.notes.trim() : ''
+});
 
 export default function SimuladorFLL() {
   const { user, isLoadingAuth } = useAuth();
@@ -195,7 +203,7 @@ export default function SimuladorFLL() {
   };
   const handleShareRound = async () => {
     if (isLoadingAuth) return;
-    if (lastSaved && JSON.stringify(state) === JSON.stringify(lastSaved.payload.state)) {
+    if (lastSaved && stateSignature(state) === stateSignature(lastSaved.payload.state)) {
       try {
         const result = await saveFllSimulation({...lastSaved.payload,share:true});
         setSharedRound(result.simulation); setShowShareModal(true);
@@ -203,13 +211,15 @@ export default function SimuladorFLL() {
     } else setSaveIntent({sharing:true,snapshot:{...state}});
   };
   const persistRound = async payload => {
-    const fingerprint = JSON.stringify({...payload, userId:user?.id || null});
+    const fingerprint = payloadSignature(payload, user?.id);
     if (!requests.current.has(fingerprint)) requests.current.set(fingerprint, crypto.randomUUID());
     const body = {...payload,requestId:requests.current.get(fingerprint)};
     const {simulation} = await saveFllSimulation({...body,share:saveIntent.sharing});
     const entry = simulationForHistory(simulation);
     setState(simulation.state_snapshot);
-    setLastSaved({payload:body});
+    const savedPayload = {...body,state:simulation.state_snapshot};
+    requests.current.set(payloadSignature(savedPayload,user?.id),body.requestId);
+    setLastSaved({payload:savedPayload});
     if (user) setRemoteRounds(previous=>[entry,...previous.filter(row=>row.id!==entry.id)]);
     else setSavedRounds(previous=>[entry,...previous.filter(row=>row.id!==entry.id)].slice(0,20));
     if (saveIntent.sharing) { setSharedRound(simulation); setShowShareModal(true); }

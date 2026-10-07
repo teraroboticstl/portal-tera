@@ -16,6 +16,15 @@ function harness({user=null,authFails=false,rpcError=null,rows=[]}={}) {
 }
 const body={requestId:'12345678-1234-4123-8123-123456789abc',state:{...INITIAL_ROUND_STATE,teamName:'Equipe teste'},email:'round-test@example.invalid'};
 const season={id:'12345678-1234-4123-8123-123456789abc',theme:'BIOGLOW',year:2026};
+test('compartilhamento reutiliza resultado mesmo quando JSONB reordena respostas',()=>{
+ const page=fs.readFileSync(new URL('../src/pages/SimuladorFLL.jsx',import.meta.url),'utf8');
+ const block=page.slice(page.indexOf('const stateSignature'),page.indexOf('export default function'));
+ const context=vm.createContext({INITIAL_ROUND_STATE});
+ vm.runInContext(block+';globalThis.signature=stateSignature;',context);
+ const reordered=Object.fromEntries(Object.entries(body.state).reverse());
+ assert.equal(context.signature(body.state),context.signature(reordered));
+ assert.notEqual(context.signature(body.state),context.signature({...reordered,inspectionSmallArea:true}));
+});
 async function call(h,request){const res={code:0,setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;return this;}};await h.handleFllSimulations({headers:{},query:{},...request},res,async()=>season);return res;}
 test('recalcula pontuação, elimina campos adicionais e não aceita identidade declarada',()=>{
  const record=harness().buildSimulationRecord({...body,score:530,user_id:'admin',state:{...body.state,email:'private',inspectionSmallArea:true}},null,season);
