@@ -157,7 +157,7 @@ export default function Team() {
       <section className="py-10 px-6 bg-black">
         <div className="max-w-6xl mx-auto">
           <div className="flex gap-3 mb-10 justify-center flex-wrap">
-            {['all', 'FRC', 'FTC'].map(f => (
+            {['all', 'OBR', 'FLL', 'FTC', 'FRC'].map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}

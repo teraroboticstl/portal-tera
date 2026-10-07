@@ -1,3 +1,4 @@
+import { projectModalities, projectCategories, mergeProjectLinks } from '../../lib/modalities.js';
 import { supabase } from '../supabaseClient.js';
 
 /**
@@ -83,6 +84,8 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       mapped.link = item.link || item.links?.primary || item.links?.url || '';
       mapped.tags = Array.isArray(item.tags) ? item.tags : (item.links?.tags || []);
       mapped.date_period = item.date_period || item.links?.date_period || '';
+      mapped.modalities = projectModalities(item);
+      mapped.obr_categories = projectCategories(item);
     } else if (actualTableName === 'products') {
       mapped.available = item.in_stock !== undefined ? Boolean(item.in_stock) : true;
       mapped.in_stock = mapped.available;
@@ -445,7 +448,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         }
         const existingLinks = (typeof sanitized.links === 'object' && sanitized.links !== null) ? sanitized.links : {};
         sanitized.links = {
-          ...existingLinks,
+          ...mergeProjectLinks(existingLinks, sanitized),
           ...(sanitized.link ? { primary: sanitized.link } : {}),
           ...(sanitized.tags && sanitized.tags.length > 0 ? { tags: sanitized.tags } : {}),
           ...(sanitized.date_period ? { date_period: sanitized.date_period } : {}),
@@ -455,6 +458,8 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         delete sanitized.link;
         delete sanitized.tags;
         delete sanitized.date_period;
+        delete sanitized.modalities;
+        delete sanitized.obr_categories;
       }
 
       // Tratar strings vazias em UUIDs/Foreign Keys para null
@@ -486,6 +491,13 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       const sanitized = { ...payload };
       delete sanitized.id;
       delete sanitized.created_date;
+
+      // Preserve unrelated project metadata in partial edits; the query uses the user's existing RLS.
+      if (actualTableName === 'projects' && sanitized.links === undefined) {
+        const { data: existing, error } = await supabase.from(actualTableName).select('links').eq('id', id).single();
+        if (error) throw error;
+        sanitized.links = existing?.links || {};
+      }
 
       if (actualTableName === 'robots') {
         if (sanitized.cad_url !== undefined && !sanitized.cad_link) {
@@ -673,7 +685,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         }
         const existingLinks = (typeof sanitized.links === 'object' && sanitized.links !== null) ? sanitized.links : {};
         sanitized.links = {
-          ...existingLinks,
+          ...mergeProjectLinks(existingLinks, sanitized),
           ...(sanitized.link !== undefined ? { primary: sanitized.link } : {}),
           ...(sanitized.tags !== undefined ? { tags: sanitized.tags } : {}),
           ...(sanitized.date_period !== undefined ? { date_period: sanitized.date_period } : {}),
@@ -683,6 +695,8 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         delete sanitized.link;
         delete sanitized.tags;
         delete sanitized.date_period;
+        delete sanitized.modalities;
+        delete sanitized.obr_categories;
       }
 
       for (const key of Object.keys(sanitized)) {

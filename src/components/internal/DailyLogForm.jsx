@@ -1,3 +1,4 @@
+import { RECORD_PROGRAMS } from '@/lib/modalities';
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -11,14 +12,14 @@ import { toast } from "sonner";
 import { useDraft } from './useDraft';
 
 const LOG_TYPES = ['Reunião', 'Build', 'CAD', 'Programação', 'Teste', 'Divulgação'];
-const PROGRAMS = ['FRC', 'FTC', 'FLL'];
+const PROGRAMS = RECORD_PROGRAMS;
 
-export default function DailyLogForm({ log = null, onClose, onSuccess }) {
+export default function DailyLogForm({ log = null, onClose, onSuccess, initialProgram = 'FRC' }) {
   const queryClient = useQueryClient();
   const isEditing = !!log;
   const { form, setForm, hasDraft, clearDraft } = useDraft('draft_dailylog', {
     date: new Date().toISOString().split('T')[0],
-    program: 'FRC',
+    program: initialProgram === 'all' ? 'FRC' : initialProgram,
     log_type: 'Build',
     participants: [],
     what_was_done: '',

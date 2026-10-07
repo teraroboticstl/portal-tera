@@ -1,3 +1,5 @@
+import ModalityFields, { ModalityBadges, ModalityFilter } from '@/components/common/ModalityFields';
+import { matchesProject, projectModalities, projectCategories } from '@/lib/modalities';
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -21,6 +23,7 @@ const TAG_OPTIONS = ['Educação', 'Engenharia', 'Impacto Social', 'Tecnologia',
 
 export default function ProjectsManagement() {
   const queryClient = useQueryClient();
+  const [modality, setModality] = useState('all');
   const savedDraft = loadAdminDraft('projects');
 
   const [showForm, setShowForm] = useState(Boolean(savedDraft?.isOpen));
@@ -36,7 +39,7 @@ export default function ProjectsManagement() {
     date_period: '',
     tags: [],
     link: '',
-    status: 'active'
+    status: 'active', modalities: [], obr_categories: []
   };
 
   const [form, setForm] = useState(() => ({ ...emptyForm, ...(savedDraft?.data || {}) }));
@@ -94,7 +97,7 @@ export default function ProjectsManagement() {
       date_period: project.date_period || '',
       tags: Array.isArray(project.tags) ? [...project.tags] : [],
       link: project.link || '',
-      status: project.status || 'active'
+      status: project.status || 'active', modalities: projectModalities(project), obr_categories: projectCategories(project)
     };
     setEditingProject(project);
     setForm(editData);
@@ -260,6 +263,7 @@ export default function ProjectsManagement() {
       tags: form.tags || [],
       link: form.link?.trim() || '',
       status: form.status || 'active',
+      modalities: form.modalities || [], obr_categories: form.obr_categories || [],
       images: images
     };
 
@@ -291,6 +295,7 @@ export default function ProjectsManagement() {
         </Button>
       </div>
 
+      <ModalityFilter value={modality} onChange={setModality} />
       {isLoading ? (
         <div className="py-16 text-center">
           <LoadingSpinner text="Carregando projetos da equipe..." />
@@ -307,7 +312,7 @@ export default function ProjectsManagement() {
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => {
+          {projects.filter(p => matchesProject(p, modality)).map((project) => {
             const projectImages = Array.isArray(project.images) ? project.images : (project.image_url ? [project.image_url] : []);
             const primaryImg = projectImages[0];
             const hasDriveImg = isDriveImage(primaryImg);
@@ -352,7 +357,7 @@ export default function ProjectsManagement() {
                 {/* Conteúdo textual */}
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="font-bold text-white text-lg mb-1">{project.title}</h3>
+                    <h3 className="font-bold text-white text-lg mb-1">{project.title}</h3><ModalityBadges project={project} />
                     {project.date_period && (
                       <p className="text-xs text-[#B8BDC7] flex items-center gap-1 mb-2">
                         <Calendar className="w-3 h-3 text-[#E10600]" />
@@ -440,6 +445,7 @@ export default function ProjectsManagement() {
             </DialogDescription>
           </DialogHeader>
 
+          <ModalityFields value={form.modalities || []} categories={form.obr_categories || []} onChange={modalities => setForm(prev => ({ ...prev, modalities }))} onCategoriesChange={obr_categories => setForm(prev => ({ ...prev, obr_categories }))} />
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
             <div>
               <Label className="text-sm font-medium text-white mb-1.5 block">Título do Projeto *</Label>

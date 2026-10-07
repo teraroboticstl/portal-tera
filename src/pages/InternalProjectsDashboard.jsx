@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -117,6 +118,7 @@ function DashboardContent({ user }) {
     <InternalPageLayout user={user} currentPage="InternalProjectsDashboard" title="Projetos & ESG">
       <div className="max-w-4xl space-y-5">
 
+        <Link to="/InternalSocialProjects" className="block text-blue-400 hover:underline">Projetos sociais — vínculos OBR, FLL, FTC e FRC →</Link>
         {/* Tab Nav */}
         <div className="flex gap-1 bg-[#0B0B0D] p-1 rounded-xl w-fit">
           {[{ key: 'projects', label: '📋 Gestão de Projetos' }, { key: 'esg', label: '🌱 Sustentabilidade (ESG)' }].map(t => (

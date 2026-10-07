@@ -1,3 +1,4 @@
+import { OBR_CATEGORIES, matchesProgram, initialProgram } from '@/lib/modalities';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -19,7 +20,7 @@ function InternalLogsContent({ user }) {
   const [showForm, setShowForm] = useState(false);
   const [editingLog, setEditingLog] = useState(null);
   const [viewingLog, setViewingLog] = useState(null);
-  const [filterProgram, setFilterProgram] = useState('all');
+  const [filterProgram, setFilterProgram] = useState(() => initialProgram(window.location.search));
   const queryClient = useQueryClient();
 
   const { data: logs = [], isLoading } = useQuery({
@@ -38,7 +39,7 @@ function InternalLogsContent({ user }) {
   const activeLogs = logs.filter(l => !l.season_tag);
   const filteredLogs = filterProgram === 'all' 
     ? activeLogs 
-    : activeLogs.filter(l => l.program === filterProgram);
+    : activeLogs.filter(l => matchesProgram(l.program, filterProgram));
 
   // Verificar permissões baseadas em member_role
   const canCreate = userCanEdit(user);
@@ -81,13 +82,15 @@ function InternalLogsContent({ user }) {
         <div className="flex items-center gap-4">
           <Filter className="w-4 h-4 text-[#B8BDC7]" />
           <Tabs value={filterProgram} onValueChange={setFilterProgram}>
-            <TabsList className="bg-[#111217] border border-[#1F222B]">
+            <TabsList className="bg-[#111217] border border-[#1F222B] h-auto flex-wrap">
               <TabsTrigger value="all" className="data-[state=active]:bg-[#E10600]">Todos</TabsTrigger>
               <TabsTrigger value="FRC" className="data-[state=active]:bg-red-500">FRC</TabsTrigger>
               <TabsTrigger value="FTC" className="data-[state=active]:bg-orange-500">FTC</TabsTrigger>
               <TabsTrigger value="FLL" className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black">FLL</TabsTrigger>
+              <TabsTrigger value="OBR" className="data-[state=active]:bg-blue-500">OBR</TabsTrigger>
             </TabsList>
           </Tabs>
+          {filterProgram.startsWith('OBR') && <label className="block text-sm mt-3">Subcategoria OBR<select value={filterProgram} onChange={e => setFilterProgram(e.target.value)} className="block w-full mt-2 p-3 bg-[#111217] border border-[#1F222B] rounded-lg"><option value="OBR">Todas as subcategorias OBR</option>{OBR_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></label>}
         </div>
 
         {/* Logs List */}
@@ -169,7 +172,7 @@ function InternalLogsContent({ user }) {
             <DialogHeader>
               <DialogTitle>{editingLog ? 'Editar Log' : 'Novo Log Diário'}</DialogTitle>
             </DialogHeader>
-            <DailyLogForm 
+            <DailyLogForm initialProgram={filterProgram} 
               log={editingLog} 
               onClose={() => { setShowForm(false); setEditingLog(null); }}
             />

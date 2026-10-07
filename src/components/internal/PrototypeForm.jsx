@@ -1,3 +1,4 @@
+import { RECORD_PROGRAMS } from '@/lib/modalities';
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -10,15 +11,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-const PROGRAMS = ['FRC', 'FTC', 'FLL'];
+const PROGRAMS = RECORD_PROGRAMS;
 const CONCLUSIONS = ['Aprovado', 'Refazer', 'Cancelado'];
 
-export default function PrototypeForm({ prototype = null, onClose, onSuccess }) {
+export default function PrototypeForm({ prototype = null, onClose, onSuccess, initialProgram = 'FRC' }) {
   const queryClient = useQueryClient();
   const isEditing = !!prototype;
   const { form, setForm, hasDraft, clearDraft } = useDraft('draft_prototype', {
     date: new Date().toISOString().split('T')[0],
-    program: 'FRC',
+    program: initialProgram === 'all' ? 'FRC' : initialProgram,
     subsystem: '',
     hypothesis: '',
     test_method: '',

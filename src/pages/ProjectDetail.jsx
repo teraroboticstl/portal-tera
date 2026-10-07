@@ -1,3 +1,4 @@
+import { ModalityBadges } from '@/components/common/ModalityFields';
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -322,6 +323,7 @@ export default function ProjectDetail() {
           {project.title}
         </motion.h1>
 
+        <ModalityBadges project={project} />
         {project.date_period && (
           <motion.div
             initial={{ opacity: 0 }}

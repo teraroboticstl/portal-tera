@@ -37,6 +37,13 @@ const PUBLIC_NAV_ITEMS = [
     label: 'PROGRAMAS',
     children: [
       { label: 'Visão Geral', path: 'Competitions' },
+      { label: 'Olimpíada Brasileira de Robótica (OBR)', path: 'CompetitionsOBR', children: [
+        { label: 'Visão Geral OBR', path: 'CompetitionsOBR' },
+        { label: 'Resgate Nível 1', path: 'CompetitionsOBR#resgate-n1' },
+        { label: 'Resgate Nível 2', path: 'CompetitionsOBR#resgate-n2' },
+        { label: 'Artística Nível 1', path: 'CompetitionsOBR#artistica-n1' },
+        { label: 'Artística Nível 2', path: 'CompetitionsOBR#artistica-n2' },
+      ] },
       {
         label: 'FIRST LEGO League (FLL)',
         path: 'CompetitionsFLL',
@@ -731,11 +738,11 @@ export default function Layout({ children, currentPageName }) {
                   <img src={LOGO_COMPLETE} alt="TeraRobotics" className="w-14 h-14 object-contain" />
                   <div>
                     <p className="font-black text-xl tracking-tight">TERA<span className="text-[#E10600]">ROBOTICS</span></p>
-                    <p className="text-gray-500 text-xs">#10343 • #17730 • FLL</p>
+                    <p className="text-gray-500 text-xs">#10343 • #17730 • FLL • OBR</p>
                   </div>
                 </div>
                 <p className="text-gray-500 text-sm leading-relaxed mb-5">
-                  Organização educacional de robótica do SESI Três Lagoas, participante dos programas FIRST LEGO League, FIRST Tech Challenge (#17730) e FIRST Robotics Competition (#10343).
+                  Organização educacional de robótica do SESI Três Lagoas, atuante na OBR e nos programas FIRST LEGO League, FIRST Tech Challenge (#17730) e FIRST Robotics Competition (#10343).
                 </p>
                 <p className="text-gray-600 text-xs">Três Lagoas, Mato Grosso do Sul, Brasil</p>
               </div>
@@ -755,6 +762,7 @@ export default function Layout({ children, currentPageName }) {
                     <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Programas</p>
                     <div className="space-y-1 mb-3">
                       <Link to={createPageUrl('Competitions')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Visão Geral</Link>
+                      <Link to={createPageUrl('CompetitionsOBR')} className="block text-gray-500 hover:text-[#E10600] transition-colors">OBR</Link>
                       <Link to={createPageUrl('CompetitionsFLL')} className="block text-gray-500 hover:text-[#E10600] transition-colors">FLL</Link>
                       <Link to={createPageUrl('CompetitionsFTC')} className="block text-gray-500 hover:text-[#E10600] transition-colors">FTC</Link>
                       <Link to={createPageUrl('CompetitionsFRC')} className="block text-gray-500 hover:text-[#E10600] transition-colors">FRC</Link>

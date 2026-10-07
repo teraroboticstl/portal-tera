@@ -49,6 +49,8 @@ const ADMIN_TAB_STORAGE_KEY = 'portal_tera_admin_active_tab';
  * Recupera e valida a última guia ativa armazenada na sessão da aba
  */
 function getInitialAdminTab() {
+  const requested = new URLSearchParams(window.location.search).get('tab');
+  if (VALID_ADMIN_TABS.includes(requested)) return requested;
   try {
     if (typeof window !== 'undefined' && window.sessionStorage) {
       const savedTab = window.sessionStorage.getItem(ADMIN_TAB_STORAGE_KEY);

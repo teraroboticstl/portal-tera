@@ -150,6 +150,7 @@ export default function UsersManagement() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#111217] border-[#1F222B] text-white [&_*]:text-white">
+                      <SelectItem value="OBR">OBR</SelectItem>
                       <SelectItem value="FRC">FRC</SelectItem>
                       <SelectItem value="FTC">FTC</SelectItem>
                       <SelectItem value="FLL">FLL</SelectItem>

@@ -13,7 +13,7 @@ import { toast } from "sonner";
 export default function SeasonCloseManagement() {
   const queryClient = useQueryClient();
   const [seasonTag, setSeasonTag] = useState('');
-  const [programs, setPrograms] = useState({ FRC: true, FTC: true, FLL: false });
+  const [programs, setPrograms] = useState({ FRC: true, FTC: true, FLL: false, OBR: false });
   const [loading, setLoading] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [counting, setCounting] = useState(false);
@@ -26,7 +26,7 @@ export default function SeasonCloseManagement() {
 
   const handleFetchPreview = async () => {
     if (selectedPrograms.length === 0) {
-      toast.error('Selecione pelo menos um programa (FRC, FTC ou FLL).');
+      toast.error('Selecione pelo menos um programa (OBR, FRC, FTC ou FLL).');
       return;
     }
     setCounting(true);
@@ -261,7 +261,7 @@ export default function SeasonCloseManagement() {
               Programas a serem incluídos no arquivamento
             </Label>
             <div className="flex gap-3">
-              {['FRC', 'FTC', 'FLL'].map(p => (
+              {['OBR', 'FRC', 'FTC', 'FLL'].map(p => (
                 <button
                   key={p}
                   type="button"

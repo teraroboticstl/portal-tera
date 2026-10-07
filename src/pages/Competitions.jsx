@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 const programs = {
+  obr: { label: 'OBR', subtitle: 'Olimpíada Brasileira de Robótica', age: 'Resgate e Artística · Níveis 1 e 2', icon: Cog, description: 'Robótica de Resgate e Robótica Artística integram a preparação da Tera na OBR. As subcategorias têm registros próprios e podem compartilhar projetos sociais com as demais modalidades.', features: ['Resgate Nível 1', 'Resgate Nível 2', 'Artística Nível 1', 'Artística Nível 2'], components: [{ title: 'Resgate', desc: 'Robôs autônomos, sensores e estratégia de resgate.' }, { title: 'Artística', desc: 'Robótica, narrativa e criatividade na apresentação.' }], link: 'CompetitionsOBR' },
   fll: {
     label: 'FLL',
     subtitle: 'FIRST LEGO League',
@@ -64,12 +65,12 @@ export default function Competitions() {
         </div>
         <div className="max-w-5xl mx-auto relative text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <span className="text-[#E10600] font-bold text-sm tracking-widest uppercase">Programas FIRST</span>
+            <span className="text-[#E10600] font-bold text-sm tracking-widest uppercase">Modalidades de robótica</span>
             <h1 className="text-5xl md:text-7xl font-black text-white mt-4 mb-6 tracking-tighter">
               NOSSOS <span className="text-[#E10600]">PROGRAMAS</span>
             </h1>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              Participamos dos três programas da FIRST, oferecendo uma jornada completa de desenvolvimento em robótica para estudantes de todas as idades.
+              Atuamos na OBR e nos programas FIRST FLL, FTC e FRC, conectando competição, aprendizagem e impacto social.
             </p>
           </motion.div>
         </div>
@@ -79,7 +80,7 @@ export default function Competitions() {
       <section className="py-20 px-6 bg-white/5">
         <div className="max-w-6xl mx-auto">
           <Tabs value={active} onValueChange={setActive}>
-            <TabsList className="grid grid-cols-3 gap-4 bg-transparent h-auto p-0 mb-12">
+            <TabsList className="grid grid-cols-2 lg:grid-cols-4 gap-4 bg-transparent h-auto p-0 mb-12">
               {Object.entries(programs).map(([key, p]) => (
                 <TabsTrigger key={key} value={key}
                   className="flex flex-col items-center gap-3 p-6 bg-black border-2 border-white/10 data-[state=active]:border-[#E10600] data-[state=active]:bg-[#E10600]/10 hover:border-white/30 transition-all h-auto rounded-none">
@@ -112,6 +113,8 @@ export default function Competitions() {
                         </div>
                       ))}
                     </div>
+                    <Link className="inline-block text-blue-400 hover:underline mb-4" to={createPageUrl(p.link)}>Conhecer a modalidade →</Link>
+                    <br />
                     <Link to={createPageUrl('Contact')}>
                       <Button className="bg-[#E10600] hover:bg-[#7A0000] text-white font-bold uppercase tracking-wider">
                         Quero Participar <ArrowRight className="w-4 h-4 ml-2" />

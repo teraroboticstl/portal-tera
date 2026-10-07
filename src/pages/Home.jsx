@@ -91,8 +91,8 @@ export default function Home() {
             <motion.div className="grid grid-cols-3 gap-4 max-w-xs sm:max-w-md md:max-w-3xl mx-auto" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}>
               <div className="text-center">
                 <Cog className="w-5 h-5 text-[#E10600] mx-auto mb-1" />
-                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white">3</div>
-                <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide leading-tight mt-1">Programas FIRST</div>
+                <div className="text-2xl sm:text-3xl md:text-4xl font-black text-white">4</div>
+                <div className="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wide leading-tight mt-1">Modalidades de robótica</div>
               </div>
               <div className="text-center">
                 <Settings className="w-5 h-5 text-[#E10600] mx-auto mb-1" />
@@ -122,9 +122,9 @@ export default function Home() {
         <div className="absolute bottom-0 right-0 w-16 h-16 sm:w-32 sm:h-32 border-r-2 border-b-2 border-[#E10600]/20" />
         <div className="max-w-7xl mx-auto">
           <motion.div className="text-center mb-10 sm:mb-16" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className="text-[#E10600] font-bold text-xs sm:text-sm tracking-widest uppercase">Programas FIRST</span>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mt-3 mb-4 tracking-tight">TRÊS CAMINHOS PARA A <span className="text-[#E10600]">INOVAÇÃO</span></h2>
-            <p className="text-sm sm:text-lg text-gray-400 max-w-2xl mx-auto">Participamos dos três principais programas da FIRST, oferecendo oportunidades para estudantes de todas as idades.</p>
+            <span className="text-[#E10600] font-bold text-xs sm:text-sm tracking-widest uppercase">Modalidades de robótica</span>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mt-3 mb-4 tracking-tight">CAMINHOS PARA A <span className="text-[#E10600]">INOVAÇÃO</span></h2>
+            <p className="text-sm sm:text-lg text-gray-400 max-w-2xl mx-auto">OBR, FLL, FTC e FRC: aprendizagem e engenharia conectadas aos projetos sociais da Tera.</p>
           </motion.div>
 
           <ProgramCards />

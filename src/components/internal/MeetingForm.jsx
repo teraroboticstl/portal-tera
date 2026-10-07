@@ -1,3 +1,4 @@
+import { RECORD_PROGRAMS } from '@/lib/modalities';
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -10,14 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-const PROGRAMS = ['FRC', 'FTC', 'FLL', 'Geral'];
+const PROGRAMS = [...RECORD_PROGRAMS, 'Geral'];
 
-export default function MeetingForm({ meeting = null, onClose, onSuccess }) {
+export default function MeetingForm({ meeting = null, onClose, onSuccess, initialProgram = 'FRC' }) {
   const queryClient = useQueryClient();
   const isEditing = !!meeting;
   const { form, setForm, hasDraft, clearDraft } = useDraft('draft_meeting', {
     date: new Date().toISOString().split('T')[0],
-    program: 'Geral',
+    program: initialProgram === 'all' ? 'FRC' : initialProgram,
     participants: [],
     agenda: '',
     technical_discussions: '',

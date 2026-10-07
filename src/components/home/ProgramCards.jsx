@@ -5,6 +5,7 @@ import { createPageUrl } from '@/utils';
 import { X } from 'lucide-react';
 
 const PROGRAMS = [
+  { id: 'obr', title: 'OBR', subtitle: 'OLIMPÍADA BRASILEIRA DE ROBÓTICA', description: 'Resgate e Artística, nos níveis 1 e 2. Robótica autônoma, criatividade e aprendizagem conectadas às ações sociais da Tera.', age: 'Resgate e Artística · Níveis 1 e 2', page: 'CompetitionsOBR' },
   {
     id: 'fll',
     title: 'FLL',
@@ -42,7 +43,7 @@ export default function ProgramCards() {
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 max-w-2xl mx-auto sm:max-w-none">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 max-w-2xl mx-auto sm:max-w-none">
         {PROGRAMS.map((p, i) => (
           <motion.div
             key={p.id}
@@ -60,11 +61,11 @@ export default function ProgramCards() {
               <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-[#E10600] opacity-60" />
               <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-[#E10600] opacity-60" />
 
-              <img
+              {p.logo ? <img
                 src={p.logo}
                 alt={p.title}
                 className={`w-28 h-28 sm:w-32 sm:h-32 object-contain transition-transform duration-300 group-hover:scale-105 ${p.bgLogo ? 'mix-blend-lighten' : ''}`}
-              />
+              /> : <span className="text-5xl font-black text-blue-400">OBR</span>}
             </button>
           </motion.div>
         ))}
@@ -100,11 +101,11 @@ export default function ProgramCards() {
               </button>
 
               <div className="flex justify-center mb-6">
-                <img
+                {selected.logo ? <img
                   src={selected.logo}
                   alt={selected.title}
                   className={`h-20 w-auto object-contain ${selected.bgLogo ? 'mix-blend-lighten' : ''}`}
-                />
+                /> : <span className="text-5xl font-black text-blue-400">OBR</span>}
               </div>
 
               <h3 className="text-2xl font-black text-white mb-1 text-center">{selected.title}</h3>

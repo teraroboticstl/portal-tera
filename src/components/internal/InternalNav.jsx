@@ -20,8 +20,14 @@ const menuItems = [
       { name: 'Galeria Eventos', icon: ImageIcon, path: 'InternalEventGallery' },
       { name: 'Análise de Risco', icon: AlertTriangle, path: 'InternalRiskAnalysis' },
       { name: 'Projetos & ESG', icon: Leaf, path: 'InternalProjectsDashboard' },
+      { name: 'Projetos sociais', icon: Heart, path: 'InternalSocialProjects' },
       { name: 'Pontuação FLL', icon: Calculator, path: 'FLLScorer' },
     ]
+  },
+  {
+    category: 'OBR — Resgate e Artística',
+    color: 'blue',
+    items: [{ name: 'Área OBR e subcategorias', icon: Cpu, path: 'InternalOBR' }],
   },
   {
     category: 'FRC',

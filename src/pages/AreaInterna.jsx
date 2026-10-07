@@ -1,3 +1,4 @@
+import { matchesProgram } from '@/lib/modalities';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -94,6 +95,10 @@ function AreaInternaContent({ user }) {
   const frcMeetings = activeMeetings.filter(m => m.program === 'FRC');
 
   const programData = [
+    { key: 'OBR', label: 'OBR', subtitle: 'Resgate e Artística — Níveis 1 e 2', alert: 'Identifique a subcategoria em cada registro de preparação e teste.', stats: [{ value: activeLogs.filter(r => matchesProgram(r.program, 'OBR')).length, label: 'Logs OBR', icon: BookOpen, color: '#3b82f6' }, { value: activePrototypes.filter(r => matchesProgram(r.program, 'OBR')).length, label: 'Protótipos', icon: FlaskConical, color: '#22c55e' }], navCards: [
+      { icon: Cpu, title: 'Área OBR', subtitle: 'Resgate e Artística N1 / N2', path: 'InternalOBR', color: '#3b82f6' },
+      { icon: Lightbulb, title: 'Projetos sociais', subtitle: 'Ações vinculadas às modalidades', path: 'InternalSocialProjects', color: '#22c55e' }
+    ], recentMeetings: activeMeetings.filter(r => matchesProgram(r.program, 'OBR')).slice(0,4), progressItems: activePrototypes.filter(r => matchesProgram(r.program, 'OBR')).slice(0,4), program: 'OBR' },
     {
       key: 'FTC',
       label: 'FTC #17730',

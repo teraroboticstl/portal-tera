@@ -1,0 +1,16 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { OBR_CATEGORIES, OBR_MANUALS_URL, matchesProject } from '@/lib/modalities';
+import { ModalityBadges } from '@/components/common/ModalityFields';
+
+export default function CompetitionsOBR() {
+  const { data: projects = [], isError } = useQuery({ queryKey: ['projects'], queryFn: () => base44.entities.Project.filter({ status: 'active' }, '-created_date') });
+  return <div className="max-w-6xl mx-auto px-4 py-24 space-y-12">
+    <header className="max-w-3xl"><p className="text-blue-400 font-bold">OLIMPÍADA BRASILEIRA DE ROBÓTICA</p><h1 className="text-4xl sm:text-6xl font-black my-4">Tera na <span className="text-[#E10600]">OBR</span></h1><p className="text-gray-300 text-lg">Robótica, aprendizagem e criatividade: Resgate e Artística, nos níveis 1 e 2, integram as modalidades da Tera Robotics.</p></header>
+    <section aria-label="Subcategorias OBR" className="grid md:grid-cols-2 gap-5">{OBR_CATEGORIES.map(c => <article id={c.includes('Resgate') ? `resgate-n${c.endsWith('1') ? 1 : 2}` : `artistica-n${c.endsWith('1') ? 1 : 2}`} key={c} className="bg-[#111217] border border-[#1F222B] rounded-2xl p-6 scroll-mt-24"><h2 className="text-xl font-bold mb-3">{c.replace('OBR ', '')}</h2><p className="text-gray-400">{c.includes('Resgate') ? 'Desenvolvimento e programação de robôs para percorrer desafios de resgate de forma autônoma. Treinos, sensores, mecanismos e estratégia compõem a preparação.' : 'Integração de robótica e expressão artística em uma apresentação. Criatividade, programação, movimentos e narrativa compõem a preparação.'}</p><Link className="inline-block text-blue-400 mt-4 hover:underline" to={`/Projects?modality=${encodeURIComponent(c)}`}>Projetos sociais vinculados →</Link></article>)}</section>
+    <section className="bg-[#111217] rounded-2xl p-6 border border-[#1F222B]"><h2 className="text-2xl font-bold mb-3">Preparação e regulamentos</h2><p className="text-gray-400 mb-4">Os níveis e critérios de participação seguem os regulamentos oficiais de cada edição. Consulte os manuais para planejar a inscrição e a preparação da equipe.</p><a className="text-blue-400 hover:underline" href={OBR_MANUALS_URL} target="_blank" rel="noopener noreferrer">Documentos e manuais oficiais da OBR ↗</a><div className="mt-4 flex flex-wrap gap-4"><Link className="text-[#E10600] hover:underline" to="/InternalOBR">Área OBR para membros →</Link><Link className="hover:underline" to="/Contact">Fale com a Tera →</Link></div></section>
+    <section><h2 className="text-2xl font-bold mb-4">Projetos sociais conectados à OBR</h2>{isError ? <p role="alert">Não foi possível carregar os projetos. Tente novamente.</p> : <div className="grid md:grid-cols-2 gap-4">{projects.filter(p => matchesProject(p, 'OBR')).map(p => <Link key={p.id} to={`/ProjectDetail?id=${encodeURIComponent(p.id)}`} className="border border-[#1F222B] rounded-xl p-5 hover:border-[#E10600]"><h3 className="font-bold">{p.title}</h3><ModalityBadges project={p} /><p className="text-gray-400 line-clamp-3">{p.description}</p></Link>)}</div>}<Link className="inline-block mt-4 text-blue-400 hover:underline" to="/Projects?modality=OBR">Consultar todos os projetos da OBR →</Link></section>
+  </div>;
+}

@@ -1,3 +1,5 @@
+import { ModalityFilter, ModalityBadges } from '@/components/common/ModalityFields';
+import { matchesProject, MODALITIES, OBR_CATEGORIES } from '@/lib/modalities';
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -16,6 +18,8 @@ const tagColors = {
 };
 
 export default function Projects() {
+  const requested = new URLSearchParams(window.location.search).get('modality');
+  const [modality, setModality] = useState([...MODALITIES, ...OBR_CATEGORIES].includes(requested) ? requested : 'all');
   const [selectedProject, setSelectedProject] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -23,6 +27,8 @@ export default function Projects() {
     queryKey: ['projects'],
     queryFn: () => base44.entities.Project.filter({ status: 'active' }, '-created_date'),
   });
+
+  const filteredProjects = projects.filter(p => matchesProject(p, modality));
 
   const nextImage = () => {
     if (selectedProject?.images?.length > 0) {
@@ -64,9 +70,10 @@ export default function Projects() {
       {/* Projects Grid */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-xl mb-8"><ModalityFilter value={modality} onChange={setModality} /></div>
           {isLoading ? (
             <LoadingSpinner />
-          ) : projects.length === 0 ? (
+          ) : filteredProjects.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -77,7 +84,7 @@ export default function Projects() {
             </motion.div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {projects.map((project, index) => (
+              {filteredProjects.map((project, index) => (
                 <motion.div
                   key={project.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -115,6 +122,7 @@ export default function Projects() {
                     <h3 className="font-bold text-lg mb-2 group-hover:text-[#E10600] transition-colors">
                       {project.title}
                     </h3>
+                    <ModalityBadges project={project} />
                     <p className="text-[#B8BDC7] text-sm line-clamp-2 mb-4">
                       {project.description}
                     </p>
@@ -158,6 +166,7 @@ export default function Projects() {
               </DialogHeader>
 
               <div className="space-y-6 mt-4">
+                <ModalityBadges project={selectedProject} />
                 {/* Image Gallery */}
                 {selectedProject.images?.length > 0 && (
                   <div className="relative">
