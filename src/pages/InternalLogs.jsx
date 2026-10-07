@@ -81,7 +81,7 @@ function InternalLogsContent({ user }) {
         {/* Filters */}
         <div className="flex items-center gap-4">
           <Filter className="w-4 h-4 text-[#B8BDC7]" />
-          <Tabs value={filterProgram} onValueChange={setFilterProgram}>
+          <Tabs value={filterProgram.startsWith('OBR') ? 'OBR' : filterProgram} onValueChange={setFilterProgram}>
             <TabsList className="bg-[#111217] border border-[#1F222B] h-auto flex-wrap">
               <TabsTrigger value="all" className="data-[state=active]:bg-[#E10600]">Todos</TabsTrigger>
               <TabsTrigger value="FRC" className="data-[state=active]:bg-red-500">FRC</TabsTrigger>
