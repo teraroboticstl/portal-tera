@@ -57,6 +57,15 @@ const PUBLIC_NAV_ITEMS = [
     ],
   },
   {
+    type: 'group',
+    label: 'SIMULADORES',
+    children: [
+      {label:'Todos os simuladores',path:'Simuladores'},
+      {label:'FLL Bioglow',path:'SimuladorFLL'},
+      {label:'Interclasse — Desafios da Indústria',path:'SimuladorIndustria'},
+    ],
+  },
+  {
     type: 'link',
     label: 'PROJETOS',
     path: 'Projects',

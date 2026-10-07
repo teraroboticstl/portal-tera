@@ -7,8 +7,8 @@ async function request(url, body) {
   return result;
 }
 export const saveFllSimulation = body => request('/api/fll/simulations',body);
-export async function listFllSimulations(admin=false) {
-  if (!admin) return request('/api/fll/simulations');
+export async function listFllSimulations(admin=false,simulator='bioglow') {
+  if (!admin) return request('/api/fll/simulations?simulator='+encodeURIComponent(simulator));
   const rows=[];
   let before='';
   for(let page=0;page<=200;page++) {

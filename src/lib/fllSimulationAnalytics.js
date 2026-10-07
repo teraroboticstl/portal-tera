@@ -1,4 +1,6 @@
 import { INITIAL_ROUND_STATE } from './fllBioglowRules.js';
+import { ANALYTICS_MISSIONS, RULES_VERSION as INDUSTRY_VERSION } from './fllIndustryRules.js';
+export const missionsForVersion=version=>version===INDUSTRY_VERSION ? ANALYTICS_MISSIONS : MISSIONS;
 export const MISSIONS = [
   ['inspection','Inspeção',20], ['m01','M01 Drone',30], ['m02','M02 Sementes',30], ['m03','M03 Rocha',30],
   ['m04','M04 Folhas',30], ['m05','M05 Raízes',20], ['m06','M06 Saúvas',30], ['m07','M07 Fungo',40],
@@ -22,7 +24,7 @@ export function analyzeSimulations(rows,window=3,metric='score') {
   const teams=Array.from(groups,([key,rounds])=>{
     const first=rounds.slice(0,window),last=rounds.slice(-window);
     const canCompare=rounds.length>=window*2;
-    const missions=MISSIONS.map(([code,label,max])=>{
+    const missions=missionsForVersion(rounds[0]?.rules_version).map(([code,label,max])=>{
       const mean=sample=>sample.reduce((sum,row)=>sum+(Number(row.breakdown?.[code]) || 0),0)/sample.length;
       const points=mean(rounds),recent=mean(last);
       return {code,label,max,average:points,recent,percentage:100*points/max,zeroRate:100*rounds.filter(row=>!row.breakdown?.[code]).length/rounds.length,gain:canCompare ? recent-mean(first) : null,opportunity:max-recent};

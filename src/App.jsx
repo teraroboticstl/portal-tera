@@ -18,6 +18,9 @@ import InternalCADConfig from './pages/InternalCADConfig';
 import InternalBoardDiary from './pages/InternalBoardDiary';
 import InternalSeasonArchive from './pages/InternalSeasonArchive';
 import ProjectDetail from './pages/ProjectDetail';
+import Simuladores from './pages/Simuladores';
+import {lazy,Suspense} from 'react';
+const SimuladorIndustria=lazy(()=>import('./pages/SimuladorIndustria')); 
 import CompetitionsOBR from './pages/CompetitionsOBR';
 import InternalOBR from './pages/InternalOBR';
 import InternalSocialProjects from './pages/InternalSocialProjects';
@@ -92,6 +95,8 @@ const AuthenticatedApp = () => {
       <Route path="/InternalCADConfig" element={<LayoutWrapper currentPageName="InternalCADConfig"><InternalCADConfig /></LayoutWrapper>} />
       <Route path="/InternalBoardDiary" element={<LayoutWrapper currentPageName="InternalBoardDiary"><InternalBoardDiary /></LayoutWrapper>} />
       <Route path="/InternalSeasonArchive" element={<LayoutWrapper currentPageName="InternalSeasonArchive"><InternalSeasonArchive /></LayoutWrapper>} />
+      <Route path="/Simuladores" element={<LayoutWrapper currentPageName="Simuladores"><Simuladores /></LayoutWrapper>} />
+      <Route path="/SimuladorIndustria" element={<LayoutWrapper currentPageName="SimuladorIndustria"><Suspense fallback={<p className="p-10 text-white">Carregando simulador…</p>}><SimuladorIndustria /></Suspense></LayoutWrapper>} />
       <Route path="/CompetitionsOBR" element={<LayoutWrapper currentPageName="CompetitionsOBR"><CompetitionsOBR /></LayoutWrapper>} />
       <Route path="/InternalOBR" element={<LayoutWrapper currentPageName="InternalOBR"><InternalOBR /></LayoutWrapper>} />
       <Route path="/InternalSocialProjects" element={<LayoutWrapper currentPageName="InternalSocialProjects"><InternalSocialProjects /></LayoutWrapper>} />

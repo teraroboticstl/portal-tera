@@ -1,0 +1,76 @@
+const MISSIONS=[
+  {id:1,name:"Central de Suprimentos",max:60,optional:false,items:[
+    {label:"Insumos carregados no caminhão",type:"counter",max:3,pts:10,key:"m1_insumos"},
+    {label:"Caminhão retirado da área de carregamento",type:"toggle",pts:20,key:"m1_caminhao",requires:()=>state['m1_insumos']>=1},
+    {label:"Bônus: caminhão no estoque (+10 como transporte)",type:"toggle",pts:10,key:"m1_bonus",requires:()=>state['m1_caminhao']===true},
+  ]},
+  {id:2,name:"Doca de descarga aérea",max:30,optional:false,items:[
+    {label:"Alavanca acionada",type:"toggle",pts:20,key:"m2_alavanca"},
+    {label:"Carga sem tocar na estrutura/avião",type:"toggle",pts:10,key:"m2_carga",requires:()=>state['m2_alavanca']===true},
+  ]},
+  {id:3,name:"Carregamento e expedição",max:20,optional:false,items:[
+    {label:"Caminhão liberado",type:"toggle",pts:10,key:"m3_lib"},
+    {label:"Caminhão estacionado no estoque (+10 como transporte)",type:"toggle",pts:10,key:"m3_est",requires:()=>state['m3_lib']===true},
+  ]},
+  {id:4,name:"Reparo de unidade operacional",max:30,optional:false,items:[
+    {label:"Alavanca girada 180°",type:"toggle",pts:30,key:"m4_alavanca"},
+  ]},
+  {id:5,name:"Helicóptero de abastecimento",max:30,optional:false,items:[
+    {label:"Carga liberada pelo helicóptero",type:"toggle",pts:20,key:"m5_lib"},
+    {label:"Carga recebida da equipe vizinha",type:"toggle",pts:10,key:"m5_recebe"},
+  ]},
+  {id:6,name:"Estação de armazenamento",max:40,optional:false,items:[
+    {label:"Módulos armazenados na estação",type:"counter",max:3,pts:10,key:"m6_mod"},
+    {label:"Módulo escondido retirado/afastado",type:"toggle",pts:10,key:"m6_esc"},
+  ]},
+  {id:7,name:"Turbina de geração industrial",max:60,optional:false,items:[
+    {label:"Módulos liberados sem tocar a turbina",type:"counter",max:3,pts:20,key:"m7_mod"},
+  ]},
+  {id:8,name:"Segurança no trabalho",max:30,optional:true,zeroable:true,items:[
+    {label:"Robô estacionado dentro da área",type:"toggle",pts:20,key:"m8_park"},
+    {label:"Placa de vaga ocupada movida",type:"toggle",pts:10,key:"m8_placa",requires:()=>state['m8_park']===true},
+    {label:"Estrutura de proteção derrubada — ZERA A MISSÃO",type:"danger-toggle",pts:0,key:"m8_derrubou"},
+  ]},
+  {id:9,name:"Linha de produção",max:50,optional:false,items:[
+    {label:"Módulos inseridos na linha",type:"counter",max:3,pts:10,key:"m9_mod"},
+    {label:"Carrinho de carga liberado",type:"toggle",pts:20,key:"m9_carrinho",requires:()=>state['m9_mod']>=1},
+  ]},
+  {id:10,name:"Movimentação operacional",max:40,optional:false,items:[
+    {label:"Trilhos completados",type:"toggle",pts:20,key:"m10_trilhos"},
+    {label:"Composição no final dos trilhos (trava acionada)",type:"toggle",pts:20,key:"m10_comp",requires:()=>state['m10_trilhos']===true},
+  ]},
+  {id:11,name:"Fluxo logístico aéreo",max:20,optional:false,items:[
+    {label:"Mecanismo acionado",type:"toggle",pts:0,key:"m11_mec"},
+    {label:"Avião liberado afastado do mecanismo",type:"toggle",pts:10,key:"m11_aviao",requires:()=>state['m11_mec']===true},
+    {label:"Avião na área de estoque do hangar (+10 como transporte)",type:"toggle",pts:10,key:"m11_hangar",requires:()=>state['m11_aviao']===true},
+  ]},
+  {id:12,name:"Fluxo logístico rodoviário",max:20,optional:false,items:[
+    {label:"Mecanismo acionado",type:"toggle",pts:0,key:"m12_mec"},
+    {label:"Caminhão liberado afastado do mecanismo",type:"toggle",pts:10,key:"m12_cam",requires:()=>state['m12_mec']===true},
+    {label:"Caminhão na doca de estoque (+10 como transporte)",type:"toggle",pts:10,key:"m12_doca",requires:()=>state['m12_cam']===true},
+  ]},
+  {id:13,name:"Estoque",max:40,optional:false,
+   note:"Meios de transporte já pontuam +10 nas missões 1, 3, 11 e 12. Carga da M2 conta aqui se estiver no estoque.",
+   items:[
+    {label:"Elementos na área de estoque (exceto transportes)",type:"counter",max:8,pts:5,key:"m13_el"},
+  ]},
+];
+
+const DISC_SCORES=[0,10,15,25,35,50,50];
+const VALUES_OPTIONS=[{pts:20,lbl:"Inicial"},{pts:40,lbl:"Em desenvolvimento"},{pts:60,lbl:"Plenamente demonstrado"}];
+let state={}, discsRemaining=6, valuesScore=40, inspBonus=false;
+
+function initState(){MISSIONS.forEach(m=>m.items.forEach(it=>{if(it.type==='counter')state[it.key]=0;else if(it.type==='toggle'||it.type==='danger-toggle')state[it.key]=false;}));}
+function isLocked(it){return it.requires&&!it.requires();}
+function cascadeOff(key){MISSIONS.forEach(m=>m.items.forEach(it=>{if(it.type==='toggle'&&it.requires&&isLocked(it)&&state[it.key]){state[it.key]=false;cascadeOff(it.key);}}));}
+function getMissionScore(m){
+  if(m.zeroable&&state['m8_derrubou'])return 0;
+  let s=0;m.items.forEach(it=>{if(it.type==='counter')s+=state[it.key]*it.pts;else if(it.type==='toggle'&&state[it.key]&&!isLocked(it))s+=it.pts;});return s;
+}
+function isZeroed(m){return m.zeroable&&state['m8_derrubou'];}
+function calcTotal(){
+  let missions=0;MISSIONS.forEach(m=>missions+=getMissionScore(m));
+  return{missions,discs:DISC_SCORES[discsRemaining],vals:valuesScore,insp:inspBonus?20:0,
+         total:missions+DISC_SCORES[discsRemaining]+valuesScore+(inspBonus?20:0)};
+}
+

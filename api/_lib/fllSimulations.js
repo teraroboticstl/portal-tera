@@ -2,6 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { supabaseServer, validateUserAuth, createScopedUserSupabaseClient } from './supabaseServer.js';
 import { INITIAL_ROUND_STATE, calculateScores } from '../../src/lib/fllBioglowRules.js';
 
+import { normalizeState as normalizeIndustryState, calculateScores as calculateIndustryScores, RULES_VERSION as INDUSTRY_VERSION, SEASON_THEME as INDUSTRY_THEME } from '../../src/lib/fllIndustryRules.js';
+
 export const RULES_VERSION = 'bioglow-2026-2027-v1';
 const PUBLIC_FIELDS = 'id,created_at,season_theme,season_year,team_name,round_name,state_snapshot,score,breakdown,rules_version,share_token';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -26,7 +28,9 @@ export function normalizeSimulationState(input) {
 
 export function buildSimulationRecord(body, user, season) {
   if (!UUID.test(body.requestId || '')) throw invalid('Identificador de salvamento inválido.');
-  const state = normalizeSimulationState(body.state);
+  const industry = body.simulator === 'industria';
+  let state;
+  try { state = industry ? normalizeIndustryState(body.state,{strict:true,requireTeam:true}) : normalizeSimulationState(body.state); } catch(error) { throw invalid(error.message); }
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   if (!user && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254)) throw invalid('Informe um e-mail válido.');
   if (!user && body.portfolio) throw invalid('Faça login para registrar uma iteração no portfólio.', 403);
@@ -34,11 +38,11 @@ export function buildSimulationRecord(body, user, season) {
   if (body.portfolio && (!title || title.length > 120)) throw invalid('Informe a identificação da iteração (até 120 caracteres).');
   const notes = body.portfolio ? String(body.notes || '').trim() : null;
   if (notes?.length > 2000) throw invalid('As observações devem ter até 2000 caracteres.');
-  const { total, breakdown } = calculateScores(state);
+  const { total, breakdown } = industry ? calculateIndustryScores(state) : calculateScores(state);
   const record = { request_id:body.requestId, user_id:user?.id || null, email:user ? null : email,
     season_id:season.id, season_theme:season.theme, season_year:season.year,
     team_name:state.teamName, round_name:state.roundName, state_snapshot:state,
-    score:total, breakdown, rules_version:RULES_VERSION, is_portfolio:Boolean(body.portfolio), iteration_title:title, notes,
+    score:total, breakdown, rules_version:industry ? INDUSTRY_VERSION : RULES_VERSION, is_portfolio:Boolean(body.portfolio), iteration_title:title, notes,
     origin:user ? 'member' : 'guest', is_test:Boolean(body.testOnly && user?.profile?.is_admin) };
   const hashed = {...record};
   if (!record.is_test) delete hashed.is_test; // Keep existing real-round retry hashes compatible.
@@ -76,6 +80,8 @@ export async function handleFllSimulations(req, res, getSeason) {
       const before = req.query?.before || new Date().toISOString();
       if (!Number.isFinite(Date.parse(before))) throw invalid('Data de consulta inválida.');
       let query = supabaseServer.from('fll_round_simulations').select(admin ? `${PUBLIC_FIELDS},user_id,origin,is_tera,is_test,deleted_at,is_portfolio,iteration_title,notes,fll_simulation_contacts(email)` : `${PUBLIC_FIELDS},is_portfolio,iteration_title,notes`, {count:'exact'}).order('created_at', {ascending:false}).order('id',{ascending:false});
+      // Default member queries remain Bioglow-only for compatibility.
+      if (!admin) query = query.eq('rules_version',req.query?.simulator === 'industria' ? INDUSTRY_VERSION : RULES_VERSION);
       if (!admin) query = query.eq('user_id', user.id).eq('is_test',false).is('deleted_at',null).limit(100);
       else query = query.lte('created_at',before).range(page*250,page*250+249);
       const {data,error,count} = await query;
@@ -102,8 +108,9 @@ export async function handleFllSimulations(req, res, getSeason) {
       return res.status(200).json({success:true});
     }
     if (!body) throw invalid('Dados ausentes.',400);
-    const season = await getSeason();
-    if (season.theme !== 'BIOGLOW') throw invalid('Estas regras correspondem à temporada BIOGLOW.');
+    if (body.simulator !== undefined && !['bioglow','industria'].includes(body.simulator)) throw invalid('Simulador desconhecido.');
+    const season = body.simulator === 'industria' ? {id:null,theme:INDUSTRY_THEME,year:2026} : await getSeason();
+    if (body.simulator !== 'industria' && season.theme !== 'BIOGLOW') throw invalid('Estas regras correspondem à temporada BIOGLOW.');
     const record = buildSimulationRecord(body,user,season);
     // RPC transacional: contato e round são gravados juntos; retries não duplicam.
     const { data, error } = await supabaseServer.rpc('save_fll_round_simulation', {p_record:record});

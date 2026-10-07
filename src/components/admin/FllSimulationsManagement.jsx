@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { listFllSimulations, classifyTeraSimulation, archiveFllSimulations, saveFllSimulation } from '@/api/fllSimulationsClient';
-import { MISSIONS, normalizeTeam, seasonKey, filterSimulations, analyzeSimulations, demonstrationRounds } from '@/lib/fllSimulationAnalytics';
+import { missionsForVersion, normalizeTeam, seasonKey, filterSimulations, analyzeSimulations, demonstrationRounds } from '@/lib/fllSimulationAnalytics';
 import { Button } from '@/components/ui/button';
 const COLORS=['#f87171','#34d399','#60a5fa','#fbbf24','#c084fc','#fb923c','#22d3ee','#f472b6'];
 const number=value=>value===null ? '—' : Number(value).toLocaleString('pt-BR',{maximumFractionDigits:1});
@@ -28,8 +28,11 @@ export default function FllSimulationsManagement() {
   const visible=invalidDates || !season ? [] : filterSimulations(rows,filters);
   const eligible=filterSimulations(rows,{...filters,teams:[]});
   const availableTeams=Array.from(new Map(eligible.map(row=>[normalizeTeam(row.team_name),row.team_name])).entries()).sort((a,b)=>a[1].localeCompare(b[1]));
+  const selectedVersion=visible[0]?.rules_version || rows.find(row=>seasonKey(row)===season)?.rules_version;
+  const MISSIONS=missionsForVersion(selectedVersion);
+  const scoreMax=selectedVersion==='industria-interclasse-2026-v11' ? 600 : 530;
   const analysis=analyzeSimulations(visible,3,metric),chartTeams=analysis.teams.slice(0,8);
-  const metricMax=metric==='score' ? 530 : MISSIONS.find(([code])=>code===metric)?.[2] || 530;
+  const metricMax=metric==='score' ? scoreMax : MISSIONS.find(([code])=>code===metric)?.[2] || scoreMax;
   async function classify(row) {
     setLoading(true);setError('');
     try{await classifyTeraSimulation(row.id,!row.is_tera);await load();}catch(err){setError(err.message);setLoading(false);}
@@ -59,7 +62,7 @@ export default function FllSimulationsManagement() {
     <div className="flex flex-wrap justify-between gap-3"><div><h2 className="text-xl font-bold">Análise de simulações FLL</h2><p className="text-sm text-gray-400">Evolução por equipe, comparação de rounds e desempenho por missão.</p></div><Button onClick={load} disabled={loading}>{loading ? progress || 'Carregando…' : 'Atualizar'}</Button></div>
     {error && <p role="alert" className="text-red-400">{error}</p>}{notice && <p role="status" className="text-emerald-300">{notice}</p>}
     <div className="rounded-xl border border-white/10 bg-[#111217] p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-      <label className="text-sm">Temporada e regras<select className={control} value={season} onChange={e=>{setSeason(e.target.value);setTeams([]);}}><option value="">Selecione a temporada</option>{seasons.map(item=><option key={item}>{item}</option>)}</select></label>
+      <label className="text-sm">Temporada e regras<select className={control} value={season} onChange={e=>{setSeason(e.target.value);setTeams([]);setMetric('score');}}><option value="">Selecione a temporada</option>{seasons.map(item=><option key={item}>{item}</option>)}</select></label>
       <label className="text-sm">Comparação<select className={control} value={group} onChange={e=>{setGroup(e.target.value);setTeams([]);}}><option value="all">Todas as equipes</option><option value="tera">Exclusivamente Tera confirmados</option><option value="others">Outras equipes (não Tera)</option></select></label>
       <label className="text-sm">Conjunto de dados<select className={control} value={data} onChange={e=>{setData(e.target.value);setTeams([]);}}><option value="real">Somente dados reais</option><option value="test">Somente demonstração / testes</option><option value="all">Reais e testes (misturados)</option></select></label>
       <label className="text-sm">Registros<select className={control} value={trash?'trash':'active'} onChange={e=>setTrash(e.target.value==='trash')}><option value="active">Ativos</option><option value="trash">Lixeira — restaurar registros</option></select></label>
