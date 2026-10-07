@@ -20,13 +20,13 @@ export default function SimuladorIndustria(){
  const [rounds,setRounds]=useState(()=>{const value=read(HISTORY,[]);return Array.isArray(value)?value:[];});
  const [remote,setRemote]=useState([]),[intent,setIntent]=useState(null),[share,setShare]=useState(null);
  const [error,setError]=useState(''),[notice,setNotice]=useState(''),[reset,setReset]=useState(false);
- const [remaining,setRemaining]=useState(150),[running,setRunning]=useState(false),[muted,setMuted]=useState(false);
- const timer=useRef(null),player=useRef(null),left=useRef(150),requests=useRef(new Map()),lastSaved=useRef(null),sessionIdentity=useRef(user?.id||null);
+ const [remaining,setRemaining]=useState(()=>150-state.elapsedSeconds),[running,setRunning]=useState(false),[muted,setMuted]=useState(false);
+ const timer=useRef(null),player=useRef(null),left=useRef(150-state.elapsedSeconds),mutedRef=useRef(false),requests=useRef(new Map()),lastSaved=useRef(null),sessionIdentity=useRef(user?.id||null);
  const {total,breakdown,missions}=calculateScores(state);
  const sharedToken=params.get('simulation');
  function stopAudio(){if(player.current){player.current.pause();player.current.currentTime=0;}}
  function play(slot){
-  if(muted)return;
+  if(mutedRef.current)return;
   player.current ||= new Audio();
   player.current.pause();player.current.src=assets[slot];player.current.currentTime=0;
   player.current.play().catch(()=>setNotice('O navegador bloqueou o áudio. Ative o som e inicie novamente.'));
@@ -50,7 +50,7 @@ export default function SimuladorIndustria(){
  useEffect(()=>{try{localStorage.setItem(HISTORY,JSON.stringify(rounds));}catch{/* Cloud records remain saved. */}},[rounds]);
  useEffect(()=>{
   let cancelled=false;setRemote([]);requests.current.clear();lastSaved.current=null;sessionIdentity.current=user?.id||null;
-  if(user && !isLoadingAuth)listFllSimulations(false,'industria').then(result=>{if(!cancelled)setRemote(result.simulations.map(historyEntry));}).catch(err=>{if(!cancelled)setError(err.message);});
+  if(user && !isLoadingAuth)listFllSimulations(false,'industria').then(result=>{if(!cancelled)setRemote(result.simulations.map(row=>({...historyEntry(row),remote:true})));}).catch(err=>{if(!cancelled)setError(err.message);});
   return()=>{cancelled=true;};
  },[user?.id,isLoadingAuth]);
  useEffect(()=>{
@@ -63,7 +63,7 @@ export default function SimuladorIndustria(){
   return()=>{cancelled=true;};
  },[sharedToken]);
  function change(key,value){setState(old=>{const next=normalizeState({...old,[key]:value});if(typeof value==='string')next[key]=value;return next;});lastSaved.current=null;}
- const history=[...remote,...rounds.filter(row=>!user || !row.user_id)].filter((row,index,list)=>list.findIndex(item=>item.id===row.id)===index).sort((a,b)=>b.total-a.total);
+ const history=[...remote,...rounds].filter((row,index,list)=>list.findIndex(item=>item.id===row.id)===index).sort((a,b)=>b.total-a.total);
  function beginSave(sharing){if(isLoadingAuth)return;if(running)stopTimer();setError('');setIntent({sharing,snapshot:{...state}});}
  async function persist(payload){
   const savingIdentity=user?.id||null;
@@ -72,7 +72,7 @@ export default function SimuladorIndustria(){
   const body={...payload,simulator:'industria',requestId:requests.current.get(fingerprint)};
   const {simulation}=await saveFllSimulation({...body,share:intent.sharing});
   if(sessionIdentity.current!==savingIdentity)throw new Error('A conta mudou durante o salvamento. Consulte o histórico ao entrar novamente.');
-  const entry=historyEntry(simulation);setState(normalizeState(simulation.state_snapshot));
+  const entry={...historyEntry(simulation),remote:Boolean(user)};setState(normalizeState(simulation.state_snapshot));
   if(user)setRemote(old=>[entry,...old.filter(row=>row.id!==entry.id)]);
   else setRounds(old=>[entry,...old.filter(row=>row.id!==entry.id)].slice(0,60));
   lastSaved.current={body,state:simulation.state_snapshot};
@@ -91,7 +91,7 @@ export default function SimuladorIndustria(){
  const shareURL=share?`${window.location.origin}/SimuladorIndustria?simulation=${share.share_token}`:'';
  const shareText=share?`Desafios da Indústria · Interclasse 2026\nEquipe: ${share.team_name}\n${share.round_name}: ${share.score} / 600 pontos\n`+Object.entries(share.breakdown).map(([code,points])=>`${code}: ${points} pts`).join('\n')+'\n'+shareURL:'';
  async function copy(text){try{await navigator.clipboard.writeText(text);setNotice('Copiado para compartilhar.');}catch{setError('Não foi possível copiar automaticamente. Selecione e copie o texto do resumo.');}}
- function toggleMute(){const next=!muted;setMuted(next);if(next)stopAudio();}
+ function toggleMute(){const next=!muted;mutedRef.current=next;setMuted(next);if(next)stopAudio();}
  const Toggle=({checked,disabled,onClick,label,danger=false})=><button type="button" role="switch" aria-label={label} aria-checked={checked} disabled={disabled} className={'toggle'+(checked?(danger?' on-danger':' on'):'')+(disabled?' locked':'')} onClick={onClick}/>;
  const timerText=running?'⏸ Pausar':remaining<150 && remaining>0?'▶ Continuar':'▶ Iniciar';
  const TimerButtons=()=><><button className="timer-btn t-start" disabled={remaining===0} onClick={toggleTimer}>{timerText}</button><button className="timer-btn t-reset" onClick={resetTimer}>↺ Resetar</button><button className="reset-btn" onClick={()=>beginSave(false)}>Salvar Simulação</button><button className="reset-btn" onClick={exportCSV}>Exportar CSV</button><button className="reset-btn" onClick={openShare}>Compartilhar</button><button className="reset-btn" onClick={toggleMute}>{muted?'Ativar som':'Silenciar'}</button></>;
@@ -108,7 +108,7 @@ export default function SimuladorIndustria(){
    const zeroed=m.zeroable && state.m8_derrubou;
    return <article key={m.id} className={'mission-card'+(m.optional?' optional':'')+(zeroed?' zeroed':'')}><div className="mission-header"><div className="mission-num">{m.id}</div><div><h2 className="mission-name">{m.name}{m.optional && <small> (opcional · última)</small>}</h2><div className="mission-max">Máx. {m.max} pts</div></div></div>{m.note && <div className="info-note">{m.note}</div>}<div className="mission-items">{m.items.map(it=>{const locked=isLocked(it,state);return <div key={it.key} className="item-row"><span className={'item-label'+(locked?' disabled':'')}>{it.type==='danger-toggle'?'⚠ ':''}{it.label}{locked && <small> (bloqueado)</small>}</span><div className="item-controls">{it.type==='counter'?<><div className="counter"><button aria-label={`Diminuir ${it.label}`} disabled={state[it.key]===0} onClick={()=>change(it.key,state[it.key]-1)}>−</button><span>{state[it.key]}</span><button aria-label={`Aumentar ${it.label}`} disabled={state[it.key]===it.max} onClick={()=>change(it.key,state[it.key]+1)}>+</button></div><span className="item-pts">{state[it.key]*it.pts} pts</span></>:<><Toggle label={it.label} danger={it.type==='danger-toggle'} checked={state[it.key]} disabled={locked} onClick={()=>change(it.key,!state[it.key])}/>{it.type==='toggle' && <span className="item-pts">{it.pts?'+'+it.pts:'—'}</span>}</>}</div></div>;})}</div>{zeroed && <div className="zeroed-overlay">✕ Missão zerada — estrutura derrubada</div>}<div className="mission-subtotal"><span className={zeroed?'zeroed':''}>{breakdown['m'+String(m.id).padStart(2,'0')]} pts</span></div></article>;
   })}</div>
-  <div className="panel" style={{marginTop:20}}><h3>Resumo das Simulações</h3><p className="status-note">Resultados salvos no Supabase. A remoção abaixo oculta a cópia deste navegador; a administração pode mover o registro para a lixeira do portal.</p><div className="history-wrap"><table id="simTable"><thead><tr>{['Round','Total','Missões','Precisão','Tempo','Ação'].map(label=><th key={label}>{label}</th>)}</tr></thead><tbody>{history.map((row,index)=><tr key={row.id} style={index===0?{background:'rgba(255,215,0,.15)',fontWeight:700}:undefined}><td><button className="reset-btn" onClick={()=>{const loaded=normalizeState(row.state_snapshot);stopTimer();setState(loaded);left.current=150-loaded.elapsedSeconds;setRemaining(left.current);lastSaved.current=null;}}>{row.round_name}</button></td><td>{row.total}</td><td>{row.mission}</td><td>{row.discos}</td><td>{format(row.tempo)}</td><td>{!row.user_id && <button className="btn-delete" aria-label={`Ocultar ${row.round_name} deste navegador`} onClick={()=>setRounds(old=>old.filter(item=>item.id!==row.id))}>✕</button>}</td></tr>)}</tbody><tfoot><tr><td>MÉDIA</td><td>{Math.round(avg('total'))}</td><td>{Math.round(avg('mission'))}</td><td>{avg('discos').toFixed(1)}</td><td>{format(Math.round(avg('tempo')))}</td><td/></tr></tfoot></table></div>{!history.length && <p className="status-note">Nenhuma simulação salva nesta temporada.</p>}</div>
+  <div className="panel" style={{marginTop:20}}><h3>Resumo das Simulações</h3><p className="status-note">Resultados salvos no Supabase. A remoção abaixo oculta a cópia deste navegador; a administração pode mover o registro para a lixeira do portal.</p><div className="history-wrap"><table id="simTable"><thead><tr>{['Round','Total','Missões','Precisão','Tempo','Ação'].map(label=><th key={label}>{label}</th>)}</tr></thead><tbody>{history.map((row,index)=><tr key={row.id} style={index===0?{background:'rgba(255,215,0,.15)',fontWeight:700}:undefined}><td><button className="reset-btn" onClick={()=>{const loaded=normalizeState(row.state_snapshot);stopTimer();setState(loaded);left.current=150-loaded.elapsedSeconds;setRemaining(left.current);lastSaved.current=null;}}>{row.round_name}</button></td><td>{row.total}</td><td>{row.mission}</td><td>{row.discos}</td><td>{format(row.tempo)}</td><td>{!row.remote && <button className="btn-delete" aria-label={`Ocultar ${row.round_name} deste navegador`} onClick={()=>setRounds(old=>old.filter(item=>item.id!==row.id))}>✕</button>}</td></tr>)}</tbody><tfoot><tr><td>MÉDIA</td><td>{Math.round(avg('total'))}</td><td>{Math.round(avg('mission'))}</td><td>{avg('discos').toFixed(1)}</td><td>{format(Math.round(avg('tempo')))}</td><td/></tr></tfoot></table></div>{!history.length && <p className="status-note">Nenhuma simulação salva nesta temporada.</p>}</div>
   <div className="final-bar"><div><div className="lbl">Pontuação total do round</div><div className="breakdown">{[['Missões',missions],['Precisão',breakdown.precision],['Valores',breakdown.values],['Inspeção',breakdown.inspection]].map(([label,pts])=><span key={label} className="breakdown-item">{label}: <span>{pts}</span></span>)}</div></div><div className="score">{total}</div></div>
   <div id="bottom-bar" className="timer-block" style={{marginTop:'1.2rem',justifyContent:'space-between',flexWrap:'wrap',gap:16}}><div id="bottom-bar-btns" className="dialog-controls"><TimerButtons/></div><div className={timerClass} id="timer-digits-bottom">{format(remaining)}</div></div>
   {intent && <FllSimulationSaveDialog user={user} snapshot={intent.snapshot} sharing={intent.sharing} onClose={()=>setIntent(null)} onSave={persist}/>}
