@@ -13,6 +13,7 @@ const menuItems = [
     category: 'Geral',
     items: [
       { name: 'Dashboard', icon: LayoutDashboard, path: 'AreaInterna' },
+      { name: 'Operação Tera e ULTRON', icon: ListTodo, path: 'InternalOperations' },
       { name: 'Logs Diários', icon: BookOpen, path: 'InternalLogs' },
       { name: 'Reuniões', icon: Calendar, path: 'InternalMeetings' },
       { name: 'Protótipos', icon: FlaskConical, path: 'InternalPrototypes' },

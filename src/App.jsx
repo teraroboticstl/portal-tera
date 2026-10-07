@@ -39,6 +39,7 @@ import KnowledgeBase from './pages/KnowledgeBase.jsx';
 import InternalGuard from './components/internal/ProtectedRoute';
 const AVA=lazy(()=>import('./pages/AVA'));
 const AVAAdmin=lazy(()=>import('./pages/AVAAdmin'));
+const InternalOperations=lazy(()=>import('./pages/InternalOperations'));
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -107,6 +108,7 @@ const AuthenticatedApp = () => {
       <Route path="/InternalOBR" element={<LayoutWrapper currentPageName="InternalOBR"><InternalOBR /></LayoutWrapper>} />
       <Route path="/InternalESG" element={<LayoutWrapper currentPageName="InternalESG"><InternalESG /></LayoutWrapper>} />
       <Route path="/InternalProjects" element={<LayoutWrapper currentPageName="InternalProjects"><InternalProjects /></LayoutWrapper>} />
+      <Route path="/InternalOperations" element={<LayoutWrapper currentPageName="InternalOperations"><Suspense fallback={<p className="p-10 text-white">Carregando operação…</p>}><InternalOperations /></Suspense></LayoutWrapper>} />
       <Route path="/InternalSocialProjects" element={<LayoutWrapper currentPageName="InternalSocialProjects"><InternalSocialProjects /></LayoutWrapper>} />
       <Route path="/ProjectDetail" element={<LayoutWrapper currentPageName="ProjectDetail"><ProjectDetail /></LayoutWrapper>} />
       <Route path="/InternalFLLDashboard" element={<LayoutWrapper currentPageName="InternalFLLDashboard"><InternalFLLDashboard /></LayoutWrapper>} />
