@@ -21,6 +21,7 @@ import ProductsManagement from '@/components/admin/ProductsManagement';
 import SeasonCloseManagement from '@/components/admin/SeasonCloseManagement';
 import GoogleDriveTestManagement from '@/components/admin/GoogleDriveTestManagement';
 import FllMissionsManagement from '@/components/admin/FllMissionsManagement';
+import FllSimulationsManagement from '@/components/admin/FllSimulationsManagement';
 import FllAudiosManagement from '@/components/admin/FllAudiosManagement';
 import { Bot, Volume2 } from 'lucide-react';
 
@@ -37,6 +38,7 @@ const VALID_ADMIN_TABS = [
   'products',
   'fll_missions',
   'fll_audios',
+  'fll_simulations',
   'season_close',
   'google_drive'
 ];
@@ -198,6 +200,7 @@ export default function AdminPanel() {
                 <Volume2 className="w-4 h-4 mr-1.5" />
                 Áudios FLL
               </TabsTrigger>
+              <TabsTrigger value="fll_simulations" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">Simulações FLL</TabsTrigger>
               <TabsTrigger value="season_close" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
                 <Archive className="w-4 h-4 mr-1.5" />
                 Encerrar Temporada
@@ -233,6 +236,7 @@ export default function AdminPanel() {
           <TabsContent value="fll_audios">
             <FllAudiosManagement user={user} />
           </TabsContent>
+          <TabsContent value="fll_simulations"><FllSimulationsManagement /></TabsContent>
           <TabsContent value="season_close">
             <SeasonCloseManagement />
           </TabsContent>

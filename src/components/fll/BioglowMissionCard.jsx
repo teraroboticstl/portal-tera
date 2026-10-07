@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Info, AlertCircle, Check, ChevronDown, ChevronUp, Maximize2, X, ImageOff } from 'lucide-react';
 
 export default function BioglowMissionCard({
+  compact = false,
   code,
   title,
   subtotal = 0,
@@ -34,14 +35,14 @@ export default function BioglowMissionCard({
 
   return (
     <div
-      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+      className={`${compact ? 'md:grid md:grid-cols-2 ' : ''}rounded-2xl border transition-all duration-200 overflow-hidden ${
         hasScore
           ? 'bg-[#14151C] border-[#E10600]/30 shadow-lg shadow-black/40'
           : 'bg-[#111217] border-white/10 hover:border-white/20'
       }`}
     >
       {/* Cabeçalho do Card */}
-      <div className="p-4 sm:p-5 border-b border-white/5 flex items-start justify-between gap-3">
+      <div className={`${compact ? 'p-3 md:border-r md:border-b-0' : 'p-4 sm:p-5'} border-b border-white/5 flex items-start justify-between gap-3`}>
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono font-bold tracking-wider uppercase text-[#E10600]">
@@ -94,7 +95,7 @@ export default function BioglowMissionCard({
       </div>
 
       {/* Imagem Oficial da Missão com Armazenamento no Google Drive */}
-      {imageUrl && !imageError && (
+      {!compact && imageUrl && !imageError && (
         <div className="px-4 sm:px-5 pt-4">
           <div
             role="button"
@@ -145,7 +146,7 @@ export default function BioglowMissionCard({
 
       {/* Explicação acessível das regras expansível */}
       {showRules && (
-        <div className="bg-black/30 border-b border-white/5 p-4 sm:p-5 text-xs sm:text-sm space-y-3">
+        <div className={`${compact ? 'order-2 md:col-span-2' : ''} bg-black/30 border-b border-white/5 p-4 sm:p-5 text-xs sm:text-sm space-y-3`}>
           {requirements.length > 0 && (
             <div>
               <p className="font-semibold text-white mb-1 flex items-center gap-1.5">
@@ -191,7 +192,7 @@ export default function BioglowMissionCard({
       )}
 
       {/* Controles interativos da missão */}
-      <div className="p-4 sm:p-5 space-y-3.5">
+      <div className={compact ? 'p-3 space-y-2 md:self-center' : 'p-4 sm:p-5 space-y-3.5'}>
         {children}
       </div>
 

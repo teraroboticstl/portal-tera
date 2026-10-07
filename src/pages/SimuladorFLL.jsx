@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Bookmark,
@@ -26,15 +26,25 @@ import {
   calculateScores,
   MAX_POSSIBLE_SCORE,
   PRECISION_TABLE,
-  encodeRoundState,
   decodeRoundState
 } from '@/lib/fllBioglowRules';
 import { fetchActiveFllSeason } from '@/api/fllSeasonClient';
+
+import { useAuth } from '@/lib/AuthContext';
+import FllSimulationSaveDialog from '@/components/fll/FllSimulationSaveDialog';
+import { saveFllSimulation, listFllSimulations, fetchSharedSimulation, simulationForHistory } from '@/api/fllSimulationsClient';
 
 const STORAGE_KEY_CURRENT = 'fll_bioglow_current_state';
 const STORAGE_KEY_SAVED = 'fll_bioglow_saved_rounds';
 
 export default function SimuladorFLL() {
+  const { user, isLoadingAuth } = useAuth();
+  const [saveIntent, setSaveIntent] = useState(null);
+  const [remoteRounds, setRemoteRounds] = useState([]);
+  const [historyError, setHistoryError] = useState('');
+  const [sharedRound, setSharedRound] = useState(null);
+  const [lastSaved, setLastSaved] = useState(null);
+  const requests = useRef(new Map());
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeSeason, setActiveSeason] = useState({
     theme: 'BIOGLOW',
@@ -157,22 +167,56 @@ export default function SimuladorFLL() {
     });
   };
 
-  const handleSaveRound = () => {
-    const newEntry = {
-      id: Date.now().toString(),
-      savedAt: new Date().toISOString(),
-      teamName: state.teamName || 'Equipe sem nome',
-      roundName: state.roundName || 'Round 1',
-      score: total,
-      stateSnapshot: { ...state }
-    };
+  useEffect(() => {
+    let cancelled = false;
+    setRemoteRounds([]); setHistoryError(''); setLastSaved(null); requests.current.clear();
+    if (user && !isLoadingAuth) listFllSimulations().then(result => {
+      if (!cancelled) setRemoteRounds((result.simulations || []).map(simulationForHistory));
+    }).catch(error => { if (!cancelled) setHistoryError(error.message); });
+    return () => { cancelled = true; };
+  }, [user?.id, isLoadingAuth]);
 
-    setSavedRounds(prev => [newEntry, ...prev.slice(0, 19)]);
-    toast({
-      title: "Round salvo com sucesso!",
-      description: `${newEntry.teamName} - ${newEntry.roundName}: ${total} pontos gravados no navegador.`
-    });
+  const sharedToken = searchParams.get('simulation');
+  useEffect(() => {
+    if (!sharedToken) return;
+    let cancelled = false;
+    fetchSharedSimulation(sharedToken).then(({simulation}) => {
+      if (!cancelled) {
+        setState({ ...INITIAL_ROUND_STATE, ...simulation.state_snapshot });
+        toast({title:'Simulação compartilhada carregada', description:simulation.team_name + ' · ' + simulation.score + ' pts'});
+      }
+    }).catch(error=>{ if (!cancelled) toast({title:'Link indisponível',description:error.message,variant:'destructive'}); });
+    return () => { cancelled = true; };
+  }, [sharedToken]);
+
+  const handleSaveRound = () => {
+    if (isLoadingAuth) return;
+    setSaveIntent({ sharing:false, snapshot:{...state} });
   };
+  const handleShareRound = async () => {
+    if (isLoadingAuth) return;
+    if (lastSaved && JSON.stringify(state) === JSON.stringify(lastSaved.payload.state)) {
+      try {
+        const result = await saveFllSimulation({...lastSaved.payload,share:true});
+        setSharedRound(result.simulation); setShowShareModal(true);
+      } catch (error) { toast({title:'Compartilhamento indisponível',description:error.message,variant:'destructive'}); }
+    } else setSaveIntent({sharing:true,snapshot:{...state}});
+  };
+  const persistRound = async payload => {
+    const fingerprint = JSON.stringify({...payload, userId:user?.id || null});
+    if (!requests.current.has(fingerprint)) requests.current.set(fingerprint, crypto.randomUUID());
+    const body = {...payload,requestId:requests.current.get(fingerprint)};
+    const {simulation} = await saveFllSimulation({...body,share:saveIntent.sharing});
+    const entry = simulationForHistory(simulation);
+    setState(simulation.state_snapshot);
+    setLastSaved({payload:body});
+    if (user) setRemoteRounds(previous=>[entry,...previous.filter(row=>row.id!==entry.id)]);
+    else setSavedRounds(previous=>[entry,...previous.filter(row=>row.id!==entry.id)].slice(0,20));
+    if (saveIntent.sharing) { setSharedRound(simulation); setShowShareModal(true); }
+    setSaveIntent(null);
+    toast({title:'Round salvo no Supabase',description:simulation.is_portfolio ? 'Registrado no portfólio da temporada como iteração de round.' : 'Resultado armazenado permanentemente no portal.'});
+  };
+  const historyRounds = [...remoteRounds,...savedRounds.filter(row=>!row.remote || !user)].filter((row,index,all)=>all.findIndex(item=>item.id===row.id)===index);
 
   const handleLoadRound = (savedItem) => {
     setState({ ...savedItem.stateSnapshot });
@@ -187,8 +231,7 @@ export default function SimuladorFLL() {
   };
 
   // Geração de link e texto de compartilhamento
-  const encodedState = encodeRoundState(state);
-  const shareableUrl = `${window.location.origin}/SimuladorFLL?state=${encodedState}`;
+  const shareableUrl = sharedRound ? `${window.location.origin}/SimuladorFLL?simulation=${sharedRound.share_token}` : '';
 
   const generateSummaryText = () => {
     const active = [];
@@ -250,11 +293,36 @@ export default function SimuladorFLL() {
         resetTrigger={resetTrigger}
         onResetClick={() => setShowResetConfirm(true)}
         onSaveClick={handleSaveRound}
-        onShareClick={() => setShowShareModal(true)}
+        onShareClick={handleShareRound}
       />
 
       {/* Conteúdo Principal */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-6">
+            {/* Inspeção do Robô */}
+            <BioglowMissionCard compact
+              code="INSPEÇÃO"
+              title="Inspeção do Robô"
+              subtotal={breakdown.inspection}
+              maxPoints={20}
+              imageUrl={missionImages['INSPEÇÃO']?.imageUrl}
+              imageAlt={missionImages['INSPEÇÃO']?.imageAlt}
+              description="Avaliação de tamanho do robô e acessórios antes do início da partida."
+              requirements={[
+                "Todo o Robô (robô, anexos, garras e peças adicionais) cabe completamente dentro do espaço pequeno de inspeção (Small Inspection Area)."
+              ]}
+              restrictions={[
+                "A verificação ocorre antes do início dos 2min30s da partida."
+              ]}
+            >
+              <BioglowToggle
+                label="Todo o Robô (robô, anexos, garras e peças adicionais) coube na área pequena de inspeção"
+                checked={state.inspectionSmallArea}
+                onChange={(val) => updateField('inspectionSmallArea', val)}
+                pointsText="+20 pts"
+              />
+            </BioglowMissionCard>
+
+
 
         {/* Identificação da Equipe e Round (Opcional) */}
         <section className="bg-[#111217] border border-white/10 rounded-2xl p-4 sm:p-5 shadow-sm">
@@ -303,30 +371,6 @@ export default function SimuladorFLL() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-            {/* Inspeção do Robô */}
-            <BioglowMissionCard
-              code="INSPEÇÃO"
-              title="Inspeção do Robô"
-              subtotal={breakdown.inspection}
-              maxPoints={20}
-              imageUrl={missionImages['INSPEÇÃO']?.imageUrl}
-              imageAlt={missionImages['INSPEÇÃO']?.imageAlt}
-              description="Avaliação de tamanho do robô e acessórios antes do início da partida."
-              requirements={[
-                "Todo o Robô (robô, anexos, garras e peças adicionais) cabe completamente dentro do espaço pequeno de inspeção (Small Inspection Area)."
-              ]}
-              restrictions={[
-                "A verificação ocorre antes do início dos 2min30s da partida."
-              ]}
-            >
-              <BioglowToggle
-                label="Todo o Robô (robô, anexos, garras e peças adicionais) coube na área pequena de inspeção"
-                checked={state.inspectionSmallArea}
-                onChange={(val) => updateField('inspectionSmallArea', val)}
-                pointsText="+20 pts"
-              />
-            </BioglowMissionCard>
 
             {/* M01 Drone Survey */}
             <BioglowMissionCard
@@ -948,17 +992,18 @@ export default function SimuladorFLL() {
           </div>
         </section>
 
+        {historyError && <p role="alert" className="text-red-400">Histórico: {historyError}</p>}
         {/* Histórico de Simulações Salvas no Navegador */}
-        {savedRounds.length > 0 && (
+        {historyRounds.length > 0 && (
           <section className="bg-[#111217] border border-white/10 rounded-2xl p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <Bookmark className="w-5 h-5 text-[#E10600]" />
-                  <span>Simulações Salvas no Navegador ({savedRounds.length})</span>
+                  <span>Simulações Salvas ({historyRounds.length})</span>
                 </h3>
                 <p className="text-xs text-gray-400">
-                  Rounds armazenados localmente para consulta e comparação de estratégias
+                  Resultados no Supabase e rascunhos antigos deste navegador
                 </p>
               </div>
               <Button
@@ -968,12 +1013,12 @@ export default function SimuladorFLL() {
                 onClick={() => setSavedRounds([])}
                 className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
               >
-                Limpar Histórico
+                Limpar lista deste navegador
               </Button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {savedRounds.map((item) => (
+              {historyRounds.map((item) => (
                 <div
                   key={item.id}
                   className="bg-black/40 border border-white/10 rounded-xl p-3.5 flex items-center justify-between gap-3 hover:border-[#E10600]/40 transition-all"
@@ -986,7 +1031,7 @@ export default function SimuladorFLL() {
                       {item.roundName} · {new Date(item.savedAt).toLocaleDateString('pt-BR')}
                     </p>
                     <p className="font-mono text-sm font-extrabold text-[#E10600]">
-                      {item.score} pts
+                      {item.score} pts · {item.remote ? 'Supabase' : 'Somente local'}{item.portfolio ? ' · Portfólio' : ''}
                     </p>
                   </div>
 
@@ -1004,7 +1049,7 @@ export default function SimuladorFLL() {
                       type="button"
                       onClick={() => handleDeleteSavedRound(item.id)}
                       className="p-1.5 text-gray-400 hover:text-red-400 transition-colors"
-                      title="Excluir simulação"
+                      title="Remover referência deste navegador" disabled={item.remote}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -1216,6 +1261,7 @@ export default function SimuladorFLL() {
 
       </main>
 
+      {saveIntent && <FllSimulationSaveDialog key={user?.id || 'guest'} user={user} snapshot={saveIntent.snapshot} sharing={saveIntent.sharing} onClose={()=>setSaveIntent(null)} onSave={persistRound} />}
       {/* Modal de Confirmação para Zerar Simulação */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1260,7 +1306,7 @@ export default function SimuladorFLL() {
       )}
 
       {/* Modal de Compartilhamento do Resultado */}
-      {showShareModal && (
+      {showShareModal && sharedRound && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[#14151C] border border-white/15 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between">
@@ -1315,7 +1361,8 @@ export default function SimuladorFLL() {
                 <label className="text-xs font-semibold text-gray-300 block">
                   Resumo em Texto para WhatsApp / Discord:
                 </label>
-                <textarea
+                <a className="inline-flex rounded-lg bg-green-700 p-2 text-sm text-white" href={`https://wa.me/?text=${encodeURIComponent(generateSummaryText())}`} target="_blank" rel="noopener noreferrer">Compartilhar no WhatsApp</a>
+              <textarea
                   readOnly
                   rows={6}
                   value={generateSummaryText()}

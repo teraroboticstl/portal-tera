@@ -1,5 +1,6 @@
 import { validateUserAuth, createScopedUserSupabaseClient, supabaseServer } from '../_lib/supabaseServer.js';
 import { getGoogleDriveClient } from '../_lib/googleDrive.js';
+import { handleFllSimulations } from '../_lib/fllSimulations.js';
 import {
   getActiveFllSeasonData,
   getFllAudioConfig,
@@ -32,6 +33,8 @@ export default async function handler(req, res) {
     const parts = req.url.split('?')[0].split('/').filter(Boolean);
     action = parts[parts.length - 1];
   }
+
+  if (action === 'simulations') return handleFllSimulations(req, res, getActiveFllSeasonData);
 
   // =========================================================================
   // DOMÍNIO 1: TEMPORADA E MISSÕES FLL (season)
