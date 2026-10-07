@@ -23,8 +23,8 @@ export default function Projects() {
   const [selectedProject, setSelectedProject] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['projects'],
+  const { data: projects = [], isLoading, isError } = useQuery({
+    queryKey: ['projects', 'public'],
     queryFn: () => base44.entities.Project.filter({ status: 'active' }, '-created_date'),
   });
 
@@ -57,7 +57,7 @@ export default function Projects() {
             className="text-center max-w-3xl mx-auto"
           >
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-              Nossos <span className="text-[#E10600]">Projetos</span>
+              Projetos <span className="text-[#E10600]">Sociais</span>
             </h1>
             <p className="text-xl text-[#B8BDC7]">
               Conheça os projetos desenvolvidos pela TeraRobotics que impactam nossa comunidade 
@@ -73,6 +73,8 @@ export default function Projects() {
           <div className="max-w-xl mb-8"><ModalityFilter value={modality} onChange={setModality} /></div>
           {isLoading ? (
             <LoadingSpinner />
+          ) : isError ? (
+            <p role="alert" className="text-center text-red-400">Não foi possível carregar os projetos sociais. Tente novamente.</p>
           ) : filteredProjects.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}

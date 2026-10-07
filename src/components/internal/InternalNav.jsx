@@ -19,8 +19,8 @@ const menuItems = [
       { name: 'Memorial', icon: Trophy, path: 'InternalMemorial' },
       { name: 'Galeria Eventos', icon: ImageIcon, path: 'InternalEventGallery' },
       { name: 'Análise de Risco', icon: AlertTriangle, path: 'InternalRiskAnalysis' },
-      { name: 'Projetos & ESG', icon: Leaf, path: 'InternalProjectsDashboard' },
-      { name: 'Projetos sociais', icon: Heart, path: 'InternalSocialProjects' },
+      { name: 'Sustentabilidade (ESG)', icon: Leaf, path: 'InternalESG' },
+      { name: 'Projetos Sociais', icon: Heart, path: 'InternalSocialProjects' },
       { name: 'Pontuação FLL', icon: Calculator, path: 'FLLScorer' },
     ]
   },

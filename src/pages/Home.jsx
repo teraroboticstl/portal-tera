@@ -26,7 +26,7 @@ export default function Home() {
   });
 
   const { data: activeProjects = [], isLoading: isLoadingProjects } = useQuery({
-    queryKey: ['active-projects-home'],
+    queryKey: ['projects', 'home'],
     queryFn: () => base44.entities.Project.filter({ status: 'active' }, '-created_date'),
     initialData: []
   });

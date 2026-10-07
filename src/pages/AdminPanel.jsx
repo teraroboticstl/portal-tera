@@ -188,7 +188,7 @@ export default function AdminPanel() {
               </TabsTrigger>
               <TabsTrigger value="projects" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
                 <FolderOpen className="w-4 h-4 mr-1.5" />
-                Projetos
+                Projetos Sociais
               </TabsTrigger>
               <TabsTrigger value="products" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
                 <Package className="w-4 h-4 mr-1.5" />

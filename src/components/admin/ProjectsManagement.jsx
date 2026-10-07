@@ -72,7 +72,7 @@ export default function ProjectsManagement() {
   }, [showForm, editingProject, form, images]);
 
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['admin-projects'],
+    queryKey: ['projects', 'admin'],
     queryFn: () => base44.entities.Project.list('-created_date'),
   });
 
@@ -151,7 +151,7 @@ export default function ProjectsManagement() {
   const createProject = useMutation({
     mutationFn: (data) => base44.entities.Project.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       handleSaveSuccess(images);
       toast.success('Projeto social criado com sucesso!');
     },
@@ -164,7 +164,7 @@ export default function ProjectsManagement() {
   const updateProject = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Project.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       handleSaveSuccess(images);
       toast.success('Projeto atualizado com sucesso!');
     },
@@ -177,7 +177,7 @@ export default function ProjectsManagement() {
   const deleteProject = useMutation({
     mutationFn: (id) => base44.entities.Project.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       setDeleteCandidate(null);
       toast.success('Projeto excluído com sucesso!');
     },
