@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import MemberHistory from './MemberHistory';
 import InternalNav from './InternalNav';
 import InternalHeader from './InternalHeader';
 import OnlineUsers from './OnlineUsers';
@@ -51,6 +52,7 @@ export default function InternalPageLayout({
         />
 
         <main className="p-4 lg:p-8">
+          <MemberHistory user={user} />
           {user?.portal_internal && !canEditInternal(user) && <p role="status" className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">{accessLabel(user)}: acesso à Área Interna somente para consulta. Alterações e envio de arquivos exigem o nível Membro Integrado ou Membro Líder.</p>}
           <div className="flex gap-6 items-start">
             <div className="flex-1 min-w-0">

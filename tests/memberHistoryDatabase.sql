@@ -1,0 +1,36 @@
+BEGIN;
+DO $$
+DECLARE admin_id uuid; member_id uuid; data jsonb; blocked boolean; n integer;
+BEGIN
+ SELECT id INTO admin_id FROM profiles WHERE role='admin' LIMIT 1;
+ SELECT id INTO member_id FROM profiles WHERE role!='admin' AND member_role!='admin' AND lower(email) NOT IN ('teraroboticstl@gmail.com','nathannovaes16@gmail.com') LIMIT 1;
+ IF admin_id IS NULL OR member_id IS NULL THEN RAISE EXCEPTION 'Missing rollback fixtures'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',admin_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
+ SET LOCAL ROLE authenticated;
+ PERFORM portal_set_access(jsonb_build_object('user_id',member_id,'access_level','trainee','status','approved'));
+ PERFORM set_config('request.jwt.claim.sub',member_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',member_id,'role','authenticated')::text,true);
+ data:=member_history_save(jsonb_build_object('entry_year',null,'modalities',jsonb_build_array('FLL'),'responsibilities','Aluno em treinamento','history','Registro fictício para auditoria, desfeito ao concluir o teste.','user_id',admin_id,'access_level','leader'));
+ IF data->>'required'!='false' OR data->'history'->>'user_id'!=member_id::text OR public.portal_can_edit() OR public.is_admin() THEN RAISE EXCEPTION 'Own history write or role preservation failed'; END IF;
+ blocked:=false; BEGIN PERFORM member_history_read(admin_id); EXCEPTION WHEN others THEN blocked:=true; END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Read another member allowed'; END IF;
+ blocked:=false; BEGIN UPDATE member_histories SET history='invalid'; EXCEPTION WHEN insufficient_privilege THEN blocked:=true; END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Direct write allowed'; END IF;
+ blocked:=false; BEGIN PERFORM member_history_save(jsonb_build_object('modalities',jsonb_build_array('invalid'),'history','short')); EXCEPTION WHEN others THEN blocked:=true; END;
+ IF NOT blocked THEN RAISE EXCEPTION 'Invalid story allowed'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',admin_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
+ data:=member_history_read(member_id); IF data->'history'->>'user_id'!=member_id::text THEN RAISE EXCEPTION 'Leader consultation failed'; END IF;
+ PERFORM portal_set_access(jsonb_build_object('user_id',member_id,'access_level','student','status','approved'));
+ PERFORM set_config('request.jwt.claim.sub',member_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',member_id,'role','authenticated')::text,true);
+ SELECT count(*) INTO n FROM member_histories; IF n!=0 THEN RAISE EXCEPTION 'External student reads member histories'; END IF;
+ blocked:=false; BEGIN PERFORM member_history_read(); EXCEPTION WHEN others THEN blocked:=true; END;
+ IF NOT blocked THEN RAISE EXCEPTION 'External history access allowed'; END IF;
+ blocked:=false; BEGIN PERFORM member_history_save(jsonb_build_object('modalities',jsonb_build_array('FLL'),'responsibilities','Test','history','This external student should not save team history.')); EXCEPTION WHEN others THEN blocked:=true; END;
+ IF NOT blocked THEN RAISE EXCEPTION 'External history write allowed'; END IF;
+ RESET ROLE;
+ RAISE NOTICE 'Member history: own save, trainee exception, leader consultation, privacy and validation passed';
+END $$;
+ROLLBACK;

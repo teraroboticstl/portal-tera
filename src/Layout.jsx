@@ -558,7 +558,7 @@ export default function Layout({ children, currentPageName }) {
                 className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider border border-[#E10600]/40 text-gray-200 bg-[#E10600]/10 hover:bg-[#E10600] hover:text-white hover:border-[#E10600] transition-all rounded"
               >
                 <LayoutDashboard className="w-3.5 h-3.5 text-[#E10600]" />
-                <span>{user && !user.portal_internal?'Meu AVA':'Área Interna'}</span>
+                <span>{user && !user.portal_internal?'Trilhas de Aprendizagem':'Área Interna'}</span>
               </Link>
 
               {!loading && (
@@ -580,7 +580,7 @@ export default function Layout({ children, currentPageName }) {
                       </div>
                       <DropdownMenuItem asChild>
                         <Link to={createPageUrl(user && !user.portal_internal ? 'AVA' : 'AreaInterna')} className="flex items-center gap-2 text-gray-300 hover:text-white text-sm">
-                          <LayoutDashboard className="w-4 h-4" /> {user && !user.portal_internal?'Minha aprendizagem':'Área Interna'}
+                          <LayoutDashboard className="w-4 h-4" /> {user && !user.portal_internal?'Trilhas de Aprendizagem':'Área Interna'}
                         </Link>
                       </DropdownMenuItem>
                       {(user.role === 'admin' || user.member_role === 'admin') && (
@@ -647,7 +647,7 @@ export default function Layout({ children, currentPageName }) {
                     className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#E10600] hover:bg-[#7A0000] text-white font-bold text-xs uppercase tracking-wider rounded transition-colors"
                   >
                     <LayoutDashboard className="w-4 h-4" />
-                    <span>{user && !user.portal_internal?'Acessar AVA':'Acessar Área Interna'}</span>
+                    <span>{user && !user.portal_internal?'Trilhas de Aprendizagem':'Acessar Área Interna'}</span>
                   </Link>
                 </div>
 
@@ -696,7 +696,7 @@ export default function Layout({ children, currentPageName }) {
                         </div>
                         <Link to={createPageUrl(user && !user.portal_internal ? 'AVA' : 'AreaInterna')} onClick={() => setMobileMenuOpen(false)}
                           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0', color: '#d1d5db', fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>
-                          <LayoutDashboard size={16} /> {user && !user.portal_internal?'Minha aprendizagem':'Área Interna'}
+                          <LayoutDashboard size={16} /> {user && !user.portal_internal?'Trilhas de Aprendizagem':'Área Interna'}
                         </Link>
                         {(user.role === 'admin' || user.member_role === 'admin') && (
                           <>
