@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { getDriveErrorInfo, getGoogleDriveClient, resolveTargetFolder, sanitizeFileName, uploadBufferToDrive } from '../_lib/googleDrive.js';
 import { verifyMediaAccess, isFileReferencedInDb, invalidateFileDbCache } from '../_lib/mediaSecurity.js';
-import { validateUserAuth, validateUploadPermission } from '../_lib/supabaseServer.js';
+import { validateUserAuth, validateUploadPermission, supabaseServer } from '../_lib/supabaseServer.js';
 import { parseMultipart } from '../_lib/multipart.js';
 import { cacheAudioBytes } from '../_lib/fllAudioStorage.js';
 
@@ -36,6 +36,7 @@ const ALLOWED_CONTEXTS = new Set([
   'attachments',
   'fll-missions',
   'fll-audio',
+  'ava',
   'test'
 ]);
 
@@ -131,6 +132,8 @@ export default async function handler(req, res) {
         });
       }
 
+      if (context === 'ava' && !['application/pdf','image/jpeg','image/png','image/webp'].includes(file.mimeType)) return res.status(422).json({error:'O AVA aceita PDFs e imagens JPG, PNG ou WebP.'});
+      if (context === 'ava' && (!fields.recordId || !/^[0-9a-f-]{36}$/i.test(fields.recordId))) return res.status(422).json({error:'Salve o módulo ou a trilha antes de enviar o material.'});
       // 6. Validação de tamanho máximo específico por tipo
       const isVideo = file.mimeType.startsWith('video/');
       const maxSizeBytes = isVideo ? 100 * 1024 * 1024 : 15 * 1024 * 1024; // 100MB vídeos, 15MB imagens/docs
@@ -197,6 +200,11 @@ export default async function handler(req, res) {
         }
       }
 
+      if (context === 'ava') {
+        const isCover = fields.subfolder === 'Capas';
+        const {error} = await supabaseServer.rpc('ava_register_media',{p_actor:authenticatedUser.id,p_data:{file_id:uploadedFile.id,name:uploadedFile.name,mime_type:file.mimeType,size:file.size,folder_id:targetFolderId,module_id:isCover ? null : fields.recordId,track_id:isCover ? fields.recordId : null}});
+        if (error) { try { await drive.files.delete({fileId:uploadedFile.id}); } catch {} return res.status(503).json({error:'Falha ao registrar material no AVA. Tente novamente.'}); }
+      }
       // 11. Resposta com metadados estruturados (com salvaguarda contra arquivo órfão)
       try {
         const metadata = {

@@ -1,0 +1,82 @@
+-- Run after the AVA migration, or prepend its contents without COMMIT for a dry run.
+-- All fixtures, permissions and progress in this test are rolled back.
+BEGIN;
+DO $$
+DECLARE admin_id uuid; student_id uuid; track_id uuid:=gen_random_uuid(); module_id uuid:=gen_random_uuid(); mentor_id uuid:=gen_random_uuid(); result jsonb; failed boolean; rowcount integer; body jsonb;
+BEGIN
+ SELECT id INTO admin_id FROM profiles WHERE role='admin' LIMIT 1;
+ SELECT id INTO student_id FROM profiles WHERE role!='admin' AND member_role!='admin' AND status='approved' LIMIT 1;
+ IF admin_id IS NULL OR student_id IS NULL THEN RAISE EXCEPTION 'Need an existing admin and approved nonadmin for rollback audit'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',admin_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
+ SET LOCAL ROLE authenticated;
+ PERFORM public.ava_mutate('save_track',jsonb_build_object('id',track_id,'title','AVA rollback audit','status','published','audience','all'));
+ body:=jsonb_build_object('id',module_id,'track_id',track_id,'title','Audit module','status','published','contents',jsonb_build_array(
+  jsonb_build_object('id','text','type','text','text','Audit content'),
+  jsonb_build_object('id','check','type','checklist','items',jsonb_build_array('One','Two')),
+  jsonb_build_object('id','quiz','type','quiz','min_score',70,'max_attempts',2,'questions',jsonb_build_array(jsonb_build_object('prompt','Question','options',jsonb_build_array('Wrong','Correct'),'correct',1,'feedback','Review the lesson')))));
+ PERFORM public.ava_mutate('save_module',body);
+ PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'ava_status','pending','portal_internal',false));
+ PERFORM set_config('request.jwt.claim.sub',student_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student_id,'role','authenticated')::text,true);
+ failed:=false; BEGIN PERFORM public.ava_read('dashboard'); EXCEPTION WHEN others THEN failed:=SQLERRM LIKE '%AVA_ACCESS_DENIED%'; END;
+ IF NOT failed THEN RAISE EXCEPTION 'Pending AVA user obtained content'; END IF;
+ IF public.portal_internal_access() THEN RAISE EXCEPTION 'External user obtained internal scope'; END IF;
+ SELECT count(*) INTO rowcount FROM public.daily_logs; IF rowcount!=0 THEN RAISE EXCEPTION 'Internal RLS leaked logs'; END IF;
+ SELECT count(*) INTO rowcount FROM public.profiles; IF rowcount!=1 THEN RAISE EXCEPTION 'External user can read other profiles'; END IF;
+ failed:=false; BEGIN PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'ava_status','active','ava_admin',true)); EXCEPTION WHEN others THEN failed:=true; END;
+ IF NOT failed THEN RAISE EXCEPTION 'Student escalated privilege'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',admin_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
+ PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'ava_status','active','portal_internal',false));
+ PERFORM set_config('request.jwt.claim.sub',student_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student_id,'role','authenticated')::text,true);
+ PERFORM public.ava_mutate('enroll',jsonb_build_object('track_id',track_id));
+ result:=public.ava_read('module',module_id);
+ IF result->'module'->'contents'->2->'questions'->0 ? 'correct' OR result->'module'->'contents'->2->'questions'->0 ? 'feedback' THEN RAISE EXCEPTION 'Answer key exposed'; END IF;
+ IF result->'progress' IS NOT NULL AND result->'progress'!='null'::jsonb THEN RAISE EXCEPTION 'Visit alone changed progress'; END IF;
+ failed:=false; BEGIN PERFORM public.ava_mutate('progress',jsonb_build_object('module_id',module_id,'version',1,'block_id','text')); EXCEPTION WHEN others THEN failed:=true; END;
+ IF NOT failed THEN RAISE EXCEPTION 'Missing confirmation counted as read'; END IF;
+ PERFORM public.ava_mutate('progress',jsonb_build_object('module_id',module_id,'version',1,'block_id','text','value',true));
+ result:=public.ava_mutate('progress',jsonb_build_object('module_id',module_id,'version',1,'block_id','check','value',jsonb_build_array(true,false)));
+ IF (result->>'completed')::boolean THEN RAISE EXCEPTION 'Partial checklist completed module'; END IF;
+ result:=public.ava_mutate('progress',jsonb_build_object('module_id',module_id,'version',1,'block_id','quiz','value',jsonb_build_array(0),'score',100,'passed',true));
+ IF (result->>'score')::numeric!=0 OR (result->>'passed')::boolean THEN RAISE EXCEPTION 'Client fabricated quiz approval'; END IF;
+ PERFORM public.ava_mutate('progress',jsonb_build_object('module_id',module_id,'version',1,'block_id','check','value',jsonb_build_array(true,true)));
+ result:=public.ava_mutate('progress',jsonb_build_object('module_id',module_id,'version',1,'block_id','quiz','value',jsonb_build_array(1)));
+ IF NOT (result->>'completed')::boolean OR (result->>'score')::numeric!=100 THEN RAISE EXCEPTION 'Deterministic completion failed'; END IF;
+ failed:=false; BEGIN PERFORM public.ava_mutate('progress',jsonb_build_object('module_id',module_id,'version',1,'block_id','quiz','value',jsonb_build_array(1))); EXCEPTION WHEN others THEN failed:=SQLERRM LIKE '%tentativas%'; END;
+ IF NOT failed THEN RAISE EXCEPTION 'Attempt cap bypassed'; END IF;
+ IF public.ava_media_allowed('nonexistent') THEN RAISE EXCEPTION 'Unreferenced media authorized'; END IF;
+ failed:=false; BEGIN INSERT INTO public.ava_progress(user_id,module_id,version,completed_at) VALUES(student_id,module_id,1,now()); EXCEPTION WHEN insufficient_privilege THEN failed:=true; END;
+ IF NOT failed THEN RAISE EXCEPTION 'Direct progress write allowed'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',admin_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
+ PERFORM public.ava_mutate('save_module',jsonb_set(body,'{contents,0,text}','"Updated lesson"'));
+ PERFORM public.ava_mutate('notify',jsonb_build_object('title','Audit notification','message','Audit only','audience','track','track_id',track_id));
+ PERFORM public.ava_mutate('save_mentorship',jsonb_build_object('id',mentor_id,'title','Audit mentorship','starts_at',now()+interval '1 day','capacity',1,'meeting_url','https://example.org/meeting'));
+ PERFORM set_config('request.jwt.claim.sub',student_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student_id,'role','authenticated')::text,true);
+ result:=public.ava_read('module',module_id);
+ IF result->'progress'!='null'::jsonb THEN RAISE EXCEPTION 'Old version retained completion'; END IF;
+ result:=public.ava_read('dashboard');
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(result->'notifications') n WHERE n->>'title'='Audit notification') THEN RAISE EXCEPTION 'Target notification not delivered'; END IF;
+ PERFORM public.ava_mutate('register_mentorship',jsonb_build_object('id',mentor_id));
+ PERFORM public.ava_mutate('register_mentorship',jsonb_build_object('id',mentor_id));
+ RESET ROLE;
+ SELECT count(*) INTO rowcount FROM ava_mentorship_registrations WHERE mentorship_id=mentor_id;
+ IF rowcount!=1 THEN RAISE EXCEPTION 'Mentorship retry duplicated registration'; END IF;
+ SET LOCAL ROLE authenticated;
+ PERFORM set_config('request.jwt.claim.sub',admin_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
+ failed:=false; BEGIN PERFORM public.ava_mutate('register_mentorship',jsonb_build_object('id',mentor_id)); EXCEPTION WHEN others THEN failed:=SQLERRM LIKE '%Vagas esgotadas%'; END;
+ IF NOT failed THEN RAISE EXCEPTION 'Capacity bypassed'; END IF;
+ PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'ava_status','blocked','portal_internal',false));
+ PERFORM set_config('request.jwt.claim.sub',student_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student_id,'role','authenticated')::text,true);
+ failed:=false; BEGIN PERFORM public.ava_read('module',module_id); EXCEPTION WHEN others THEN failed:=SQLERRM LIKE '%AVA_ACCESS_DENIED%'; END;
+ IF NOT failed THEN RAISE EXCEPTION 'Revoked AVA access still reads modules'; END IF;
+ RESET ROLE;
+ RAISE NOTICE 'AVA audit passed: authorization, RLS, answer secrecy, deterministic progress, attempts, versions, notifications and capacity';
+END $$;
+ROLLBACK;

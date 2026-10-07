@@ -21,6 +21,7 @@ const menuItems = [
       { name: 'Análise de Risco', icon: AlertTriangle, path: 'InternalRiskAnalysis' },
       { name: 'Sustentabilidade (ESG)', icon: Leaf, path: 'InternalESG' },
       { name: 'Projetos', icon: Heart, path: 'InternalProjects' },
+      { name: 'Aprendizagem (AVA)', icon: BookOpen, path: 'AVA' },
     ]
   },
   {

@@ -32,6 +32,7 @@ export const AuthProvider = ({ children }) => {
         console.warn('[AuthContext] Aviso ao buscar perfil na tabela profiles:', error.message);
       }
 
+      const {data: access, error: accessError} = await supabase.rpc('ava_identity');
       const isSeedAdmin = authUser.email && SEED_ADMIN_EMAILS.includes(authUser.email.toLowerCase());
       const role = profile?.role || (isSeedAdmin ? 'admin' : 'aluno');
       const memberRole = profile?.member_role || (role === 'admin' || isSeedAdmin ? 'admin' : role === 'mentor' ? 'member' : 'user');
@@ -68,6 +69,9 @@ export const AuthProvider = ({ children }) => {
         role,
         member_role: memberRole,
         status,
+        portal_internal: !accessError && access?.portal_internal === true,
+        ava_status: access?.ava_status || 'pending',
+        ava_admin: !accessError && access?.ava_admin === true,
         user_metadata: authUser.user_metadata
       };
 

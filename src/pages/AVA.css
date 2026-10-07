@@ -1,0 +1,13 @@
+.ava-shell { color:#f5f7fa; }
+.ava-shell .ava-card { background:#111217; border:1px solid #242630; border-radius:16px; padding:24px; }
+.ava-shell .ava-input { display:block; width:100%; background:#0b0b0d; border:1px solid #454752; border-radius:8px; color:#f5f7fa; padding:10px 12px; font-size:14px; }
+.ava-shell .ava-input:focus-visible { outline:2px solid #ef4444; outline-offset:2px; }
+.ava-shell .ava-link { color:#fca5a5; font-size:14px; text-decoration:underline; text-underline-offset:4px; }
+.ava-shell .ava-track-icon { background:#e106001a; color:#ef4444; padding:16px; width:fit-content; border-radius:12px; }
+.ava-shell .ava-progress { height:8px; border-radius:20px; overflow:hidden; appearance:none; }
+.ava-shell .ava-progress::-webkit-progress-bar { background:#282a32; }
+.ava-shell .ava-progress::-webkit-progress-value { background:#e10600; }
+.ava-shell .ava-progress::-moz-progress-bar { background:#e10600; }
+.ava-shell .ava-hero { background:radial-gradient(ellipse at 70% 40%,#ba0800 0%,#410503 60%,#111217 100%); border:1px solid #871813; }
+.ava-shell table { width:100%; text-align:left; font-size:14px; }
+.ava-shell td,.ava-shell th { padding:12px; border-bottom:1px solid #242630; vertical-align:top; }

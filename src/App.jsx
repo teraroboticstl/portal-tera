@@ -36,12 +36,16 @@ import InternalFLLTasks from './pages/InternalFLLTasks';
 import InternalFLLJudgePrep from './pages/InternalFLLJudgePrep';
 import InternalFLLAttachments from './pages/InternalFLLAttachments';
 import KnowledgeBase from './pages/KnowledgeBase.jsx';
+import InternalGuard from './components/internal/ProtectedRoute';
+const AVA=lazy(()=>import('./pages/AVA'));
+const AVAAdmin=lazy(()=>import('./pages/AVAAdmin'));
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
-const LayoutWrapper = ({ children, currentPageName }) => Layout ?
+const InternalContent = ({ children }) => <>{children}</>;
+const LayoutWrapper = ({ children, currentPageName }) => (currentPageName?.startsWith('Internal') || ['AreaInterna','AdminPanel','SeasonConfig'].includes(currentPageName)) ? <InternalGuard><InternalContent>{children}</InternalContent></InternalGuard> : Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
@@ -114,6 +118,8 @@ const AuthenticatedApp = () => {
       <Route path="/InternalFLLTasks" element={<LayoutWrapper currentPageName="InternalFLLTasks"><InternalFLLTasks /></LayoutWrapper>} />
       <Route path="/InternalFLLJudgePrep" element={<LayoutWrapper currentPageName="InternalFLLJudgePrep"><InternalFLLJudgePrep /></LayoutWrapper>} />
       <Route path="/InternalFLLAttachments" element={<LayoutWrapper currentPageName="InternalFLLAttachments"><InternalFLLAttachments /></LayoutWrapper>} />
+      <Route path="/AVA/*" element={<LayoutWrapper currentPageName="AVA"><Suspense fallback={<p className="p-10">Carregando AVA…</p>}><AVA /></Suspense></LayoutWrapper>} />
+      <Route path="/AVAAdmin" element={<LayoutWrapper currentPageName="AVAAdmin"><Suspense fallback={<p className="p-10">Carregando administração…</p>}><AVAAdmin /></Suspense></LayoutWrapper>} />
       <Route path="/KnowledgeBase" element={<LayoutWrapper currentPageName="KnowledgeBase"><KnowledgeBase /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

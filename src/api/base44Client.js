@@ -86,6 +86,7 @@ const authShim = {
         .eq('id', user.id)
         .maybeSingle();
 
+      const {data: access, error: accessError} = await supabase.rpc('ava_identity');
       const isSeedAdmin = user.email && SEED_ADMIN_EMAILS.includes(user.email.toLowerCase());
       const role = profile?.role || (isSeedAdmin ? 'admin' : 'aluno');
       const memberRole = profile?.member_role || (role === 'admin' || isSeedAdmin ? 'admin' : role === 'mentor' ? 'member' : 'user');
@@ -108,6 +109,9 @@ const authShim = {
         role,
         member_role: memberRole,
         status,
+        portal_internal: !accessError && access?.portal_internal === true,
+        ava_status: access?.ava_status || 'pending',
+        ava_admin: !accessError && access?.ava_admin === true,
         user_metadata: user.user_metadata
       };
     } catch (err) {

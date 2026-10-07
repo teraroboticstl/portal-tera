@@ -257,6 +257,7 @@ export async function resolveTargetFolder(drive, context, extraMeta = {}) {
     'tir': ['04. Torneios & Eventos', 'TIR'],
     'fll-missions': ['04. Torneios & Eventos', 'FLL BIOGLOW', 'Missões'],
     'fll-audio': ['04. Torneios & Eventos', 'FLL BIOGLOW', 'Áudios'],
+    'ava': ['06. Ambiente Virtual de Aprendizagem'],
     'test': ['99. Testes do Sistema']
   };
 

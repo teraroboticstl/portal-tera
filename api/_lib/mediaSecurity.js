@@ -1,5 +1,5 @@
 import { getRootFolderId } from './googleDrive.js';
-import { supabaseServer, validateUserAuth } from './supabaseServer.js';
+import { supabaseServer, validateUserAuth, createScopedUserSupabaseClient } from './supabaseServer.js';
 
 // Cache em memória para verificações de pastas e registros públicos (evita sobrecarga no Drive e Supabase)
 const folderClassificationCache = new Map(); // folderId -> { isPublic: boolean, isPrivate: boolean, isPortal: boolean, name: string, expiresAt: number }
@@ -23,6 +23,7 @@ const KNOWN_PUBLIC_FOLDER_NAMES = new Set([
 
 // Nomes de pastas reconhecidamente restritas/privadas do Portal Tera
 const KNOWN_PRIVATE_FOLDER_NAMES = new Set([
+  '06. Ambiente Virtual de Aprendizagem',
   '99. Testes do Sistema',
   '05. Engenharia & Temporadas',
   '99. Outros Arquivos'
@@ -69,7 +70,7 @@ export async function isFileReferencedInDb(fileId) {
       robotsRes,
       memorialsRes,
       seasonsRes,
-      fllMissionsRes
+      avaMediaRes, fllMissionsRes
     ] = await Promise.all([
       supabaseServer.from('products').select('id', { head: true, count: 'exact' }).ilike('image_url', searchPattern),
       supabaseServer.from('projects').select('id', { head: true, count: 'exact' }).or(`image_url.ilike.${searchPattern},links->>extra_images.ilike.${searchPattern}`),
@@ -80,6 +81,7 @@ export async function isFileReferencedInDb(fileId) {
       supabaseServer.from('robots').select('id, images, specs'),
       supabaseServer.from('tournament_memorials').select('id, images'),
       supabaseServer.from('seasons').select('id', { head: true, count: 'exact' }).ilike('description', searchPattern),
+      supabaseServer.from('ava_media_assets').select('file_id', {head:true,count:'exact'}).eq('file_id',fileId),
       Promise.resolve(supabaseServer.from('fll_missions').select('id', { head: true, count: 'exact' }).ilike('image_url', searchPattern)).catch(() => ({ data: null, error: null }))
     ]);
 
@@ -93,7 +95,8 @@ export async function isFileReferencedInDb(fileId) {
       { name: 'fotos TIR', res: tirRes },
       { name: 'robôs', res: robotsRes },
       { name: 'memoriais de torneio', res: memorialsRes },
-      { name: 'temporadas FLL', res: seasonsRes }
+      { name: 'temporadas FLL', res: seasonsRes },
+      { name: 'materiais AVA', res: avaMediaRes }
     ];
 
     for (const check of queryChecks) {
@@ -109,6 +112,7 @@ export async function isFileReferencedInDb(fileId) {
     }
 
     const entities = [];
+    if (avaMediaRes?.count > 0) entities.push('materiais AVA');
     if (productsRes?.count && productsRes.count > 0) entities.push('produtos');
     if (projectsRes?.count && projectsRes.count > 0) entities.push('projetos');
     if (sponsorsRes?.count && sponsorsRes.count > 0) entities.push('patrocinadores');
@@ -372,7 +376,7 @@ export async function verifyMediaAccess({ drive, fileMeta, req }) {
   const isExplicitPublicFlag = fileMeta.appProperties?.isPublic === 'true' || fileMeta.appProperties?.isPublic === true;
   const isExplicitPrivateFlag = fileMeta.appProperties?.isPublic === 'false' || fileMeta.appProperties?.isPublic === false;
 
-  const isPrivateContext = ['test', 'seasons', 'admin', 'internal', 'engineering'].includes(contextTag);
+  const isPrivateContext = ['ava', 'test', 'seasons', 'admin', 'internal', 'engineering'].includes(contextTag);
   const isMarkedPrivate = visibilityTag === 'private' || isExplicitPrivateFlag || isPrivateContext || folderIsPrivate;
 
   // Se o arquivo for classificado como PRIVADO por qualquer um dos critérios, a privacidade prevalece incondicionalmente
@@ -416,8 +420,13 @@ async function handlePrivateAccess({ fileMeta, req }) {
   try {
     const authenticatedUser = await validateUserAuth(authHeader);
 
+    if (fileMeta.appProperties?.context === 'ava') {
+      const token = authHeader.replace(/^Bearer\s+/i, '');
+      const {data,error} = await createScopedUserSupabaseClient(token).rpc('ava_media_allowed',{p_file:fileMeta.id});
+      return {allowed:!error && data === true,statusCode:!error && data === true ? 200 : 403,isPublic:false,error:'Material protegido',message:'Acesso restrito à trilha e matrícula autorizadas.'};
+    }
     // Validação de perfil aprovado
-    const isApproved = authenticatedUser.profile?.status === 'approved' || authenticatedUser.profile?.is_admin;
+    const isApproved = (authenticatedUser.profile?.status === 'approved' && authenticatedUser.profile?.portal_internal !== false) || authenticatedUser.profile?.is_admin;
     if (!isApproved) {
       return {
         allowed: false,

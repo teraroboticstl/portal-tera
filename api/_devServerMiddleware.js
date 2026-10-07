@@ -1,5 +1,6 @@
 import mediaHandler from './media/[id].js';
 import authHandler from './auth/google/[action].js';
+import avaHandler from './ava/[action].js';
 import fllHandler from './fll/[action].js';
 
 /**
@@ -9,7 +10,7 @@ import fllHandler from './fll/[action].js';
  *   - /api/auth/google/*  -> authHandler  (api/auth/google/[action].js)
  *   - /api/fll/*          -> fllHandler   (api/fll/[action].js)
  */
-export function devApiMiddleware(req, res, next) {
+export async function devApiMiddleware(req, res, next) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost:3000'}`);
   const pathname = url.pathname;
 
@@ -40,6 +41,15 @@ export function devApiMiddleware(req, res, next) {
     };
   }
 
+  if (pathname.startsWith('/api/ava/')) {
+    req.query=Object.fromEntries(url.searchParams.entries());
+    if(req.method==='POST' && req.body===undefined){
+      const chunks=[];let bytes=0;
+      for await(const chunk of req){bytes+=chunk.length;if(bytes>150000)return res.status(413).json({error:'Conteúdo excede o tamanho permitido.'});chunks.push(chunk);}
+      req.body=Buffer.concat(chunks).toString('utf8');
+    }
+    return avaHandler(req,res);
+  }
   // 1. Roteamento de Mídia (/api/media/*)
   if (pathname === '/api/media/upload' || pathname === '/api/media') {
     req.query = {

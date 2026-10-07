@@ -119,7 +119,9 @@ export default function ProtectedRoute({
 
   // 4. Verificação de status para usuários comuns
   let denialReason = null;
-  if (user.status === 'pending') {
+  if (user.portal_internal === false) {
+    denialReason = 'approval_required';
+  } else if (user.status === 'pending') {
     denialReason = 'pending';
   } else if (user.status === 'rejected') {
     denialReason = 'rejected';

@@ -69,6 +69,7 @@ export async function validateUserAuth(authHeaderOrToken) {
   const memberRole = profile?.member_role || (role === 'admin' || isSeedAdmin ? 'admin' : role === 'mentor' ? 'member' : 'user');
   const status = profile?.status || (role === 'admin' || isSeedAdmin ? 'approved' : 'pending');
 
+  const { data: access, error: accessError } = await createScopedUserSupabaseClient(token).rpc('ava_identity');
   const fullUser = {
     ...user,
     profile: {
@@ -76,7 +77,10 @@ export async function validateUserAuth(authHeaderOrToken) {
       role,
       member_role: memberRole,
       status,
-      is_admin: role === 'admin' || isSeedAdmin
+      is_admin: role === 'admin' || memberRole === 'admin' || isSeedAdmin,
+      portal_internal: !accessError && access?.portal_internal === true,
+      ava_status: access?.ava_status || 'pending',
+      ava_admin: !accessError && access?.ava_admin === true
     }
   };
 
@@ -90,7 +94,11 @@ export async function validateUserAuth(authHeaderOrToken) {
  */
 export function validateUploadPermission(user, context) {
   const isAdmin = user.profile.is_admin;
-  const isApproved = user.profile.status === 'approved' || isAdmin;
+  if (context === 'ava') {
+    if (!isAdmin && !user.profile.ava_admin) throw new Error('Upload restrito à administração do AVA.');
+    return true;
+  }
+  const isApproved = (user.profile.status === 'approved' && user.profile.portal_internal !== false) || isAdmin;
 
   if (!isApproved) {
     throw new Error('Acesso negado: seu cadastro ainda aguarda aprovação da equipe.');
