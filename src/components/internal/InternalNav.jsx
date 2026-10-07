@@ -4,7 +4,7 @@ import { createPageUrl } from '@/utils';
 import { 
   LayoutDashboard, FileText, Target, BookOpen, Lightbulb,
   Cpu, Trophy, Rocket, Settings, ChevronRight, Home, X,
-  Users, FlaskConical, Calendar, Image as ImageIcon, Shield, AlertTriangle, Leaf, Calculator, Wrench, Archive,
+  Users, FlaskConical, Calendar, Image as ImageIcon, Shield, AlertTriangle, Leaf, Wrench, Archive,
   Heart, ListTodo, HelpCircle, Paperclip
 } from 'lucide-react';
 
@@ -21,7 +21,6 @@ const menuItems = [
       { name: 'Análise de Risco', icon: AlertTriangle, path: 'InternalRiskAnalysis' },
       { name: 'Sustentabilidade (ESG)', icon: Leaf, path: 'InternalESG' },
       { name: 'Projetos Sociais', icon: Heart, path: 'InternalSocialProjects' },
-      { name: 'Pontuação FLL', icon: Calculator, path: 'FLLScorer' },
     ]
   },
   {

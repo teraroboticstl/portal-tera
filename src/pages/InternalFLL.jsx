@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion } from 'framer-motion';
-import { Rocket, BookOpen, FlaskConical, ArrowRight, Calendar, Calculator } from 'lucide-react';
+import { Rocket, BookOpen, FlaskConical, ArrowRight, Calendar } from 'lucide-react';
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import Badge from '@/components/common/Badge';
@@ -46,24 +46,6 @@ function InternalFLLContent({ user }) {
             Robot Game, Projeto de Inovação e Core Values.
             Documentação completa para a FLL Challenge.
           </p>
-        </motion.div>
-
-        {/* Scorer Button */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Link to={createPageUrl('FLLScorer')}>
-            <div className="bg-gradient-to-r from-[#1a237e] to-[#283593] border border-[#3949ab] rounded-xl p-5 hover:border-yellow-400/50 transition-all group flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-yellow-400/20 rounded-xl flex items-center justify-center">
-                  <Calculator className="w-6 h-6 text-yellow-400" />
-                </div>
-                <div>
-                  <h3 className="font-black text-yellow-400 text-lg">Sistema de Pontuação FLL</h3>
-                  <p className="text-blue-200 text-sm">Árbitro interativo — Torneio Interclasse 2025</p>
-                </div>
-              </div>
-              <ArrowRight className="w-6 h-6 text-yellow-400 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </Link>
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-4">

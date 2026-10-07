@@ -12,7 +12,7 @@ import EventGalleryPublic from './pages/EventGalleryPublic';
 import InternalEventGallery from './pages/InternalEventGallery';
 import TIR2026 from './pages/TIR2026';
 import TIRAdmin from './pages/TIRAdmin';
-import FLLScorer from './pages/FLLScorer';
+
 import InternalCADAssistant from './pages/InternalCADAssistant';
 import InternalCADConfig from './pages/InternalCADConfig';
 import InternalBoardDiary from './pages/InternalBoardDiary';
@@ -91,7 +91,7 @@ const AuthenticatedApp = () => {
       <Route path="/InternalEventGallery" element={<LayoutWrapper currentPageName="InternalEventGallery"><InternalEventGallery /></LayoutWrapper>} />
       <Route path="/TIR2026" element={<LayoutWrapper currentPageName="TIR2026"><TIR2026 /></LayoutWrapper>} />
       <Route path="/TIRAdmin" element={<LayoutWrapper currentPageName="TIRAdmin"><TIRAdmin /></LayoutWrapper>} />
-      <Route path="/FLLScorer" element={<FLLScorer />} />
+      <Route path="/FLLScorer" element={<Navigate to="/Simuladores" replace />} />
       <Route path="/InternalCADAssistant" element={<LayoutWrapper currentPageName="InternalCADAssistant"><InternalCADAssistant /></LayoutWrapper>} />
       <Route path="/InternalCADConfig" element={<LayoutWrapper currentPageName="InternalCADConfig"><InternalCADConfig /></LayoutWrapper>} />
       <Route path="/InternalBoardDiary" element={<LayoutWrapper currentPageName="InternalBoardDiary"><InternalBoardDiary /></LayoutWrapper>} />
