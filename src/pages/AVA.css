@@ -1,4 +1,4 @@
-.ava-shell { color:#f5f7fa; }
+.ava-shell { color:#f5f7fa; --background:240 8% 5%; --foreground:220 23% 97%; --primary:2 100% 44%; --primary-foreground:0 0% 100%; --input:230 14% 25%; --accent:230 14% 17%; --accent-foreground:0 0% 100%; --muted-foreground:220 10% 70%; }
 .ava-shell .ava-card { background:#111217; border:1px solid #242630; border-radius:16px; padding:24px; }
 .ava-shell .ava-input { display:block; width:100%; background:#0b0b0d; border:1px solid #454752; border-radius:8px; color:#f5f7fa; padding:10px 12px; font-size:14px; }
 .ava-shell .ava-input:focus-visible { outline:2px solid #ef4444; outline-offset:2px; }
