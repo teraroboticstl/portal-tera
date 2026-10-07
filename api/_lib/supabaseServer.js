@@ -101,11 +101,7 @@ export function validateUploadPermission(user, context) {
   if (adminOnlyContexts.includes(context) && !isAdmin) {
     throw new Error(`Permissão insuficiente: o contexto "${context}" exige privilégios de administrador.`);
   }
-
-  // Contextos editoriais de projetos
-  if (context === 'projects' && !isAdmin && user.profile.member_role !== 'member') {
-    throw new Error('Permissão insuficiente para upload de mídias de projetos.');
-  }
+  // Projetos podem receber mídias de qualquer usuário aprovado na Área Interna.
 
   return true;
 }

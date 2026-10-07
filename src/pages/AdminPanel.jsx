@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { 
-  Users, Clock, Heart, Cpu, FolderOpen, Home, 
+  Users, Clock, Heart, Cpu, Home, 
   LogOut, LayoutDashboard, Archive, Shield, 
   Package, HardDrive 
 } from 'lucide-react';
@@ -16,7 +16,6 @@ import UsersManagement from '@/components/admin/UsersManagement';
 import TournamentSettings from '@/components/admin/TournamentSettings';
 import RobotsManagement from '@/components/admin/RobotsManagement';
 import SponsorsManagement from '@/components/admin/SponsorsManagement';
-import ProjectsManagement from '@/components/admin/ProjectsManagement';
 import ProductsManagement from '@/components/admin/ProductsManagement';
 import SeasonCloseManagement from '@/components/admin/SeasonCloseManagement';
 import GoogleDriveTestManagement from '@/components/admin/GoogleDriveTestManagement';
@@ -34,7 +33,6 @@ const VALID_ADMIN_TABS = [
   'tournament',
   'robots',
   'sponsors',
-  'projects',
   'products',
   'fll_missions',
   'fll_audios',
@@ -86,6 +84,10 @@ export default function AdminPanel() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        if (new URLSearchParams(window.location.search).get('tab') === 'projects') {
+          navigate('/InternalProjects', {replace: true});
+          return;
+        }
         const isAuth = await base44.auth.isAuthenticated();
         if (!isAuth) {
           base44.auth.redirectToLogin(createPageUrl('AdminPanel'));
@@ -186,10 +188,6 @@ export default function AdminPanel() {
                 <Heart className="w-4 h-4 mr-1.5" />
                 Patrocinadores
               </TabsTrigger>
-              <TabsTrigger value="projects" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
-                <FolderOpen className="w-4 h-4 mr-1.5" />
-                Projetos Sociais
-              </TabsTrigger>
               <TabsTrigger value="products" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
                 <Package className="w-4 h-4 mr-1.5" />
                 Produtos
@@ -225,9 +223,6 @@ export default function AdminPanel() {
           </TabsContent>
           <TabsContent value="sponsors">
             <SponsorsManagement />
-          </TabsContent>
-          <TabsContent value="projects">
-            <ProjectsManagement />
           </TabsContent>
           <TabsContent value="products">
             <ProductsManagement />

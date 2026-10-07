@@ -1,5 +1,6 @@
 import ModalityFields, { ModalityBadges, ModalityFilter } from '@/components/common/ModalityFields';
-import { matchesProject, projectModalities, projectCategories } from '@/lib/modalities';
+import { matchesProject, projectModalities, projectCategories, MODALITIES, OBR_CATEGORIES } from '@/lib/modalities';
+import {isAdmin} from '@/components/internal/ProtectedRoute';
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -21,9 +22,10 @@ import { loadAdminDraft, saveAdminDraft, clearAdminDraft } from '@/lib/adminDraf
 
 const TAG_OPTIONS = ['Educação', 'Engenharia', 'Impacto Social', 'Tecnologia', 'Comunidade', 'Robótica'];
 
-export default function ProjectsManagement() {
+export default function ProjectsManagement({user}) {
   const queryClient = useQueryClient();
-  const [modality, setModality] = useState('all');
+  const requested = new URLSearchParams(window.location.search).get('modality');
+  const [modality, setModality] = useState([...MODALITIES,...OBR_CATEGORIES].includes(requested) ? requested : 'all');
   const savedDraft = loadAdminDraft('projects');
 
   const [showForm, setShowForm] = useState(Boolean(savedDraft?.isOpen));
@@ -71,8 +73,8 @@ export default function ProjectsManagement() {
     }
   }, [showForm, editingProject, form, images]);
 
-  const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['projects', 'admin'],
+  const { data: projects = [], isLoading, isError } = useQuery({
+    queryKey: ['projects', 'internal-management'],
     queryFn: () => base44.entities.Project.list('-created_date'),
   });
 
@@ -110,7 +112,7 @@ export default function ProjectsManagement() {
    */
   const handleCancel = () => {
     tempUploadedFileIds.current.forEach(tempId => {
-      deleteFromGoogleDrive(tempId).catch(delErr =>
+      if (isAdmin(user)) deleteFromGoogleDrive(tempId).catch(delErr =>
         console.warn('[ProjectsManagement] Aviso ao limpar foto temporária não salva:', delErr.message)
       );
     });
@@ -136,7 +138,7 @@ export default function ProjectsManagement() {
 
     // 2. Limpa mídias que foram enviadas nesta sessão mas descartadas antes de salvar
     tempUploadedFileIds.current.forEach(discardedId => {
-      deleteFromGoogleDrive(discardedId).catch(delErr =>
+      if (isAdmin(user)) deleteFromGoogleDrive(discardedId).catch(delErr =>
         console.warn('[ProjectsManagement] Aviso ao limpar mídia descartada:', delErr.message)
       );
     });
@@ -157,7 +159,7 @@ export default function ProjectsManagement() {
     },
     onError: (err) => {
       console.error('Erro ao criar projeto:', err);
-      toast.error('Erro ao criar projeto: ' + (err.message || 'Verifique as permissões de administrador.'));
+      toast.error('Erro ao criar projeto: ' + (err.message || 'Verifique se seu acesso à Área Interna está aprovado.'));
     }
   });
 
@@ -170,7 +172,7 @@ export default function ProjectsManagement() {
     },
     onError: (err) => {
       console.error('Erro ao atualizar projeto:', err);
-      toast.error('Erro ao atualizar projeto: ' + (err.message || 'Verifique as permissões de administrador.'));
+      toast.error('Erro ao atualizar projeto: ' + (err.message || 'Verifique se seu acesso à Área Interna está aprovado.'));
     }
   });
 
@@ -183,7 +185,7 @@ export default function ProjectsManagement() {
     },
     onError: (err) => {
       console.error('Erro ao remover projeto:', err);
-      toast.error('Erro ao remover projeto: ' + (err.message || 'Verifique as permissões de administrador.'));
+      toast.error('Erro ao remover projeto: ' + (err.message || 'Verifique se seu acesso à Área Interna está aprovado.'));
     }
   });
 
@@ -283,7 +285,7 @@ export default function ProjectsManagement() {
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <FolderOpen className="w-5 h-5 text-[#E10600]" />
-            Gerenciar Projetos Sociais
+            Gerenciar Projetos
           </h2>
           <p className="text-sm text-[#B8BDC7]">
             Cadastre as iniciativas comunitárias, histórico de ações e acervo de fotos no Google Drive.
@@ -300,6 +302,8 @@ export default function ProjectsManagement() {
         <div className="py-16 text-center">
           <LoadingSpinner text="Carregando projetos da equipe..." />
         </div>
+      ) : isError ? (
+        <p role="alert" className="text-red-400">Não foi possível carregar os projetos. Tente novamente.</p>
       ) : projects.length === 0 ? (
         <div className="text-center py-16 bg-[#111217] border border-[#1F222B] rounded-2xl p-8">
           <FolderOpen className="w-12 h-12 text-[#1F222B] mx-auto mb-3" />
@@ -406,7 +410,7 @@ export default function ProjectsManagement() {
                       <Edit2 className="w-3.5 h-3.5 mr-1" />
                       Editar
                     </Button>
-                    <Button
+                    {isAdmin(user) && <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => setDeleteCandidate(project)}
@@ -414,7 +418,7 @@ export default function ProjectsManagement() {
                       title="Excluir projeto"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </Button>
+                    </Button>}
                   </div>
                 </div>
               </div>

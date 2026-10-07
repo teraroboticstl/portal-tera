@@ -20,7 +20,7 @@ const menuItems = [
       { name: 'Galeria Eventos', icon: ImageIcon, path: 'InternalEventGallery' },
       { name: 'Análise de Risco', icon: AlertTriangle, path: 'InternalRiskAnalysis' },
       { name: 'Sustentabilidade (ESG)', icon: Leaf, path: 'InternalESG' },
-      { name: 'Projetos Sociais', icon: Heart, path: 'InternalSocialProjects' },
+      { name: 'Projetos', icon: Heart, path: 'InternalProjects' },
     ]
   },
   {

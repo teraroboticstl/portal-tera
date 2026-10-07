@@ -24,6 +24,7 @@ const SimuladorIndustria=lazy(()=>import('./pages/SimuladorIndustria'));
 import CompetitionsOBR from './pages/CompetitionsOBR';
 import InternalOBR from './pages/InternalOBR';
 import InternalSocialProjects from './pages/InternalSocialProjects';
+import InternalProjects from './pages/InternalProjects';
 import {InternalESG} from './pages/InternalProjectsDashboard';
 import InternalFLLDashboard from './pages/InternalFLLDashboard';
 import InternalFLLMeetings from './pages/InternalFLLMeetings';
@@ -101,6 +102,7 @@ const AuthenticatedApp = () => {
       <Route path="/CompetitionsOBR" element={<LayoutWrapper currentPageName="CompetitionsOBR"><CompetitionsOBR /></LayoutWrapper>} />
       <Route path="/InternalOBR" element={<LayoutWrapper currentPageName="InternalOBR"><InternalOBR /></LayoutWrapper>} />
       <Route path="/InternalESG" element={<LayoutWrapper currentPageName="InternalESG"><InternalESG /></LayoutWrapper>} />
+      <Route path="/InternalProjects" element={<LayoutWrapper currentPageName="InternalProjects"><InternalProjects /></LayoutWrapper>} />
       <Route path="/InternalSocialProjects" element={<LayoutWrapper currentPageName="InternalSocialProjects"><InternalSocialProjects /></LayoutWrapper>} />
       <Route path="/ProjectDetail" element={<LayoutWrapper currentPageName="ProjectDetail"><ProjectDetail /></LayoutWrapper>} />
       <Route path="/InternalFLLDashboard" element={<LayoutWrapper currentPageName="InternalFLLDashboard"><InternalFLLDashboard /></LayoutWrapper>} />

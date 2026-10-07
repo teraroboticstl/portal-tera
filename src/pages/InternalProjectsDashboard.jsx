@@ -140,5 +140,5 @@ function ESGContent({user}){
 export function InternalESG(){return <ProtectedRoute requireApproved><ESGContent /></ProtectedRoute>;}
 export default function InternalProjectsDashboard(){
  const location=useLocation();
- return <ProtectedRoute requireApproved><Navigate replace to={'/InternalSocialProjects'+location.search} /></ProtectedRoute>;
+ return <ProtectedRoute requireApproved><Navigate replace to={'/InternalProjects'+location.search} /></ProtectedRoute>;
 }
