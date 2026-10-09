@@ -2,9 +2,9 @@ export const CONTENT_TYPES = ['text','video','pdf','image','checklist','activity
 export function youtubeId(value) {
   if (/^[\w-]{11}$/.test(value || '')) return value;
   try {
-    const url=new URL(value);
-    if(url.protocol!=='https:')return null;
-    const id=url.hostname==='youtu.be' ? url.pathname.slice(1) : ['youtube.com','www.youtube.com','m.youtube.com'].includes(url.hostname) ? url.searchParams.get('v') || url.pathname.match(/^\/(?:embed|shorts)\/([\w-]{11})/)?.[1] : '';
+    const url=new URL(String(value).trim());
+    if(url.protocol!=='https:' || url.username || url.password)return null;
+    const id=url.hostname==='youtu.be' ? url.pathname.slice(1) : ['youtube.com','www.youtube.com','m.youtube.com','youtube-nocookie.com','www.youtube-nocookie.com'].includes(url.hostname) ? url.searchParams.get('v') || url.pathname.match(/^\/(?:embed|shorts|live)\/([\w-]{11})(?:\/|$)/)?.[1] : '';
     return /^[\w-]{11}$/.test(id || '') ? id : null;
   } catch { return null; }
 }
