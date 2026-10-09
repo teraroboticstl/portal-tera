@@ -34,7 +34,7 @@ const PUBLIC_NAV_ITEMS = [
   },
   {
     type: 'group',
-    label: 'PROGRAMAS',
+    label: 'EQUIPES',
     children: [
       { label: 'Visão Geral', path: 'Competitions' },
       { label: 'Olimpíada Brasileira de Robótica (OBR)', path: 'CompetitionsOBR', children: [
@@ -58,11 +58,12 @@ const PUBLIC_NAV_ITEMS = [
   },
   {
     type: 'group',
-    label: 'SIMULADORES',
+    label: 'FERRAMENTAS',
     children: [
       {label:'Todos os simuladores',path:'Simuladores'},
       {label:'FLL Bioglow',path:'SimuladorFLL'},
       {label:'Interclasse — Desafios da Indústria',path:'SimuladorIndustria'},
+      {label:'Safety Check',path:'SafetyCheck'},
     ],
   },
   {
@@ -79,6 +80,7 @@ const PUBLIC_NAV_ITEMS = [
       { label: 'CADs', path: 'CADs' },
     ],
   },
+  { type: 'link', label: 'CURSOS', path: 'AVA' },
   {
     type: 'group',
     label: 'HISTÓRIA',
@@ -88,17 +90,9 @@ const PUBLIC_NAV_ITEMS = [
       { label: 'Galeria', path: 'EventGalleryPublic' },
     ],
   },
-  {
-    type: 'group',
-    label: 'MAIS',
-    children: [
-      { label: 'Cursos', path: 'AVA' },
-      { label: 'TIR 2026', path: 'TIR2026' },
-      { label: 'Patrocinadores', path: 'Sponsors' },
-      { label: 'Contato', path: 'Contact' },
-      { label: 'Safety Check', path: 'SafetyCheck' },
-    ],
-  },
+  { type: 'link', label: 'TIR2026', path: 'TIR2026' },
+  { type: 'link', label: 'PATROCINADORES', path: 'Sponsors' },
+  { type: 'link', label: 'CONTATO', path: 'Contact' },
 ];
 
 // Item do submenu desktop com suporte a flyout flutuante para filhos aninhados
@@ -316,7 +310,7 @@ function NavDropdown({ item, currentPageName }) {
         onKeyDown={handleKeyDown}
         aria-haspopup="true"
         aria-expanded={open}
-        className={`flex items-center gap-1 px-2.5 py-1.5 text-[11px] xl:text-xs font-semibold uppercase tracking-wider transition-colors rounded hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#E10600] whitespace-nowrap ${
+        className={`flex items-center gap-1 px-1.5 py-1.5 text-[11px] font-semibold uppercase tracking-normal transition-colors rounded hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#E10600] whitespace-nowrap ${
           isGroupActive || open
             ? 'text-[#E10600]'
             : 'text-gray-300 hover:text-white'
@@ -514,18 +508,18 @@ export default function Layout({ children, currentPageName }) {
       {/* NAVBAR */}
       {isPublicPage && (
         <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-md border-b border-white/5">
-          <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
+          <div className="max-w-[1600px] mx-auto px-4 flex items-center justify-between h-14">
 
             {/* Logo */}
             <Link to={createPageUrl('Home')} className="flex items-center gap-2 flex-shrink-0">
               <img src={LOGO_MINIMALIST} alt="TeraRobotics" className="w-9 h-9 object-contain" />
-              <span className="font-black text-lg tracking-tight hidden sm:block">
+              <span className="font-black text-lg tracking-tight hidden 2xl:block">
                 TERA<span className="text-[#E10600]">ROBOTICS</span>
               </span>
             </Link>
 
             {/* Desktop nav */}
-            <div className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 flex-1 justify-center">
+            <div className="hidden xl:flex items-center gap-0.5 flex-1 justify-center">
               {PUBLIC_NAV_ITEMS.map((item) => {
                 if (item.type === 'link') {
                   const isActive = currentPageName === item.path;
@@ -533,7 +527,7 @@ export default function Layout({ children, currentPageName }) {
                     <Link
                       key={item.label}
                       to={createPageUrl(item.path)}
-                      className={`px-2.5 py-1.5 text-[11px] xl:text-xs font-semibold uppercase tracking-wider transition-colors rounded hover:bg-white/[0.05] whitespace-nowrap ${
+                      className={`px-1.5 py-1.5 text-[11px] font-semibold uppercase tracking-normal transition-colors rounded hover:bg-white/[0.05] whitespace-nowrap ${
                         isActive ? 'text-[#E10600]' : 'text-gray-300 hover:text-white'
                       }`}
                     >
@@ -617,7 +611,7 @@ export default function Layout({ children, currentPageName }) {
               {/* Mobile hamburger */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-2 text-gray-300 hover:text-white"
+                className="xl:hidden p-2 text-gray-300 hover:text-white"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
