@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,6 +7,8 @@ import {
   MessageCircle, Star
 } from 'lucide-react';
 import ChatMentor from '@/components/tir/ChatMentor';
+import { useAuth } from '@/lib/AuthContext';
+import { canEditInternal } from '@/lib/accessLevels';
 
 const TABS = [
   { id: 'regras', label: 'Manual TIR 2026', icon: BookOpen },
@@ -25,20 +27,8 @@ const MENTORES = [
 export default function TIR2026() {
   const [tab, setTab] = useState('regras');
   const [chatMentor, setChatMentor] = useState(null);
-  const [user, setUser] = useState(null);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-
-  useEffect(() => {
-    base44.auth.isAuthenticated().then(async (authed) => {
-      if (authed) {
-        const me = await base44.auth.me();
-        setUser(me);
-      }
-      setCheckingAuth(false);
-    });
-  }, []);
-
-  const isAdmin = user && (user.role === 'admin' || user.member_role === 'admin' || user.member_role === 'member');
+  const {user,isLoadingAuth:checkingAuth,isAuthenticated}=useAuth();
+  const isAdmin = !checkingAuth && isAuthenticated && canEditInternal(user);
 
   const { data: equipes = [] } = useQuery({
     queryKey: ['tir-equipes'],
@@ -146,15 +136,12 @@ export default function TIR2026() {
                 <p className="text-gray-500 text-sm">{equipes.length} equipe{equipes.length !== 1 ? 's' : ''} cadastrada{equipes.length !== 1 ? 's' : ''}</p>
                 {!checkingAuth && !user && (
                   <p className="text-xs text-gray-600 mt-2">
-                    Sua sala ainda não cadastrou equipe?{' '}
-                    <button onClick={() => base44.auth.redirectToLogin(window.location.pathname)} className="text-green-400 underline">
-                      Faça login
-                    </button>{' '}para registrar.
+                    O cadastro de equipes é realizado por membros integrados e líderes autorizados.
                   </p>
                 )}
               </div>
 
-              {!checkingAuth && user && <CadastroEquipe equipes={equipes} />}
+              {isAdmin && <CadastroEquipe equipes={equipes} />}
 
               {equipes.length === 0 ? (
                 <div className="text-center py-16">
@@ -282,7 +269,7 @@ export default function TIR2026() {
   );
 }
 
-/* ── Cadastro de equipe (qualquer usuário logado) ── */
+/* ── Cadastro de equipe (membros integrados e líderes autorizados) ── */
 function CadastroEquipe({ equipes }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);

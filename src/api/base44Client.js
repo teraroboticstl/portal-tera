@@ -29,6 +29,8 @@ const integrationsShim = {
      * Mapeia para a assinatura do SDK antigo para não quebrar as chamadas existentes.
      */
     async UploadFile({ file, bucketName = 'gallery' }) {
+      const {data:canUpload,error:permissionError}=await supabase.rpc('portal_can_edit');
+      if(permissionError || canUpload!==true)throw new Error('Envio de arquivos restrito a membros integrados e líderes autorizados.');
       console.log(`[Supabase Storage] Iniciando upload de ${file.name} para o bucket "${bucketName}"...`);
       
       // Gerar um nome de arquivo único para evitar colisões

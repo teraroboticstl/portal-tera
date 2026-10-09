@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
@@ -7,6 +7,9 @@ import {
   Save, X, Upload, ArrowLeft, Zap, Check, Lock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/lib/AuthContext';
+import { canEditInternal } from '@/lib/accessLevels';
+import { isAdmin as isPortalAdmin } from '@/components/internal/ProtectedRoute';
 
 const TABS = [
   { id: 'equipes', label: 'Equipes', icon: Users },
@@ -15,21 +18,11 @@ const TABS = [
 ];
 
 export default function TIRAdmin() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const {user,isLoadingAuth:loading,isAuthenticated}=useAuth();
   const [tab, setTab] = useState('equipes');
 
-  useEffect(() => {
-    base44.auth.isAuthenticated().then(async (authed) => {
-      if (authed) {
-        const me = await base44.auth.me();
-        setUser(me);
-      }
-      setLoading(false);
-    });
-  }, []);
-
-  const isAdmin = user && (user.role === 'admin' || user.member_role === 'admin' || user.member_role === 'member');
+  const isAdmin = !loading && isAuthenticated && canEditInternal(user);
+  const canManageRules = isAdmin && isPortalAdmin(user);
 
   if (loading) {
     return (
@@ -73,7 +66,7 @@ export default function TIRAdmin() {
             <Lock className="w-7 h-7 text-red-400" />
           </div>
           <h1 className="text-xl font-black text-white mb-2">Sem Permissão</h1>
-          <p className="text-gray-500 text-sm mb-6">Você não tem permissão para acessar este painel. Apenas membros com acesso à área interna podem gerenciar o TIR.</p>
+          <p className="text-gray-500 text-sm mb-6">A gestão do TIR exige o nível Membro Integrado ou Membro Líder, com acesso aprovado.</p>
           <Link to="/TIR2026"
             className="inline-flex items-center gap-2 text-green-400 text-sm hover:text-green-300 transition-colors">
             <ArrowLeft className="w-4 h-4" /> Voltar ao TIR 2026
@@ -102,7 +95,7 @@ export default function TIRAdmin() {
       {/* Tabs */}
       <div className="border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 flex">
-          {TABS.map(t => {
+          {TABS.filter(t=>t.id!=='regras'||canManageRules).map(t => {
             const Icon = t.icon;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
@@ -116,8 +109,8 @@ export default function TIRAdmin() {
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         {tab === 'equipes' && <EquipesAdmin />}
-        {tab === 'regras' && <RegrasAdmin />}
-        {tab === 'galeria' && <GaleriaAdmin />}
+        {tab === 'regras' && canManageRules && <RegrasAdmin />}
+        {tab === 'galeria' && <GaleriaAdmin canDelete={canManageRules} />}
       </div>
     </div>
   );
@@ -315,7 +308,7 @@ function RegrasAdmin() {
 }
 
 /* ────────────────────────────── GALERIA ────────────────────────────── */
-function GaleriaAdmin() {
+function GaleriaAdmin({canDelete}) {
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({ foto_url: '', equipes_ids: [], equipes_nomes: [], legenda: '' });
@@ -410,11 +403,11 @@ function GaleriaAdmin() {
           {fotos.map(f => (
             <div key={f.id} className="relative group rounded-xl overflow-hidden aspect-square bg-[#0D1526]">
               <img src={f.foto_url} alt="" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <button onClick={() => deletar.mutate(f.id)} className="p-2 bg-red-500/80 hover:bg-red-500 rounded-lg transition-colors">
+              {canDelete && <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <button onClick={() => {if(canDelete)deletar.mutate(f.id);}} className="p-2 bg-red-500/80 hover:bg-red-500 rounded-lg transition-colors">
                   <Trash2 className="w-4 h-4 text-white" />
                 </button>
-              </div>
+              </div>}
               {(f.equipes_nomes || []).length > 0 && (
                 <div className="absolute bottom-1 left-1 right-1 flex flex-wrap gap-0.5">
                   {(f.equipes_nomes || []).slice(0, 2).map(n => (

@@ -17,7 +17,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
 
   const actualTableName = tableName || defaultTable;
   async function assertWriteAccess(){
-    if(!["audit_logs","board_diaries","daily_logs","esg_initiatives","fll_attachments","fll_core_values","fll_innovation_projects","fll_judge_preps","fll_members","fll_missions","fll_tasks","frc_scouts","internal_projects","matches","meeting_notes","onshape_configs","pdi_frcs","pdis","priorities","project_risks","prototype_tests","scout_ftcs","team_knowledge_bases","team_logs","teams","tournament_configs","projects"].includes(actualTableName))return;
+    if(!["audit_logs","board_diaries","daily_logs","esg_initiatives","fll_attachments","fll_core_values","fll_innovation_projects","fll_judge_preps","fll_members","fll_missions","fll_tasks","frc_scouts","internal_projects","matches","meeting_notes","onshape_configs","pdi_frcs","pdis","priorities","project_risks","prototype_tests","scout_ftcs","team_knowledge_bases","team_logs","teams","tournament_configs","projects","tir_equipes","tir_regras","tir_fotos","robots","products","sponsors","seasons","event_galleries","event_medias","tournament_memorials"].includes(actualTableName))return;
     const {data,error}=await supabase.rpc('portal_can_edit');
     if(error || data!==true)throw new Error('Seu nível permite apenas consulta. Edição restrita a membros integrados e líderes.');
   }

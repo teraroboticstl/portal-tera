@@ -3,16 +3,24 @@ import { motion } from 'framer-motion';
 import { MapPin, Calendar, Lightbulb, Users, Heart, Target, Camera } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { useAuth } from '@/lib/AuthContext';
+import { canEditInternal } from '@/lib/accessLevels';
 
 export default function About() {
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
+  const canManagePhoto = !isLoadingAuth && isAuthenticated && canEditInternal(user);
+  const photoPermission = useRef(false);
+  photoPermission.current = canManagePhoto;
   const [teamPhoto, setTeamPhoto] = useState(() => localStorage.getItem('about_team_photo') || null);
   const fileInputRef = useRef(null);
 
   const handlePhotoChange = (e) => {
+    if (!photoPermission.current) return;
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
+      if (!photoPermission.current) return;
       const url = ev.target.result;
       setTeamPhoto(url);
       localStorage.setItem('about_team_photo', url);
@@ -92,20 +100,20 @@ export default function About() {
 
                 <div className="w-full h-full flex flex-col items-center justify-center gap-4">
                     <Camera className="w-16 h-16 text-[#E10600]/40" />
-                    <p className="text-gray-500 text-sm text-center px-8">Adicione uma foto da equipe clicando no botão abaixo</p>
+                    <p className="text-gray-500 text-sm text-center px-8">{canManagePhoto ? 'Adicione uma foto da equipe clicando no botão abaixo' : 'Equipe TeraRobotics'}</p>
                   </div>
                 }
                 {/* Overlay com botão de alterar */}
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                {canManagePhoto && <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="flex items-center gap-2 bg-[#E10600] hover:bg-red-700 text-white font-bold text-sm px-5 py-2.5 rounded transition-colors">
                     
                     <Camera className="w-4 h-4" /> Alterar Foto
                   </button>
-                </div>
+                </div>}
                 {/* Botão sempre visível no canto quando não tem foto */}
-                {!teamPhoto &&
+                {canManagePhoto && !teamPhoto &&
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-[#E10600] hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded transition-colors">
@@ -113,7 +121,7 @@ export default function About() {
                     <Camera className="w-3.5 h-3.5" /> Adicionar Foto
                   </button>
                 }
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                {canManagePhoto && <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />}
               </div>
             </motion.div>
           </div>
