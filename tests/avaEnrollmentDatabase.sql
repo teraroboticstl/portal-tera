@@ -1,6 +1,6 @@
 BEGIN;
 DO $$
-DECLARE leader uuid; student uuid; track uuid:=gen_random_uuid(); module uuid:=gen_random_uuid(); result jsonb; denied boolean;
+DECLARE leader uuid; student uuid; track uuid:=gen_random_uuid(); module uuid:=gen_random_uuid(); other_track uuid:=gen_random_uuid(); result jsonb; denied boolean;
 BEGIN
  SELECT id INTO leader FROM profiles WHERE role='admin' OR member_role='admin' LIMIT 1;
  SELECT id INTO student FROM profiles WHERE role!='admin' AND member_role!='admin' LIMIT 1;
@@ -11,6 +11,24 @@ BEGIN
  PERFORM ava_mutate('save_track',jsonb_build_object('id',track,'title','Enrollment rollback audit','status','published','audience','all'));
  PERFORM ava_mutate('save_module',jsonb_build_object('id',module,'track_id',track,'title','Audit module','status','published','contents',jsonb_build_array(jsonb_build_object('id','text','type','text','text','Audit only'))));
  PERFORM ava_mutate('set_access',jsonb_build_object('user_id',student,'access_level','student','status','approved'));
+ PERFORM ava_mutate('save_track',jsonb_build_object('id',other_track,'title','Restricted catalog audit','status','published','audience','tera'));
+ PERFORM set_config('request.jwt.claim.sub',student::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student,'role','authenticated')::text,true);
+ result:=ava_read('dashboard');
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(result->'catalog') c WHERE c->>'id'=other_track::text) THEN RAISE EXCEPTION 'Catalog hid an active track by audience'; END IF;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(result->'tracks') c WHERE c->>'id'=other_track::text) THEN RAISE EXCEPTION 'Catalog leaked restricted track details'; END IF;
+ PERFORM ava_mutate('request_enrollment',jsonb_build_object('track_id',track));
+ PERFORM ava_mutate('request_enrollment',jsonb_build_object('track_id',track));
+ result:=ava_read('dashboard');
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(result->'catalog') c WHERE c->>'id'=track::text AND c->>'enrollment_status'='pending') THEN RAISE EXCEPTION 'Request did not stay pending'; END IF;
+ denied:=false; BEGIN PERFORM ava_read('module',module); EXCEPTION WHEN others THEN denied:=SQLERRM LIKE '%AVA_ENROLLMENT_REQUIRED%'; END;
+ IF NOT denied THEN RAISE EXCEPTION 'Pending student accessed content'; END IF;
+ PERFORM ava_mutate('enroll',jsonb_build_object('track_id',track));
+ denied:=false; BEGIN PERFORM ava_mutate('enroll_user',jsonb_build_object('user_id',student,'track_id',track,'status','active')); EXCEPTION WHEN others THEN denied:=SQLERRM LIKE '%AVA_ADMIN_REQUIRED%'; END;
+ IF NOT denied THEN RAISE EXCEPTION 'Student approved own request'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',leader::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',leader,'role','authenticated')::text,true);
+ PERFORM ava_mutate('enroll_user',jsonb_build_object('user_id',student,'track_id',track,'status','revoked'));
  PERFORM ava_mutate('enroll_user',jsonb_build_object('user_id',student,'track_id',track,'status','active'));
  PERFORM set_config('request.jwt.claim.sub',student::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student,'role','authenticated')::text,true);
@@ -28,8 +46,9 @@ BEGIN
  IF EXISTS(SELECT 1 FROM jsonb_array_elements(result->'tracks') t WHERE t->>'id'=track::text AND (t->>'enrolled')::boolean) THEN RAISE EXCEPTION 'Withdrawn enrollment still active'; END IF;
  denied:=false; BEGIN PERFORM ava_read('module',module); EXCEPTION WHEN others THEN denied:=SQLERRM LIKE '%AVA_ENROLLMENT_REQUIRED%'; END;
  IF NOT denied THEN RAISE EXCEPTION 'Withdrawn student still accessed module'; END IF;
- denied:=false; BEGIN PERFORM ava_mutate('enroll',jsonb_build_object('track_id',track)); EXCEPTION WHEN others THEN denied:=SQLERRM LIKE '%retirada pelo administrador%'; END;
- IF NOT denied THEN RAISE EXCEPTION 'Student undid admin withdrawal'; END IF;
+ PERFORM ava_mutate('enroll',jsonb_build_object('track_id',track));
+ result:=ava_read('dashboard');
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(result->'tracks') t WHERE t->>'id'=track::text AND (t->>'enrolled')::boolean) THEN RAISE EXCEPTION 'Legacy enrollment bypassed approval after withdrawal'; END IF;
  PERFORM set_config('request.jwt.claim.sub',leader::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',leader,'role','authenticated')::text,true);
  PERFORM ava_mutate('enroll_user',jsonb_build_object('user_id',student,'track_id',track,'status','active'));
@@ -40,5 +59,5 @@ BEGIN
  IF portal_internal_access() THEN RAISE EXCEPTION 'Enrollment granted internal access'; END IF;
  RESET ROLE;
 END $$;
-SELECT 'PASS: admin enrollment appears on student dashboard; withdrawal blocks access and self-reactivation; admin reactivation preserves progress and student-only scope. All fixtures rolled back.' AS enrollment_audit;
+SELECT 'PASS: catalog lists all published audiences without restricted content; duplicate requests stay pending; pending and withdrawn students cannot access modules or self-approve; admin approval and rejection work; reactivation preserves progress and student-only scope. All fixtures rolled back.' AS enrollment_audit;
 ROLLBACK;

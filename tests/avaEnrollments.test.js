@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {enrollmentRows} from '../src/lib/avaEnrollmentRules.js';
+import {enrollmentRows,studentCatalog} from '../src/lib/avaEnrollmentRules.js';
 const tracks=[{id:'first',title:'FIRST',position:1,audience:'all',status:'published'},
  {id:'tera',title:'Tera',position:2,audience:'tera',status:'published'},
  {id:'external',title:'Parceiros',position:3,audience:'external',status:'published'},
@@ -25,4 +25,14 @@ test('Enrollment keeps AVA approval and track audiences separate from portal per
  }
  for(const ava_status of ['pending','blocked','none'])assert.equal(enrollmentRows({tracks},{id:'x',access:{access_level:'student',ava_status}})[0].canEnroll,false);
  assert.equal(enrollmentRows({tracks},null)[0].canEnroll,false);
+});
+
+test('Catalog retains all published metadata and pending states without exposing restricted details',()=>{
+ const data={catalog:[{id:'tera',title:'Tera',enrollment_status:'pending'},
+  {id:'external',title:'Parceiros',enrollment_status:'active'}],tracks:[{id:'external',enrolled:true,progress:40}]};
+ const catalog=studentCatalog(data);assert.equal(catalog.length,2);
+ assert.equal(catalog[0].enrollment_status,'pending');assert.equal(catalog[0].enrolled,undefined);
+ assert.equal(catalog[1].enrolled,true);assert.equal(catalog[1].progress,40);
+ const rows=enrollmentRows({tracks,enrollments:[{user_id:'student',track_id:'first',status:'pending'}]},{id:'student',access:{access_level:'student',ava_status:'active'}});
+ assert.equal(rows[0].status,'pending');assert.equal(rows[0].canEnroll,true);
 });

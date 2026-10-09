@@ -1,5 +1,9 @@
 import {accessLevel} from './accessLevels.js';
 
+export function studentCatalog(data) {
+  return (data.catalog || []).map(track=>({...track,...(data.tracks || []).find(t=>t.id===track.id)}));
+}
+
 export function enrollmentRows(data,user) {
   const level=accessLevel(user),internal=['trainee','member','leader'].includes(level);
   const authorized=!!user && (level==='leader' || user.access?.ava_status==='active');
