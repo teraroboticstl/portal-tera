@@ -92,7 +92,7 @@ const PUBLIC_NAV_ITEMS = [
     type: 'group',
     label: 'MAIS',
     children: [
-      { label: 'Ambiente de Aprendizagem (AVA)', path: 'AVA' },
+      { label: 'Cursos', path: 'AVA' },
       { label: 'TIR 2026', path: 'TIR2026' },
       { label: 'Patrocinadores', path: 'Sponsors' },
       { label: 'Contato', path: 'Contact' },

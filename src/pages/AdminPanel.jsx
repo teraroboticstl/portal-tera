@@ -194,7 +194,7 @@ export default function AdminPanel() {
               <TabsTrigger value="fll_simulators" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
                 <Bot className="w-4 h-4 mr-1.5" />Simuladores FLL
               </TabsTrigger>
-              <TabsTrigger value="ava" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">Aprendizagem AVA</TabsTrigger>
+              <TabsTrigger value="ava" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">Cursos</TabsTrigger>
               <TabsTrigger value="season_close" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
                 <Archive className="w-4 h-4 mr-1.5" />
                 Encerrar Temporada
@@ -222,7 +222,7 @@ export default function AdminPanel() {
             <ProductsManagement />
           </TabsContent>
           <TabsContent value="fll_simulators"><FllSimulatorsManagement user={user} /></TabsContent>
-          <TabsContent value="ava"><h2 className="text-xl font-bold mb-3">Ambiente Virtual de Aprendizagem</h2><p className="text-gray-400 mb-4">Trilhas, conteúdo, alunos, permissões, mentorias, progresso e comunicados.</p><Link to="/AVAAdmin"><Button>Administrar AVA</Button></Link></TabsContent>
+          <TabsContent value="ava"><h2 className="text-xl font-bold mb-3">Cursos</h2><p className="text-gray-400 mb-4">Trilhas, conteúdo, alunos, permissões, mentorias, progresso e comunicados.</p><Link to="/AVAAdmin"><Button>Administrar cursos</Button></Link></TabsContent>
           <TabsContent value="season_close">
             <SeasonCloseManagement />
           </TabsContent>
