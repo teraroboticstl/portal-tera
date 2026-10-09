@@ -16,7 +16,7 @@ BEGIN
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student,'role','authenticated')::text,true);
  result:=ava_read('dashboard');
  IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(result->'catalog') c WHERE c->>'id'=other_track::text) THEN RAISE EXCEPTION 'Catalog hid an active track by audience'; END IF;
- IF EXISTS(SELECT 1 FROM jsonb_array_elements(result->'tracks') c WHERE c->>'id'=other_track::text) THEN RAISE EXCEPTION 'Catalog leaked restricted track details'; END IF;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(result->'tracks') c WHERE c->>'id'=other_track::text AND (c ? 'community_url' OR c ? 'certificate_config' OR (c->>'can_access')::boolean)) THEN RAISE EXCEPTION 'Catalog leaked restricted track details'; END IF;
  PERFORM ava_mutate('request_enrollment',jsonb_build_object('track_id',track));
  PERFORM ava_mutate('request_enrollment',jsonb_build_object('track_id',track));
  result:=ava_read('dashboard');

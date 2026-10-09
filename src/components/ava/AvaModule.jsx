@@ -6,7 +6,7 @@ import AvaMedia from './AvaMedia';
 import {Button} from '@/components/ui/button';
 export default function AvaModule({id,onBack,onRefresh}) {
   const [data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[answers,setAnswers]=useState({}),[notice,setNotice]=useState(''),[feedback,setFeedback]=useState([]);
-  async function load(){try{const d=await avaRequest('module',id);setData(d);setAnswers(Object.fromEntries(Object.entries(d.progress?.blocks || {}).map(([k,v])=>[k,v.checks || v.answer || []])));}catch(e){setError(e.message);}}
+  async function load(){try{const d=await avaRequest('module',id);setData(d);setAnswers(Object.fromEntries(Object.entries(d.progress?.blocks || {}).map(([k,v])=>[k,v.checks || v.answer || []])));}catch(e){setData(null);setError(e.message);}}
   useEffect(()=>{load();},[id]);
   async function submit(block,value){setBusy(true);setError('');setNotice('');setFeedback([]);try{const r=await avaMutate('progress',{module_id:id,version:data.module.version,block_id:block.id,value});setNotice(block.type==='quiz'?`Nota: ${r.score}% · ${r.passed?'Aprovado':'Ainda não atingiu a nota mínima'}`:'Progresso salvo.');setFeedback(r.feedback || []);await load();onRefresh();}catch(e){setError(e.message);}finally{setBusy(false);}}
   if(!data)return <section className="p-6"><Button variant="outline" onClick={onBack}>Voltar à trilha</Button><p role="alert" className="mt-4">{error || 'Carregando módulo…'}</p></section>;

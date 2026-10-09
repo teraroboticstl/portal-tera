@@ -31,7 +31,12 @@ BEGIN
  PERFORM public.ava_mutate('set_access',jsonb_build_object('user_id',student_id,'access_level','student','status','approved'));
  PERFORM set_config('request.jwt.claim.sub',student_id::text,true);
  PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student_id,'role','authenticated')::text,true);
- PERFORM public.ava_mutate('enroll',jsonb_build_object('track_id',track_id));
+ PERFORM public.ava_mutate('request_enrollment',jsonb_build_object('track_id',track_id));
+ PERFORM set_config('request.jwt.claim.sub',admin_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
+ PERFORM public.ava_mutate('enroll_user',jsonb_build_object('track_id',track_id,'user_id',student_id,'status','active'));
+ PERFORM set_config('request.jwt.claim.sub',student_id::text,true);
+ PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',student_id,'role','authenticated')::text,true);
  result:=public.ava_read('module',module_id);
  IF result->'module'->'contents'->2->'questions'->0 ? 'correct' OR result->'module'->'contents'->2->'questions'->0 ? 'feedback' THEN RAISE EXCEPTION 'Answer key exposed'; END IF;
  IF result->'progress' IS NOT NULL AND result->'progress'!='null'::jsonb THEN RAISE EXCEPTION 'Visit alone changed progress'; END IF;
@@ -79,4 +84,5 @@ BEGIN
  RESET ROLE;
  RAISE NOTICE 'AVA audit passed: authorization, RLS, answer secrecy, deterministic progress, attempts, versions, notifications and capacity';
 END $$;
+SELECT 'PASS: AVA authorization, RLS, answer secrecy, progress, quiz attempts, versions, notifications and mentorship capacity' AS ava_system_audit;
 ROLLBACK;

@@ -36,3 +36,10 @@ test('Catalog retains all published metadata and pending states without exposing
  const rows=enrollmentRows({tracks,enrollments:[{user_id:'student',track_id:'first',status:'pending'}]},{id:'student',access:{access_level:'student',ava_status:'active'}});
  assert.equal(rows[0].status,'pending');assert.equal(rows[0].canEnroll,true);
 });
+
+test('Approved draft enrollment remains visible while lessons remain unavailable',()=>{
+ const data={catalog:[{id:'draft',status:'draft',enrollment_status:'active',enrolled:true,can_access:false},
+ {id:'first',status:'published',enrollment_status:'pending',enrolled:false,can_access:false}],tracks:[]};
+ const rows=studentCatalog(data);assert.equal(rows.filter(t=>t.enrolled).length,1);
+ assert.equal(rows[0].can_access,false);assert.equal(rows[1].enrolled,false);
+});
