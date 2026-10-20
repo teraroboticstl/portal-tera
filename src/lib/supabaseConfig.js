@@ -64,7 +64,12 @@ export function resolveSupabaseConfig(env, sha256, { server = false } = {}) {
     const checked = validatePublicSupabaseConfig({ ...publicConfig, url: candidate });
     if (checked.url !== publicConfig.url) reject();
   }
-  if (frontendKey && backendKey && frontendKey !== backendKey) reject();
+  // The existing project can issue both legacy anon JWTs and publishable keys.
+  // Validate each configured public key; textual equality is not project identity.
+  if (frontendKey) validateSupabaseKey(frontendKey, 'anon', projectRef);
+  if (backendKey) validateSupabaseKey(backendKey, 'anon', projectRef);
+  // An isolated test project still uses its independently approved key binding.
+  if (isolated && frontendKey && backendKey && frontendKey !== backendKey) reject();
   if (isolated) binding(publicConfig.publicKey, env.PREVIEW_SUPABASE_PUBLIC_KEY_SHA256, sha256);
   const serviceKey = server ? value(env.SUPABASE_SERVICE_ROLE_KEY) : '';
   if (serviceKey) {

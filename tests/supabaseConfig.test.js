@@ -86,6 +86,25 @@ test('explicit valid production config preserves target without Preview-only var
   assert.throws(() => serverSupabaseConfig({ VERCEL: '1', VERCEL_ENV: 'production' }), invalid);
 });
 
+test('existing project supports distinct public and legacy anon keys with individual role/ref checks', () => {
+  const legacy = jwt(PRODUCTION_PROJECT_REF, 'anon');
+  for (const environment of ['production', 'preview', 'development']) {
+    for (const [frontend, backend] of [[publicKey, legacy], [legacy, publicKey]]) {
+      const env = { VERCEL: '1', VERCEL_ENV: environment,
+        VITE_SUPABASE_URL: `https://${PRODUCTION_PROJECT_REF}.supabase.co`,
+        SUPABASE_URL: `https://${PRODUCTION_PROJECT_REF}.supabase.co`,
+        VITE_SUPABASE_ANON_KEY: frontend, SUPABASE_ANON_KEY: backend };
+      assert.equal(resolveSupabaseConfig(env, sha256).publicConfig.publicKey, frontend);
+      assert.equal(serverSupabaseConfig(env).publicConfig.publicKey, backend);
+      assert.equal(serverSupabaseConfig(env).serverKey, backend);
+      for (const bad of [jwt(ref, 'anon'), jwt(PRODUCTION_PROJECT_REF, 'service_role'), serviceKey, 'invalid.key.value']) {
+        assert.throws(() => resolveSupabaseConfig({ ...env, SUPABASE_ANON_KEY: bad }, sha256), invalid);
+        assert.throws(() => serverSupabaseConfig({ ...env, VITE_SUPABASE_ANON_KEY: bad }), invalid);
+      }
+    }
+  }
+});
+
 test('Preview supports the existing Portal Tera project with current public variables only', () => {
   const env = { VERCEL: '1', VERCEL_ENV: 'preview',
     VITE_SUPABASE_URL: `https://${PRODUCTION_PROJECT_REF}.supabase.co`, VITE_SUPABASE_ANON_KEY: publicKey };
@@ -186,6 +205,12 @@ test('real Vite config checks bindings at build time and defines ONLY public con
   const shared = await configFor({ VERCEL: '1', VERCEL_ENV: 'preview',
     VITE_SUPABASE_URL: `https://${PRODUCTION_PROJECT_REF}.supabase.co`, VITE_SUPABASE_ANON_KEY: publicKey });
   assert.equal(JSON.parse(shared.define.__TERA_SUPABASE_CONFIG__).projectRef, PRODUCTION_PROJECT_REF);
+  const production = await configFor({ VERCEL: '1', VERCEL_ENV: 'production',
+    VITE_SUPABASE_URL: `https://${PRODUCTION_PROJECT_REF}.supabase.co`, VITE_SUPABASE_ANON_KEY: publicKey,
+    SUPABASE_ANON_KEY: jwt(PRODUCTION_PROJECT_REF, 'anon'), SUPABASE_SERVICE_ROLE_KEY: serviceKey });
+  assert.equal(JSON.parse(production.define.__TERA_SUPABASE_CONFIG__).publicKey, publicKey);
+  assert.ok(!JSON.stringify(production.define).includes(serviceKey));
+  assert.ok(!JSON.stringify(production.define).includes(jwt(PRODUCTION_PROJECT_REF, 'anon')));
 });
 
 test('configuration errors never reflect supplied keys or URLs', () => {
