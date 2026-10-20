@@ -1,3 +1,4 @@
+import './helpers/isolatedSupabase.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { verifyMediaAccess, isFileReferencedInDb } from '../api/_lib/mediaSecurity.js';

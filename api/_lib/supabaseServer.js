@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://dqmagpxjsdelpwuofxzz.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_SNMwsaz2myKNUpcyM18xjw_mAZOMKtd';
+import { serverSupabaseConfig } from './supabaseConfig.js';
+
+const { publicConfig, serverKey: supabaseKey } = serverSupabaseConfig(process.env);
+const supabaseUrl = publicConfig.url;
 
 // Cliente Supabase server-side com privilégios de execução
 export const supabaseServer = createClient(supabaseUrl, supabaseKey, {
