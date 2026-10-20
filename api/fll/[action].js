@@ -1,5 +1,5 @@
 import { validateUserAuth, createScopedUserSupabaseClient, supabaseServer } from '../_lib/supabaseServer.js';
-import { getGoogleDriveClient } from '../_lib/googleDrive.js';
+import { getGoogleDriveClient, getDriveErrorInfo } from '../_lib/googleDrive.js';
 import { handleFllSimulations } from '../_lib/fllSimulations.js';
 import {
   getActiveFllSeasonData,
@@ -73,8 +73,8 @@ export default async function handler(req, res) {
           }
         });
       } catch (err) {
-        console.error('[API /api/fll/season GET] Erro:', err);
-        return res.status(500).json({ error: 'Erro ao carregar dados da temporada FLL', message: err.message });
+        console.error('[API /api/fll/season GET] Erro:', getDriveErrorInfo(err).code);
+        return res.status(500).json({ error: 'Erro ao carregar dados da temporada FLL', message: 'Não foi possível concluir a solicitação. Tente novamente ou consulte a administração.' });
       }
     }
 
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
         }
         userToken = authHeader.replace(/^Bearer\s+/i, '').trim();
       } catch (authErr) {
-        return res.status(401).json({ error: 'Falha na autenticação', message: authErr.message });
+        return res.status(401).json({ error: 'Falha na autenticação', message: 'Sessão inválida ou expirada. Entre novamente.' });
       }
 
       try {
@@ -169,10 +169,10 @@ export default async function handler(req, res) {
           .limit(1);
 
         if (selectErr) {
-          console.error('[API /api/fll/season POST] Erro ao consultar Supabase:', selectErr);
+          console.error('[API /api/fll/season POST] Erro ao consultar Supabase:', getDriveErrorInfo(selectErr).code);
           return res.status(500).json({
             error: 'Falha ao consultar registro no Supabase',
-            message: selectErr.message
+            message: 'Não foi possível concluir a solicitação. Tente novamente ou consulte a administração.'
           });
         }
 
@@ -305,10 +305,10 @@ export default async function handler(req, res) {
             .single();
 
           if (updateErr) {
-            console.error('[API /api/fll/season POST] Falha ao atualizar Supabase:', updateErr);
+            console.error('[API /api/fll/season POST] Falha ao atualizar Supabase:', getDriveErrorInfo(updateErr).code);
             return res.status(500).json({
               error: 'Falha ao persistir alterações no Supabase',
-              message: updateErr.message
+              message: 'Não foi possível concluir a solicitação. Tente novamente ou consulte a administração.'
             });
           }
           savedRecord = updated;
@@ -326,10 +326,10 @@ export default async function handler(req, res) {
             .single();
 
           if (insertErr) {
-            console.error('[API /api/fll/season POST] Falha ao inserir registro no Supabase:', insertErr);
+            console.error('[API /api/fll/season POST] Falha ao inserir registro no Supabase:', getDriveErrorInfo(insertErr).code);
             return res.status(500).json({
               error: 'Falha ao criar registro de temporada no Supabase',
-              message: insertErr.message
+              message: 'Não foi possível concluir a solicitação. Tente novamente ou consulte a administração.'
             });
           }
           savedRecord = inserted;
@@ -352,10 +352,10 @@ export default async function handler(req, res) {
           data: responseData
         });
       } catch (saveErr) {
-        console.error('[API /api/fll/season POST] Exceção:', saveErr);
+        console.error('[API /api/fll/season POST] Exceção:', getDriveErrorInfo(saveErr).code);
         return res.status(500).json({
           error: 'Erro interno ao processar requisição',
-          message: saveErr.message
+          message: 'Não foi possível concluir a solicitação. Tente novamente ou consulte a administração.'
         });
       }
     }
@@ -402,11 +402,11 @@ export default async function handler(req, res) {
       if (!audioBytes) {
         let drive;
         try {
-          drive = getGoogleDriveClient();
+          drive = await getGoogleDriveClient();
         } catch (driveErr) {
           return res.status(503).json({
             error: 'Google Drive não configurado no servidor',
-            message: driveErr.message
+            message: getDriveErrorInfo(driveErr).message
           });
         }
 
@@ -461,10 +461,10 @@ export default async function handler(req, res) {
       return res.status(200).end(audioBytes);
 
     } catch (err) {
-      console.error('[API /api/fll/audio] Erro ao transmitir áudio:', err);
+      console.error('[API /api/fll/audio] Erro ao transmitir áudio:', getDriveErrorInfo(err).code);
       return res.status(500).json({
         error: 'Falha ao transmitir áudio oficial FLL',
-        message: err.message
+        message: 'Não foi possível concluir a solicitação. Tente novamente ou consulte a administração.'
       });
     }
   }
@@ -502,7 +502,7 @@ export default async function handler(req, res) {
         data: enriched
       });
     } catch (err) {
-      console.error('[API /api/fll/config GET] Erro:', err);
+      console.error('[API /api/fll/config GET] Erro:', getDriveErrorInfo(err).code);
       return res.status(500).json({ error: 'Erro ao carregar configurações de áudio' });
     }
   }

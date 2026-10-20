@@ -20,5 +20,8 @@
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "installCommand": "npx --yes --package=npm@11.21.0 npm ci --include=dev --ignore-scripts",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist"
 }
