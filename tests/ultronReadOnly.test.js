@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { transform } from 'sucrase';
+import { createClient } from '@supabase/supabase-js';
 import { createUltronReadOnlySearch, safeSourceText, ULTRON_SOURCES } from '../src/api/ultronReadOnlyClient.js';
 
 const actor = '10000000-0000-0000-0000-000000000001';
@@ -39,6 +40,32 @@ function mockService(state) {
   };
 }
 const row = (n, fields = {}) => ({ id: id(n), source: 'portal_work_items', kind: 'task', title: `Teste ${n}`, text: 'fato', ...fields });
+test('actual Supabase RPC builder supports the complete read-only search without network', async () => {
+  const state = { rows: [row(1)] };
+  const service = mockService(state);
+  let unavailable = false;
+  const sdk = createClient('https://aaaaaaaaaaaaaaaaaaaa.supabase.co', 'sb_publishable_synthetic_public_key_123456', {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: async (url, options) => {
+      const path = new URL(url).pathname;
+      assert.match(path, /^\/rest\/v1\/rpc\/(ava_identity|portal_work_sources)$/);
+      if (unavailable && path.endsWith('/portal_work_sources')) {
+        return new Response(JSON.stringify({ code: 'SERVICE_UNAVAILABLE', message: 'synthetic-private-service-detail' }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } });
+      }
+      const result = await service.rpc(path.split('/').at(-1), JSON.parse(options.body || '{}'));
+      return new Response(JSON.stringify(result.data), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    } },
+  });
+  const result = await createUltronReadOnlySearch({ auth: service.auth, rpc: sdk.rpc.bind(sdk) })('Teste', actor);
+  assert.equal(result.actor, actor);
+  assert.deepEqual(result.items.map(item => item.id), [id(1)]);
+  assert.equal(state.calls.filter(call => call.name === 'ava_identity').length, 3);
+  assert.ok(state.calls.some(call => call.args?.p_ids?.includes(id(1))));
+  unavailable = true;
+  await assert.rejects(createUltronReadOnlySearch({ auth: service.auth, rpc: sdk.rpc.bind(sdk) })('Teste', actor),
+    error => /Nenhum resultado/.test(error.message) && !error.message.includes('synthetic-private'));
+});
 test('anonymous or internal-access denied callers never retrieve context', async () => {
   for (const state of [{ anonymous: true }, { access: false }]) {
     await assert.rejects(createUltronReadOnlySearch(mockService(state))('', actor), /Nenhum resultado/);

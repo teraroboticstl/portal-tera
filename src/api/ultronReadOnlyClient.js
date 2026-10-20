@@ -23,18 +23,22 @@ export function safeSourceText(value, limit) {
 }
 
 export function createUltronReadOnlySearch(client) {
+  async function readRpc(name, args) {
+    // The Supabase RPC builder is PromiseLike, not a Promise with .catch().
+    try { return await client.rpc(name, args); } catch { fail(); }
+  }
   async function authorize(expectedId) {
     const auth = await client.auth.getUser().catch(fail);
     const id = auth.data?.user?.id;
     if (auth.error || !UUID.test(id || '') || id !== expectedId) fail();
-    const access = await client.rpc('ava_identity').catch(fail);
+    const access = await readRpc('ava_identity');
     if (access.error || access.data?.portal_internal !== true) fail();
     return id;
   }
   async function page(source, query, after, limit, ids, actor) {
-    const result = await client.rpc('portal_work_sources', {
+    const result = await readRpc('portal_work_sources', {
       p_query: query, p_source: source, p_after: after, p_limit: limit, p_ids: ids,
-    }).catch(fail);
+    });
     const packet = result.data;
     if (result.error || packet?.actor_id !== actor || !Array.isArray(packet.items)
       || packet.items.length > limit || typeof packet.has_more !== 'boolean'
