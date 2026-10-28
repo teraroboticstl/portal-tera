@@ -149,35 +149,15 @@ function AreaInternaContent({ user }) {
 
   return (
     <InternalPageLayout user={user} currentPage="AreaInterna" title="Dashboard">
-      <div className="mb-8 grid md:grid-cols-3 gap-4">
-        <div className="bg-[#111217] border border-yellow-500/30 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="w-2 h-2 rounded-full bg-yellow-400" />
-            <span className="text-xs font-bold text-yellow-400 uppercase tracking-widest">FLL</span>
-          </div>
-          <CountdownTimer
-            targetDate="2026-08-04T09:00:00"
-            label="Lançamento da Temporada FLL — 04/08/2026"
-          />
-        </div>
-        <div className="bg-[#111217] border border-orange-500/30 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="w-2 h-2 rounded-full bg-orange-400" />
-            <span className="text-xs font-bold text-orange-400 uppercase tracking-widest">FTC</span>
-          </div>
-          <CountdownTimer
-            targetDate="2026-09-12T09:00:00"
-            label="Lançamento da Temporada FTC — 12/09/2026"
-          />
-        </div>
-        <div className="bg-[#111217] border border-red-500/30 rounded-2xl p-6">
+      <div className="mb-8">
+        <div className="bg-[#111217] border border-red-500/30 rounded-2xl p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-red-500" />
-            <span className="text-xs font-bold text-red-500 uppercase tracking-widest">FRC</span>
+            <span className="text-xs font-bold text-red-500 uppercase tracking-widest">Regional</span>
           </div>
           <CountdownTimer
-            targetDate="2027-01-09T09:00:00"
-            label="Kickoff FRC — 09/01/2027"
+            targetDate="2026-12-03T00:00:00-04:00"
+            label="Contagem regressiva para o Regional — 03/12/2026"
           />
         </div>
       </div>
