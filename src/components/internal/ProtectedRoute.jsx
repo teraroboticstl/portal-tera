@@ -6,6 +6,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { Button } from "@/components/ui/button";
 import { Clock, XCircle, Shield, LogIn } from 'lucide-react';
 import {canEditInternal} from '@/lib/accessLevels';
+import MemberRegistrationGate from './MemberRegistrationGate';
 
 // E-mails dos admins seed (bootstrap admins) - sempre aprovados automaticamente
 export const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com'];
@@ -105,7 +106,7 @@ export default function ProtectedRoute({
 
   // BYPASS TOTAL: Admins sempre têm acesso completo e irrestrito
   if (userIsAdmin) {
-    return React.cloneElement(children, { user });
+    return <MemberRegistrationGate key={user.id} user={user}>{children}</MemberRegistrationGate>;
   }
 
   // 4. Verificação de status para usuários comuns
@@ -189,5 +190,5 @@ export default function ProtectedRoute({
   }
 
   // Acesso concedido
-  return React.cloneElement(children, { user });
+  return <MemberRegistrationGate key={user.id} user={user}>{children}</MemberRegistrationGate>;
 }

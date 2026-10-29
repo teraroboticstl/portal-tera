@@ -65,7 +65,7 @@ export default function InternalPageLayout({
           </div>
         </main>
       </div>
-      <TerAIChat />
+      <TerAIChat profileUser={user} />
     </div>
   );
 }

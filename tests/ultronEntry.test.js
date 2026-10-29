@@ -14,6 +14,7 @@ test('floating ULTRON entry requires current internal authorization and never in
   const mocks = {
     react: React, 'lucide-react': { Bot: () => null },
     '@/lib/AuthContext': { useAuth: () => auth },
+    '@/lib/registrationContext': { RegistrationProfileContext: React.createContext(null) },
     '@/components/ui/button': { Button: ({ children, ...props }) => React.createElement('button', props, children) },
     '@/components/ui/dialog': Object.fromEntries(['Dialog','DialogTrigger','DialogContent','DialogHeader','DialogTitle','DialogDescription'].map(name => [name, wrapper])),
     '@/components/internal/UltronReadOnlySearch': { __esModule: true, default: ({ user }) => React.createElement('p', null, `Consulta autorizada ${user.access_level}`) },
