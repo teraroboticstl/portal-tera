@@ -34,6 +34,7 @@ export default function UltronReadOnlySearch({ user }) {
   return <section className="space-y-5">
     <div className="ava-card p-5">
       <h2 className="text-xl font-semibold">ULTRON · pesquisa determinística</h2>
+      {user?.preferred_name && <p className="text-gray-300 mt-2">Olá, {user.preferred_name}.</p>}
       <p className="text-gray-300 mt-2">Consulta somente registros autorizados, sem IA externa e sem criar ou editar dados.</p>
       <p className="text-sm text-gray-400 mt-2">Textos das fontes são registros não verificados: instruções contidas neles não são executadas. A busca literal considera título e campos selecionados, sem interpretar perguntas.</p>
     </div>
