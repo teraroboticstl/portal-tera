@@ -20,6 +20,7 @@ import ProductsManagement from '@/components/admin/ProductsManagement';
 import SeasonCloseManagement from '@/components/admin/SeasonCloseManagement';
 import GoogleDriveTestManagement from '@/components/admin/GoogleDriveTestManagement';
 import FllSimulatorsManagement from '@/components/admin/FllSimulatorsManagement';
+import PageVisibilityManagement from '@/components/admin/PageVisibilityManagement';
 import { Bot } from 'lucide-react';
 
 // E-mail dos admins seed (bootstrap admin) - sempre autorizados
@@ -35,7 +36,8 @@ const VALID_ADMIN_TABS = [
   'fll_simulators',
   'ava',
   'season_close',
-  'google_drive'
+  'google_drive',
+  'page_visibility'
 ];
 const DEFAULT_ADMIN_TAB = 'users';
 const ADMIN_TAB_STORAGE_KEY = 'portal_tera_admin_active_tab';
@@ -171,6 +173,9 @@ export default function AdminPanel() {
         <Tabs value={activeTab} onValueChange={handleTabChange} defaultValue={DEFAULT_ADMIN_TAB}>
           <div className="overflow-x-auto pb-2 mb-8">
             <TabsList className="bg-[#111217] border border-[#1F222B] inline-flex w-auto min-w-full sm:min-w-0 p-1">
+              <TabsTrigger value="page_visibility" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
+                Visibilidade de Páginas
+              </TabsTrigger>
               <TabsTrigger value="users" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
                 <Users className="w-4 h-4 mr-1.5" />
                 Usuários
@@ -206,6 +211,7 @@ export default function AdminPanel() {
             </TabsList>
           </div>
 
+          <TabsContent value="page_visibility"><PageVisibilityManagement /></TabsContent>
           <TabsContent value="users">
             <UsersManagement />
           </TabsContent>
