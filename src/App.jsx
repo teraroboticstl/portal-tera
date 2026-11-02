@@ -37,6 +37,7 @@ import InternalFLLJudgePrep from './pages/InternalFLLJudgePrep';
 import InternalFLLAttachments from './pages/InternalFLLAttachments';
 import KnowledgeBase from './pages/KnowledgeBase.jsx';
 import InternalGuard from './components/internal/ProtectedRoute';
+import PageVisibilityGate from './components/internal/PageVisibilityGate';
 const AVA=lazy(()=>import('./pages/AVA'));
 const AVAAdmin=lazy(()=>import('./pages/AVAAdmin'));
 const InternalOperations=lazy(()=>import('./pages/InternalOperations'));
@@ -45,8 +46,8 @@ const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
-const InternalContent = ({ children }) => <>{children}</>;
-const LayoutWrapper = ({ children, currentPageName }) => (currentPageName?.startsWith('Internal') || ['AreaInterna','AdminPanel','SeasonConfig'].includes(currentPageName)) ? <InternalGuard><InternalContent>{children}</InternalContent></InternalGuard> : Layout ?
+const InternalContent = ({ children, page }) => <PageVisibilityGate page={page}>{children}</PageVisibilityGate>;
+const LayoutWrapper = ({ children, currentPageName }) => (currentPageName?.startsWith('Internal') || ['AreaInterna','AdminPanel','SeasonConfig'].includes(currentPageName)) ? <InternalGuard><InternalContent page={currentPageName}>{children}</InternalContent></InternalGuard> : Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 

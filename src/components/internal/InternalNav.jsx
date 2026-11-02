@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { usePageVisibility } from '@/lib/usePageVisibility';
 import { 
   LayoutDashboard, FileText, Target, BookOpen, Lightbulb,
   Cpu, Trophy, Rocket, Settings, ChevronRight, Home, X,
@@ -71,6 +72,9 @@ const archiveItem = { name: 'Arquivo de Temporadas', icon: Archive, path: 'Inter
 
 export default function InternalNav({ currentPage, onClose, isAdmin }) {
   const location = useLocation();
+  const { canShow } = usePageVisibility();
+  const visibleSections = menuItems.map(section => ({ ...section, items: section.items.filter(item => canShow(item.path)) }))
+    .filter(section => section.items.length > 0);
 
   return (
     <aside className="w-64 bg-[#111217] border-r border-[#1F222B] h-screen flex flex-col">
@@ -108,7 +112,7 @@ export default function InternalNav({ currentPage, onClose, isAdmin }) {
           Voltar ao Site
         </Link>
 
-        {menuItems.map((section) => (
+        {visibleSections.map((section) => (
           <div key={section.category} className="mb-6">
             <h3 className={`text-xs font-semibold uppercase tracking-wider mb-2 px-3 ${
               section.color === 'red' ? 'text-red-500' :
@@ -142,8 +146,8 @@ export default function InternalNav({ currentPage, onClose, isAdmin }) {
           </div>
         ))}
 
-        {/* Arquivo de Temporadas - visível para todos */}
-        <div className="mb-6">
+        {/* Arquivo de Temporadas respeita a mesma configuração das rotas. */}
+        {canShow(archiveItem.path) && <div className="mb-6">
           <h3 className="text-xs font-semibold uppercase tracking-wider mb-2 px-3 text-[#B8BDC7]">Histórico</h3>
           <Link
             to={createPageUrl(archiveItem.path)}
@@ -158,6 +162,7 @@ export default function InternalNav({ currentPage, onClose, isAdmin }) {
           </Link>
         </div>
 
+        }
         {isAdmin && (
           <div className="mb-6">
             <h3 className="text-xs font-semibold uppercase tracking-wider mb-2 px-3 text-[#E10600]">

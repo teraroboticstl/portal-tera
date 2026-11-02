@@ -13,6 +13,7 @@ import {
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import CountdownTimer from '@/components/CountdownTimer';
+import { usePageVisibility } from '@/lib/usePageVisibility';
 
 function StatCard({ value, label, icon: Icon, color = '#E10600' }) {
   return (
@@ -46,6 +47,7 @@ function NavCard({ icon: Icon, title, subtitle, path, color = '#E10600' }) {
 }
 
 function AreaInternaContent({ user }) {
+  const { canShow } = usePageVisibility();
   const { data: allLogs = [] } = useQuery({
     queryKey: ['daily-logs-all'],
     queryFn: () => base44.entities.DailyLog.list('-created_date', 50),
@@ -195,7 +197,7 @@ function AreaInternaContent({ user }) {
 
             {/* Nav cards grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 px-6 mb-6">
-              {prog.navCards.map((c, i) => (
+              {prog.navCards.filter(c => canShow(c.path)).map((c, i) => (
                 <NavCard key={i} {...c} />
               ))}
             </div>
