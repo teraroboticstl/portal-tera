@@ -54,7 +54,7 @@ test('actual registration gate blocks protected children, including errors and w
   assert.equal(mounts,0);
   assert.match(render({actor:'other',required:false}),/Verificando recadastro/);
   const form=render({actor:'owner',required:true});
-  for(const text of ['Como quer ser chamado','Idade atual','Por que entrou','Modalidade','Área(s)','Experiências anteriores','contribuir','Temporada','Objetivos','Habilidades','revisão do mentor']) assert.ok(form.includes(text),text);
+  for(const text of ['Como quer ser chamado','Idade atual','Por que entrou','Modalidade','Área(s)','Experiências anteriores','contribuir','Temporada','Objetivos','Habilidades','um PDI por modalidade']) assert.ok(form.includes(text),text);
   assert.equal(mounts,0);
   const html=render({actor:'owner',required:false,preferred_name:'<img src=x onerror=alert(1)>'});
   assert.equal(mounts,1);

@@ -283,7 +283,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
      */
     async create(payload) {
       await assertWriteAccess();
-      console.log(`[Supabase Adapter] Criando registro em ${entityName} no Supabase...`, payload);
+      console.log(`[Supabase Adapter] Criando registro em ${entityName} no Supabase...`, ['pdis','pdi_frcs'].includes(actualTableName) ? '[conteúdo privado omitido]' : payload);
       
       const sanitized = { ...payload };
       delete sanitized.id;
@@ -493,7 +493,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
      */
     async update(id, payload) {
       await assertWriteAccess();
-      console.log(`[Supabase Adapter] Atualizando ID ${id} de ${entityName} no Supabase...`, payload);
+      console.log(`[Supabase Adapter] Atualizando ID ${id} de ${entityName} no Supabase...`, ['pdis','pdi_frcs'].includes(actualTableName) ? '[conteúdo privado omitido]' : payload);
       
       const sanitized = { ...payload };
       delete sanitized.id;

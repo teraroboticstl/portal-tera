@@ -33,7 +33,7 @@ export function MemberRegistrationForm({ onSubmit, busy, error }) {
       <label className="block">Temporada de referência (informe ano e contexto)<input required maxLength={100} className="block w-full rounded-lg bg-[#0B0B0D] border border-white/20 p-3 mt-2" value={form.season} onChange={event => set('season',event.target.value)} /></label>
       {text('objectives','Objetivos para a temporada',6000,true)}
       {text('competencies','Habilidades e competências que quer desenvolver',6000,true)}
-      <p className="text-sm text-gray-300">Será criada uma proposta para revisão do mentor, sem notas automáticas e sem substituir PDIs anteriores.</p>
+      <p className="text-sm text-gray-300">Será criado um PDI por modalidade, com seus objetivos e competências. A avaliação de evolução fica pendente; o cadastro não concede pontos nem substitui registros anteriores.</p>
       {error && <p role="alert" className="text-red-300">{error}</p>}
       <Button type="submit" disabled={busy || !form.modalities.length} className="bg-[#E10600] text-white">{busy ? 'Salvando…' : 'Concluir cadastro e entrar'}</Button>
     </form>

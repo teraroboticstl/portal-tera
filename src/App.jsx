@@ -12,6 +12,7 @@ import EventGalleryPublic from './pages/EventGalleryPublic';
 import InternalEventGallery from './pages/InternalEventGallery';
 import TIR2026 from './pages/TIR2026';
 import TIRAdmin from './pages/TIRAdmin';
+import MyPDI from './pages/MyPDI';
 
 import InternalCADAssistant from './pages/InternalCADAssistant';
 import InternalCADConfig from './pages/InternalCADConfig';
@@ -93,6 +94,7 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      <Route path="/MyPDI" element={<MyPDI />} />
       <Route path="/SafetyCheck" element={<LayoutWrapper currentPageName="SafetyCheck"><SafetyCheck /></LayoutWrapper>} />
       <Route path="/EventGalleryPublic" element={<LayoutWrapper currentPageName="EventGalleryPublic"><EventGalleryPublic /></LayoutWrapper>} />
       <Route path="/InternalEventGallery" element={<LayoutWrapper currentPageName="InternalEventGallery"><InternalEventGallery /></LayoutWrapper>} />

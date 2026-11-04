@@ -249,7 +249,7 @@ function PDICard({ pdi, onEdit, onDelete, onUpdateProgress, isAdmin }) {
           <span className="text-[#1F222B]">|</span>
           <button onClick={() => onEdit(pdi)} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">Editar</button>
           <span className="text-[#1F222B]">|</span>
-          <button onClick={() => onDelete(pdi.id)} className="text-xs text-red-400 hover:text-red-300 transition-colors">Excluir</button>
+          <button disabled={!isAdmin || Boolean(pdi.registration_version)} onClick={() => onDelete(pdi.id)} className="text-xs text-red-400 hover:text-red-300 transition-colors">Excluir</button>
         </div>
       </div>
       <AnimatePresence>
@@ -292,9 +292,10 @@ function InternalFRCPDIContent({ user }) {
   const [showForm, setShowForm] = useState(false);
   const [editingPDI, setEditingPDI] = useState(null);
 
-  const { data: pdis = [], isLoading } = useQuery({
-    queryKey: ['pdis-frc'],
-    queryFn: () => base44.entities.PDIFRC.list('-created_date'),
+  const { data: pdis = [], isLoading, isError } = useQuery({
+    queryKey: ['pdis-frc', user?.id],
+    gcTime: 0,
+    queryFn: () => base44.entities.PDIFRC.filter({ modality: 'FRC' }, '-created_date'),
   });
 
   const createMutation = useMutation({
@@ -326,6 +327,8 @@ function InternalFRCPDIContent({ user }) {
   return (
     <InternalPageLayout user={user} currentPage="InternalFRCPDI" title="PDI — Membros FRC">
       <div className="space-y-6">
+        {isError && <p role="alert">Falha ao carregar os PDIs. Atualize a página para tentar novamente.</p>}
+        {(createMutation.isError || updateMutation.isError || deleteMutation.isError) && <p role="alert">Não foi possível salvar a alteração com suas permissões.</p>}
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
@@ -391,7 +394,7 @@ function InternalFRCPDIContent({ user }) {
         </AnimatePresence>
 
         {/* Nossa Equipe */}
-        {!isLoading && (
+        {!isLoading && !isError && (
           <div>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -404,7 +407,7 @@ function InternalFRCPDIContent({ user }) {
               <div className="bg-[#111217] border border-[#1F222B] rounded-xl p-10 text-center">
                 <User className="w-10 h-10 text-[#B8BDC7] mx-auto mb-3" />
                 <p className="text-sm text-[#B8BDC7]">Nenhum PDI registrado ainda.</p>
-                <p className="text-xs text-[#B8BDC7]/60 mt-1">Clique em "Novo PDI" para começar.</p>
+                <p className="text-xs text-[#B8BDC7]/60 mt-1">O PDI é criado ao concluir o cadastro. Se você já concluiu, procure o administrador.</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
