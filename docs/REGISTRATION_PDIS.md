@@ -20,3 +20,13 @@ O preenchimento não mede evolução. PDIs gerados iniciam em 0%, com avaliaçã
 Testes executam SQL real em PGlite com papéis distintos: geração, histórico, multimodalidade, duplicidade, homônimos, sessão trocada, acesso negado, alteração indevida de vínculo/nota, exclusão proibida, paginação e rollback. A suíte de 173 testes, lint e build passaram em 04/11. Isso não representa teste de login real com todos os níveis de acesso.
 
 Teste funcional: concluir cadastro de um integrante autorizado; abrir Meu PDI no perfil e a modalidade correspondente; administrador consulta Todos os PDIs. Reentrar deve manter os mesmos IDs. Quem já cadastrou não precisa cadastrar novamente. Avaliações e fotos privadas não foram implementadas nesta correção.
+
+## Complemento — 05/11/2026
+
+O diagnóstico de produção encontrou 20 cadastros (16 concluídos), um PDI manual e nenhum PDI FRC; a função de geração ainda não estava instalada. O backup atual foi cifrado fora do Git e restaurado em PostgreSQL isolado; a restauração com os dados reais produziu 24 PDIs, preservou registros e respostas e não duplicou na segunda execução. Dados pessoais não foram apresentados em logs ou relatórios.
+
+A migração adicional 20261105_registration_pdi_automatic_only.sql bloqueia INSERT manual de clientes, incluindo admin. A ativação atual é supabase/audits/20261105_enable_registration_pdis.sql, que bloqueia temporariamente escrita na tabela de cadastros durante a troca para não perder envios concorrentes. O script anterior permanece no histórico. Novo PDI e chamadas de criação manual foram removidos das telas FTC/FRC; a edição de registros existentes é preservada.
+
+O backup é escopado a PDI/cadastro e depende da proteção DPAPI do perfil Windows, não substitui backup completo de Auth/Storage ou arquivos do Drive. A restauração é local e não faz upload das respostas a serviços externos.
+
+Validação desta revisão: 198 testes aprovados, nenhum ignorado; lint e build aprovados. A restauração isolada do snapshot atual também confirmou a geração de 15 PDIs das demais modalidades e 9 FRC, com preservação do PDI manual e idempotência. A estrutura aditiva foi instalada em produção com geração ainda desligada, antes da publicação da interface compatível.

@@ -29,3 +29,9 @@ Revalidar baseline (0), proteger CAD e OAuth (1–2), instalação/build (3), in
 ## Aceite
 
 Usuário antigo encontra formulário na Área Interna quando a fase está ativa; somente conclusão persistida libera os filhos. Site público/AVA inalterados. Idempotência não duplica proposta; falha de validação não salva parcialmente; dados de outra pessoa não são expostos; papel de membro integrado sem flag de mentor não concede leitura; rejeitar user_id/roles no payload; nome escolhido aparece escapado na saudação; PDIs e histórico permanecem intactos. Testar em PostgreSQL isolado e interface, sem dados reais de menores.
+
+## Correção da geração efetiva — 05/11/2026
+
+A decisão posterior do administrador exige PDI real automaticamente ao enviar o questionário, um por modalidade, também para quem já enviou. Isso substitui a antiga limitação deste documento a uma proposta inicial separada: a proposta e as respostas originais são preservadas e passam a originar registros nas estruturas existentes, vinculados pelo UUID autenticado. Não há associação por nome nem necessidade de responder outra vez.
+
+A criação manual foi retirada das telas FTC/FRC e bloqueada para chamadas diretas de clientes, inclusive administradores. Registros manuais anteriores são preservados; não se convertem nem se vinculam automaticamente. A geração é transacional e idempotente, e a ativação sincroniza com envios concorrentes do questionário para evitar lacunas. Meu PDI é pessoal; Todos os PDIs permanece administrativo. O cadastro não concede nota de evolução; a avaliação por evidências continua separada.

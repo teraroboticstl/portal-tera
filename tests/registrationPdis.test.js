@@ -33,9 +33,10 @@ test('registration creates real PDIs atomically; backfill, identity, privacy, pa
  await as(owner,'SELECT member_registration_complete($1::jsonb)',[JSON.stringify(payload)]);
  const original=(await db.query('SELECT to_jsonb(r) j FROM member_registrations r ORDER BY user_id')).rows;
  await db.exec(await readFile(new URL('../supabase/migrations/20261104_registration_pdis.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../supabase/migrations/20261105_registration_pdi_automatic_only.sql',import.meta.url),'utf8'));
  await db.query('SELECT registration_pdis_generate($1)',[owner]);
  assert.equal((await db.query('SELECT count(*)::int n FROM pdis')).rows[0].n,1,'activation initially off');
- await db.exec(await readFile(new URL('../supabase/audits/20261104_enable_registration_pdis.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../supabase/audits/20261105_enable_registration_pdis.sql',import.meta.url),'utf8'));
  await db.query('SELECT registration_pdis_generate($1)',[owner]);
  await db.query('SELECT registration_pdis_generate($1)',[owner]);
  assert.equal((await db.query('SELECT count(*)::int n FROM pdis')).rows[0].n,3);
@@ -69,6 +70,9 @@ test('registration creates real PDIs atomically; backfill, identity, privacy, pa
  assert.equal(new Set([...page.items,...next.items].map(i=>i.cursor)).size,110);
  await db.exec(await readFile(new URL('../supabase/rollbacks/20261104_registration_pdis.sql',import.meta.url),'utf8'));
  assert.equal((await db.query('SELECT pdi_generation_enabled FROM member_registration_settings')).rows[0].pdi_generation_enabled,false);
+ for (const actor of [owner,admin]) {
+  await assert.rejects(as(actor,"INSERT INTO pdis(member_name,main_role,season) VALUES('Synthetic manual','Test','2026')"),/row-level security/);
+ }
  assert.equal((await as(owner,'SELECT member_pdis() p')).rows[0].p.items.length,3);
  } finally {await db.close();}
 });
@@ -80,3 +84,11 @@ test('PDI client refuses other-user records, changed sessions and service failur
  packet.items[0].pdi.participant_id='a';failure=true;await assert.rejects(read('a'));failure=false;
  await assert.rejects(read('a',{modality:'FRC'}));change=true;await assert.rejects(read('a'));
 });
+
+ test('PDI creation UI is automatic only (static contract)',async()=>{
+ for(const file of ['InternalFTCPDI','InternalFRCPDI']) {
+  const source=await readFile(new URL('../src/pages/'+file+'.jsx',import.meta.url),'utf8');
+  assert.equal(source.includes('Novo PDI'),false);assert.equal(/entities\.(PDI|PDIFRC)\.create/.test(source),false);
+  assert.ok(source.includes('O PDI é criado automaticamente'));
+ }
+ });
