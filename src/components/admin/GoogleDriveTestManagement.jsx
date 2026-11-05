@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { uploadToGoogleDrive, getGoogleAuthUrl } from '@/api/googleDriveClient';
+import PortalMedia from '@/components/common/PortalMedia';
 
 export default function GoogleDriveTestManagement({ user }) {
   const [file, setFile] = useState(null);
@@ -258,14 +259,13 @@ export default function GoogleDriveTestManagement({ user }) {
                         <ExternalLink className="w-3.5 h-3.5 mr-1" /> Abrir no Google Drive
                       </a>
                       <span className="text-gray-600">|</span>
-                      <a 
-                        href={result.directUrl} 
-                        target="_blank" 
-                        rel="noreferrer" 
+                      <PortalMedia
+                        src={result.directUrl}
+                        type="link"
                         className="inline-flex items-center text-xs text-blue-400 hover:underline"
                       >
                         <ExternalLink className="w-3.5 h-3.5 mr-1" /> Testar streaming (/api/media/[id])
-                      </a>
+                      </PortalMedia>
                     </div>
                   </div>
 
@@ -274,14 +274,10 @@ export default function GoogleDriveTestManagement({ user }) {
                     <div className="bg-[#0B0B0D] border border-[#1F222B] rounded-xl p-4 flex flex-col items-center justify-center">
                       <span className="text-xs text-[#B8BDC7] mb-2">Pré-visualização via Stream HTTP:</span>
                       <div className="w-48 h-48 rounded-lg overflow-hidden border border-[#1F222B] bg-black flex items-center justify-center">
-                        <img 
+                        <PortalMedia
                           src={result.directUrl} 
                           alt={result.name}
                           className="w-full h-full object-contain"
-                          onError={(e) => {
-                            // Se a rota local não estiver rodando com credenciais, exibe fallback
-                            e.target.style.display = 'none';
-                          }}
                         />
                       </div>
                     </div>
