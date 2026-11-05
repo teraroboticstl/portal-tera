@@ -1,3 +1,6 @@
+import { format } from 'date-fns';
+import { requestDeadline } from '@/api/requestDeadline';
+import PortalMedia from '@/components/common/PortalMedia';
 import { RECORD_PROGRAMS } from '@/lib/modalities';
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -16,9 +19,10 @@ const CONCLUSIONS = ['Aprovado', 'Refazer', 'Cancelado'];
 
 export default function PrototypeForm({ prototype = null, onClose, onSuccess, initialProgram = 'FRC' }) {
   const queryClient = useQueryClient();
+  const [formError,setFormError]=useState('');
   const isEditing = !!prototype;
   const { form, setForm, hasDraft, clearDraft } = useDraft('draft_prototype', {
-    date: new Date().toISOString().split('T')[0],
+    date: format(new Date(), 'yyyy-MM-dd'),
     program: initialProgram === 'all' ? 'FRC' : initialProgram,
     subsystem: '',
     hypothesis: '',
@@ -62,7 +66,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
   const [uploadingVideo, setUploadingVideo] = useState(false);
 
   const createPrototype = useMutation({
-    mutationFn: (data) => base44.entities.PrototypeTest.create(data),
+    mutationFn: (data) => requestDeadline(() => base44.entities.PrototypeTest.create(data)),
+    onError: () => setFormError('Não foi possível confirmar o salvamento. Seu texto foi preservado. Confira sua conexão, seu nível de acesso e a lista antes de tentar novamente.'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prototypes'] });
       clearDraft();
@@ -73,7 +78,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
   });
 
   const updatePrototype = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.PrototypeTest.update(id, data),
+    mutationFn: ({ id, data }) => requestDeadline(() => base44.entities.PrototypeTest.update(id, data)),
+    onError: () => setFormError('Não foi possível confirmar o salvamento. Seu texto foi preservado. Confira sua conexão, seu nível de acesso e a lista antes de tentar novamente.'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prototypes'] });
       toast.success('Protótipo atualizado!');
@@ -84,6 +90,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (uploadingVideo || uploading) { setFormError('Aguarde o envio do anexo terminar antes de salvar.'); return; }
+    setFormError('');
     if (!currentForm.subsystem || !currentForm.hypothesis || !currentForm.test_method) {
       toast.error('Preencha os campos obrigatórios.');
       return;
@@ -115,16 +123,20 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
       toast.error('Apenas PNG, JPG e WebP são permitidos.');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Imagem deve ter no máximo 5MB.');
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Imagem deve ter no máximo 4 MB.');
       return;
     }
 
+    const input=e.target;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setCurrentForm({ ...currentForm, evidence_images: [...currentForm.evidence_images, file_url] });
+    setFormError('');
+    try {
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'seasons', program: currentForm.program });
+    setCurrentForm(previous => ({ ...previous, evidence_images: [...(previous.evidence_images || []), file_url] }));
     toast.success('Imagem enviada!');
-    setUploading(false);
+    } catch { setFormError('Falha no envio. O arquivo não foi anexado; você pode salvar o texto sem ele ou tentar novamente. Limite: 4 MB por arquivo.'); }
+    finally { setUploading(false); input.value=''; }
   };
 
   const removeImage = (index) => {
@@ -149,27 +161,32 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
       toast.error('Apenas arquivos de vídeo são permitidos.');
       return;
     }
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error('Vídeo deve ter no máximo 100MB.');
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Vídeo deve ter no máximo 4 MB; para maiores, use um link do Drive.');
       return;
     }
+    const input=e.target;
     setUploadingVideo(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setCurrentForm({ ...currentForm, video_urls: [...(currentForm.video_urls || []), file_url] });
+    setFormError('');
+    try {
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'seasons', program: currentForm.program });
+    setCurrentForm(previous => ({ ...previous, video_urls: [...(previous.video_urls || []), file_url] }));
     toast.success('Vídeo enviado!');
-    setUploadingVideo(false);
-    e.target.value = '';
+    } catch { setFormError('Falha no envio. O arquivo não foi anexado; você pode salvar o texto sem ele ou tentar novamente. Limite: 4 MB por arquivo.'); }
+    finally { setUploadingVideo(false); input.value=''; }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 min-w-0">
+      {formError && <p role="alert" className="rounded-lg border border-red-500 p-3 text-red-200">{formError}</p>}
+      <p className="text-sm text-gray-400">Anexos opcionais, até 4 MB por arquivo. Para vídeos maiores, adicione um link do Drive restrito à equipe.</p>
       {hasDraft && !isEditing && (
         <div className="flex items-center justify-between bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-4 py-2 text-yellow-400 text-sm">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
             <span>Rascunho salvo automaticamente</span>
           </div>
-          <button type="button" onClick={() => { clearDraft(); setCurrentForm({ date: new Date().toISOString().split('T')[0], program: 'FRC', subsystem: '', hypothesis: '', test_method: '', result: '', what_didnt_work: '', lessons_learned: '', improvements: '', decision_reason: '', metrics_kpis: '', conclusion: 'Aprovado', evidence_links: [], evidence_images: [] }); }} className="text-xs underline hover:text-yellow-300">
+          <button type="button" onClick={() => { setCurrentForm({ date: format(new Date(), 'yyyy-MM-dd'), program: 'FRC', subsystem: '', hypothesis: '', test_method: '', result: '', what_didnt_work: '', lessons_learned: '', improvements: '', decision_reason: '', metrics_kpis: '', conclusion: 'Aprovado', evidence_links: [], evidence_images: [] }); clearDraft(); }} className="text-xs underline hover:text-yellow-300">
             Limpar rascunho
           </button>
         </div>
@@ -177,8 +194,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
 
       <div className="grid md:grid-cols-3 gap-4">
         <div>
-          <Label>Data *</Label>
-          <Input
+          <Label htmlFor="Prototype-date">Data *</Label>
+          <Input id="Prototype-date"
             type="date"
             value={currentForm.date}
             onChange={(e) => setCurrentForm({ ...currentForm, date: e.target.value })}
@@ -200,8 +217,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
           </Select>
         </div>
         <div>
-          <Label>Subsistema *</Label>
-          <Input
+          <Label htmlFor="Prototype-subsystem">Subsistema *</Label>
+          <Input id="Prototype-subsystem"
             value={currentForm.subsystem}
             onChange={(e) => setCurrentForm({ ...currentForm, subsystem: e.target.value })}
             placeholder="Ex: Drivetrain, Intake, Arm..."
@@ -216,8 +233,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
         <h3 className="font-bold text-[#E10600]">🧪 Teste (Padrão Judge Ready)</h3>
         
         <div>
-          <Label>O que tentamos / Hipótese *</Label>
-          <Textarea
+          <Label htmlFor="Prototype-hypothesis">O que tentamos / Hipótese *</Label>
+          <Textarea id="Prototype-hypothesis"
             value={currentForm.hypothesis}
             onChange={(e) => setCurrentForm({ ...currentForm, hypothesis: e.target.value })}
             placeholder="Descreva a hipótese ou o que foi testado..."
@@ -227,8 +244,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
         </div>
 
         <div>
-          <Label>Como testamos *</Label>
-          <Textarea
+          <Label htmlFor="Prototype-test_method">Como testamos *</Label>
+          <Textarea id="Prototype-test_method"
             value={currentForm.test_method}
             onChange={(e) => setCurrentForm({ ...currentForm, test_method: e.target.value })}
             placeholder="Descreva o método de teste..."
@@ -238,8 +255,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
         </div>
 
         <div>
-          <Label>Resultado</Label>
-          <Textarea
+          <Label htmlFor="Prototype-result">Resultado</Label>
+          <Textarea id="Prototype-result"
             value={currentForm.result}
             onChange={(e) => setCurrentForm({ ...currentForm, result: e.target.value })}
             placeholder="O que aconteceu..."
@@ -249,8 +266,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
 
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <Label>O que NÃO funcionou</Label>
-            <Textarea
+            <Label htmlFor="Prototype-what_didnt_work">O que NÃO funcionou</Label>
+            <Textarea id="Prototype-what_didnt_work"
               value={currentForm.what_didnt_work}
               onChange={(e) => setCurrentForm({ ...currentForm, what_didnt_work: e.target.value })}
               placeholder="Problemas encontrados..."
@@ -258,8 +275,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
             />
           </div>
           <div>
-            <Label>O que aprendemos</Label>
-            <Textarea
+            <Label htmlFor="Prototype-lessons_learned">O que aprendemos</Label>
+            <Textarea id="Prototype-lessons_learned"
               value={currentForm.lessons_learned}
               onChange={(e) => setCurrentForm({ ...currentForm, lessons_learned: e.target.value })}
               placeholder="Lições aprendidas..."
@@ -270,8 +287,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
 
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <Label>O que melhoramos</Label>
-            <Textarea
+            <Label htmlFor="Prototype-improvements">O que melhoramos</Label>
+            <Textarea id="Prototype-improvements"
               value={currentForm.improvements}
               onChange={(e) => setCurrentForm({ ...currentForm, improvements: e.target.value })}
               placeholder="Melhorias implementadas..."
@@ -279,8 +296,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
             />
           </div>
           <div>
-            <Label>Por que decidimos isso</Label>
-            <Textarea
+            <Label htmlFor="Prototype-decision_reason">Por que decidimos isso</Label>
+            <Textarea id="Prototype-decision_reason"
               value={currentForm.decision_reason}
               onChange={(e) => setCurrentForm({ ...currentForm, decision_reason: e.target.value })}
               placeholder="Justificativa da decisão..."
@@ -292,8 +309,8 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <Label>Métricas / KPIs</Label>
-          <Textarea
+          <Label htmlFor="Prototype-metrics_kpis">Métricas / KPIs</Label>
+          <Textarea id="Prototype-metrics_kpis"
             value={currentForm.metrics_kpis}
             onChange={(e) => setCurrentForm({ ...currentForm, metrics_kpis: e.target.value })}
             placeholder="Dados mensuráveis..."
@@ -359,7 +376,7 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
         <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
           {currentForm.evidence_images.map((img, i) => (
             <div key={i} className="relative group">
-              <img src={img} alt={`Evidência ${i + 1}`} className="w-full h-24 object-cover rounded-lg" />
+              <PortalMedia src={img} alt={`Evidência ${i + 1}`} className="w-full h-24 object-cover rounded-lg" />
               <button
                 type="button"
                 onClick={() => removeImage(i)}
@@ -396,14 +413,14 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
         </div>
         <div className="space-y-3">
           {(currentForm.video_urls || []).map((url, i) => {
-            const isFile = url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') || url.includes('.avi') || url.includes('base44.app');
+            const isFile = url.startsWith('/api/media/') || url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') || url.includes('.avi') || url.includes('base44.app');
             return (
               <div key={i} className="bg-[#1A1D24] border border-[#2A2D36] rounded-lg p-2">
                 {isFile ? (
-                  <video src={url} controls className="w-full rounded mb-2 max-h-48" />
+                  <PortalMedia type="video" src={url} controls className="w-full rounded mb-2 max-h-48" />
                 ) : null}
                 <div className="flex items-center gap-2 text-sm">
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate flex-1">{url}</a>
+                  <PortalMedia src={url} type="link" className="text-blue-400 hover:underline truncate flex-1">{url}</PortalMedia>
                   <button type="button" onClick={() => removeVideo(i)} className="text-red-500 hover:text-red-400 flex-shrink-0">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -414,12 +431,13 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t border-[#1F222B]">
+      <div className="sticky bottom-0 bg-[#111217] flex flex-wrap justify-end gap-3 py-4 border-t border-[#1F222B]">
+        {formError && <p role="alert" className="w-full text-sm text-red-200">{formError}</p>}
         <Button type="button" variant="outline" onClick={onClose} className="border-[#1F222B]">
           <X className="w-4 h-4 mr-2" />
           Cancelar
         </Button>
-        <Button type="submit" className="bg-[#E10600] hover:bg-[#E10600]/90" disabled={createPrototype.isPending || updatePrototype.isPending}>
+        <Button type="submit" className="bg-[#E10600] hover:bg-[#E10600]/90" disabled={uploadingVideo || uploading || createPrototype.isPending || updatePrototype.isPending}>
           <Save className="w-4 h-4 mr-2" />
           {prototype ? 'Salvar Alterações' : 'Registrar Teste'}
         </Button>

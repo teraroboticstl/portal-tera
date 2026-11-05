@@ -1,3 +1,4 @@
+import PortalMedia from '@/components/common/PortalMedia';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -34,9 +35,11 @@ function AttachForm({ initial, onSave, onClose, isPending }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    try {
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     setForm(p => ({ ...p, file_url }));
-    setUploading(false);
+    } catch { toast.error('Não foi possível enviar o arquivo. Tente novamente com um arquivo de até 4 MB.'); }
+    finally { setUploading(false); }
     toast.success('Arquivo enviado!');
   };
 
@@ -146,7 +149,7 @@ function Content({ user }) {
                   className={`bg-[#111217] border ${meta.border} rounded-xl overflow-hidden`}>
                   {isImage && (
                     <div className="h-36 overflow-hidden bg-[#0B0B0D]">
-                      <img src={a.file_url} alt={a.title} className="w-full h-full object-cover" />
+                      <PortalMedia src={a.file_url} alt={a.title} className="w-full h-full object-cover" />
                     </div>
                   )}
                   <div className="p-4">
@@ -161,9 +164,9 @@ function Content({ user }) {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[#B8BDC7]">{format(new Date(a.date + 'T12:00:00'), "d 'de' MMM, yyyy", { locale: ptBR })}</span>
                       <div className="flex items-center gap-1">
-                        <a href={a.file_url} target="_blank" rel="noopener noreferrer">
+                        <PortalMedia src={a.file_url} type="link">
                           <Button variant="ghost" size="sm" className="text-orange-500 hover:text-orange-400 h-7 px-2"><ExternalLink className="w-3.5 h-3.5" /></Button>
-                        </a>
+                        </PortalMedia>
                         {canEdit(user) && (
                           <Button variant="ghost" size="sm" onClick={() => del.mutate(a.id)} className="text-red-500 hover:text-red-400 h-7 px-2"><Trash2 className="w-3.5 h-3.5" /></Button>
                         )}

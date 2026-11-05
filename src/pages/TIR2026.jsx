@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -285,9 +286,11 @@ function CadastroEquipe({ equipes }) {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    try {
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'tir' });
     setForm(p => ({ ...p, logo_url: file_url }));
-    setUploading(false);
+    } catch { toast.error('Não foi possível enviar o arquivo. Tente novamente com um arquivo de até 4 MB.'); }
+    finally { setUploading(false); }
   };
 
   return (

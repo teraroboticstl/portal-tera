@@ -1,3 +1,4 @@
+import RecordAttachments from '@/components/internal/RecordAttachments';
 import { OBR_CATEGORIES, matchesProgram, initialProgram } from '@/lib/modalities';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -80,7 +81,7 @@ function InternalPrototypesContent({ user }) {
           )}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4 min-w-0">
           <Filter className="w-4 h-4 text-[#B8BDC7]" />
           <Tabs value={filterProgram.startsWith('OBR') ? 'OBR' : filterProgram} onValueChange={setFilterProgram}>
             <TabsList className="bg-[#111217] border border-[#1F222B] h-auto flex-wrap">
@@ -118,7 +119,7 @@ function InternalPrototypesContent({ user }) {
                       <h3 className="font-bold">{proto.subsystem}</h3>
                       <div className="flex items-center gap-2 text-sm text-[#B8BDC7]">
                         <Badge variant={proto.program?.toLowerCase()}>{proto.program}</Badge>
-                        <span>{format(new Date(proto.date), "d MMM yyyy", { locale: ptBR })}</span>
+                        <span>{format(new Date(proto.date + 'T12:00:00'), "d MMM yyyy", { locale: ptBR })}</span>
                       </div>
                     </div>
                   </div>
@@ -161,7 +162,7 @@ function InternalPrototypesContent({ user }) {
         )}
 
         <Dialog open={showForm || !!editingPrototype} onOpenChange={() => { setShowForm(false); setEditingPrototype(null); }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-4xl max-h-[85dvh] w-[calc(100%-1rem)] overflow-x-hidden overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingPrototype ? 'Editar Teste' : 'Novo Teste de Protótipo'}</DialogTitle>
             </DialogHeader>
@@ -173,7 +174,7 @@ function InternalPrototypesContent({ user }) {
         </Dialog>
 
         <Dialog open={!!viewingPrototype} onOpenChange={() => setViewingPrototype(null)}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-3xl max-h-[85dvh] w-[calc(100%-1rem)] overflow-x-hidden overflow-y-auto">
             {viewingPrototype && (
               <>
                 <DialogHeader>
@@ -187,7 +188,7 @@ function InternalPrototypesContent({ user }) {
                   </div>
                   <DialogTitle>{viewingPrototype.subsystem}</DialogTitle>
                   <p className="text-[#B8BDC7] text-sm">
-                    {format(new Date(viewingPrototype.date), "d 'de' MMMM, yyyy", { locale: ptBR })}
+                    {format(new Date(viewingPrototype.date + 'T12:00:00'), "d 'de' MMMM, yyyy", { locale: ptBR })}
                   </p>
                 </DialogHeader>
                 <div className="space-y-6 mt-4">
@@ -235,46 +236,7 @@ function InternalPrototypesContent({ user }) {
                       <p className="text-[#B8BDC7] whitespace-pre-wrap">{viewingPrototype.metrics_kpis}</p>
                     </div>
                   )}
-                  {viewingPrototype.evidence_images?.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-[#E10600] mb-2">Imagens de Evidência</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {viewingPrototype.evidence_images.map((img, i) => (
-                          <a key={i} href={img} target="_blank" rel="noopener noreferrer">
-                            <img src={img} alt={`Evidência ${i + 1}`} className="w-full h-32 object-cover rounded-lg" />
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {viewingPrototype.video_urls?.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-[#E10600] mb-2">Vídeos</h4>
-                      <div className="space-y-3">
-                        {viewingPrototype.video_urls.map((url, i) => {
-                          const isFile = url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') || url.includes('.avi') || url.includes('base44.app');
-                          return (
-                            <div key={i} className="bg-[#1A1D24] border border-[#2A2D36] rounded-lg p-2">
-                              {isFile ? (
-                                <video src={url} controls className="w-full rounded mb-2 max-h-64" />
-                              ) : null}
-                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-sm truncate block">{url}</a>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  {viewingPrototype.evidence_links?.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-[#E10600] mb-2">Links de Evidências</h4>
-                      <div className="space-y-1">
-                        {viewingPrototype.evidence_links.map((link, i) => (
-                          <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="block text-blue-400 hover:underline text-sm truncate">{link}</a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <RecordAttachments record={viewingPrototype} />
                 </div>
               </>
             )}
