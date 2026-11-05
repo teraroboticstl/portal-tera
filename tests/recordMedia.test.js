@@ -31,6 +31,8 @@ test('upload: private context and bearer, missing session, size limit, 413 and n
  response={ok:false,status:413,json:async()=>{throw Error();}};await assert.rejects(m.uploadToGoogleDrive({file}),/limite/);
  response=new Error('Network down');await assert.rejects(m.uploadToGoogleDrive({file}),/Network down/);
  response={ok:false,json:async()=>({error:'Permissão negada'})};await assert.rejects(m.uploadToGoogleDrive({file}),/Permissão negada/);
+ response={ok:true,json:async()=>({authUrl:'https://accounts.google.com/synthetic-consent'})};assert.equal((await m.getGoogleAuthUrl()).authUrl,'https://accounts.google.com/synthetic-consent');assert.equal(request.url,'/api/auth/google/url');
+ session=null;await assert.rejects(m.getGoogleAuthUrl(),/autenticado/);
 });
 
 test('private media never sends token to external URL, checks current actor and refuses denied file',async()=>{

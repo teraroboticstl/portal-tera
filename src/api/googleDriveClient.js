@@ -79,6 +79,7 @@ export async function uploadToGoogleDrive(params = {}) {
  * Obtém a URL de autorização OAuth da conta institucional (apenas administradores)
  */
 export async function getGoogleAuthUrl() {
+  return requestDeadline(async signal => {
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
 
@@ -87,6 +88,7 @@ export async function getGoogleAuthUrl() {
   }
 
   const response = await fetch('/api/auth/google/url', {
+    signal,
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -98,6 +100,7 @@ export async function getGoogleAuthUrl() {
   }
 
   return result;
+  });
 }
 
 /**

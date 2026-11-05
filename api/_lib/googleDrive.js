@@ -1,3 +1,4 @@
+import { getStoredGoogleRefreshToken } from './googleOAuthStore.js';
 import { google } from 'googleapis';
 import { Readable } from 'stream';
 import fs from 'fs';
@@ -171,10 +172,10 @@ function createLocalDriveFallback() {
  * Cria ou retorna o cliente oficial do Google Drive v3 autenticado com OAuth2 offline
  * (ou fallback seguro para persistência local de bytes caso variáveis não estejam presentes)
  */
-export function getGoogleDriveClient() {
+export async function getGoogleDriveClient() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+  const refreshToken = await getStoredGoogleRefreshToken();
 
   if (!clientId || !clientSecret || !refreshToken) {
     if (process.env.VERCEL || process.env.NODE_ENV === 'production') {

@@ -150,7 +150,7 @@ export default async function handler(req, res) {
       // 7. Obtenção do cliente Google Drive autenticado
       let drive;
       try {
-        drive = getGoogleDriveClient();
+        drive = await getGoogleDriveClient();
       } catch (driveConfigErr) {
         return res.status(503).json({
           error: 'Google Drive não configurado no servidor',
@@ -267,7 +267,7 @@ export default async function handler(req, res) {
 
   let drive;
   try {
-    drive = getGoogleDriveClient();
+    drive = await getGoogleDriveClient();
   } catch (driveErr) {
     console.error('[API /api/media] Erro de configuração do Google Drive:', driveErr.message);
     return res.status(503).json({

@@ -49,3 +49,17 @@
 - Publicar somente após build e revisão do diff; conferir Preview do mesmo projeto Vercel.
 - Nenhuma migration necessária. Para reversão do código, reverter o commit desta correção por novo commit, preservando o histórico. O texto estruturado permanece armazenado e deve ser mantido; clientes antigos podem exibir o JSON até a correção voltar.
 - O build local usa configuração pública sintética apenas para compilação. Não enviar dist pré-compilado para a Vercel; ela deve usar as variáveis existentes do projeto.
+
+## Atualização de 05/11/2026 — falha real do Drive e preparação segura
+
+O teste administrativo real, com imagem técnica fictícia de 68 bytes e sem registrar documentação no banco, retornou: "A conexão com o Google Drive expirou ou foi revogada". Nenhum refresh token foi lido ou impresso. A causa individual da revogação/expiração não foi demonstrada; o prazo de sete dias em aplicativos externos em Testing é uma possibilidade documentada pelo Google, não uma configuração confirmada deste projeto.
+
+O callback publicado ainda contém o fluxo antigo que devolve token ao navegador. Não foi iniciado consentimento por esse caminho. Foi reutilizada a correção do Bloco 2 existente no clone principal, sem modificar esse clone: state com vínculo HttpOnly, cinco minutos, uso único, revalidação de administrador e armazenamento cifrado no servidor.
+
+Preflight real somente leitura no Supabase confirmou que google_oauth_flows, google_oauth_credentials e google_oauth_consume ainda não existem. A busca nos nomes das variáveis de Production da Vercel confirmou GOOGLE_OAUTH_ENCRYPTION_KEY ausente. Os nomes GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, GOOGLE_REFRESH_TOKEN e SUPABASE_SERVICE_ROLE_KEY estão presentes; valores não foram revelados. Isso não comprova validade das credenciais.
+
+A migração aditiva do Bloco 2 e sua desativação não destrutiva foram testadas em PostgreSQL isolado: anon/authenticated não leem tabelas nem executam a RPC, service_role opera conforme grants, vínculo incorreto não consome fluxo, uso repetido/expiração falham, e a desativação preserva a credencial cifrada. Não houve aplicação em produção.
+
+A ativação depende de autorização administrativa para criar somente essas duas tabelas técnicas/RPC no projeto existente e configurar uma chave aleatória de cifragem exclusiva do servidor. A chave deve ter backup administrativo protegido. Depois, será necessário consentimento na conta Google institucional; ninguém deve enviar token ou senha no chat. Nenhum projeto Supabase, conta Google ou integração duplicada é necessário.
+
+Validação ampliada: 195 testes automatizados, incluindo os testes OAuth reaproveitados e SQL isolado, além de lint/build. Esta preparação não equivale a upload real restabelecido. Não publicar a reconexão como funcional antes da configuração segura e do consentimento real.
