@@ -1,58 +1,57 @@
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/lib/AuthContext';
 
-/**
- * Hook que salva automaticamente o estado do formulário no localStorage.
- * @param {string} draftKey - chave única para este rascunho (ex: 'draft_dailylog')
- * @param {object} initialValue - valor inicial se não houver rascunho salvo
- * @param {boolean} isEditing - se true (editando registro existente), não usa rascunho
- */
+// Keep drafts scoped to the current account, including on a shared computer.
 export function useDraft(draftKey, initialValue, isEditing = false) {
-  const getSaved = () => {
-    if (isEditing) return null;
+  const { user } = useAuth();
+  const key = user?.id ? `${draftKey}:${user.id}` : null;
+  const read = () => {
+    if (isEditing || !key) return null;
     try {
-      const raw = localStorage.getItem(draftKey);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
+      const saved = JSON.parse(localStorage.getItem(key));
+      return saved && typeof saved === 'object' && !Array.isArray(saved) ? { ...initialValue, ...saved } : null;
+    } catch { return null; }
   };
-
-  const saved = getSaved();
-  const [form, setFormState] = useState(saved || initialValue);
-  const [hasDraft, setHasDraft] = useState(!isEditing && !!saved);
-  const saveTimerRef = useRef(null);
-
-  // Auto-save com debounce de 800ms
-  const setForm = (value) => {
-    setFormState(value);
-    if (isEditing) return;
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      try {
-        localStorage.setItem(draftKey, JSON.stringify(value));
-        setHasDraft(true);
-      } catch {}
-    }, 800);
+  const [state, setState] = useState(() => ({ key, value: read() || initialValue }));
+  const [hasDraft, setHasDraft] = useState(() => Boolean(read()));
+  const activeKey = useRef(key);
+  activeKey.current = key;
+  const valueRef = useRef(state.value);
+  const timer = useRef(null);
+  const pending = useRef(null);
+  const flush = () => {
+    const snapshot = pending.current;
+    pending.current = null;
+    if (!snapshot) return;
+    try { localStorage.setItem(snapshot.key, JSON.stringify(snapshot.value)); } catch { /* Storage may be full or disabled. */ }
   };
-
+  const setForm = value => {
+    // Ignore a late upload result belonging to an account that has signed out.
+    if (activeKey.current !== key) return;
+    const next = typeof value === 'function' ? value(valueRef.current) : value;
+    valueRef.current = next;
+    setState({ key, value: next });
+    clearTimeout(timer.current);
+    if (isEditing || !key) return;
+    pending.current = { key, value: next };
+    timer.current = setTimeout(() => { flush(); setHasDraft(true); }, 800);
+  };
   const clearDraft = () => {
-    localStorage.removeItem(draftKey);
+    clearTimeout(timer.current);
+    pending.current = null;
+    try { if (key) localStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
     setHasDraft(false);
   };
-
   const restoreDraft = () => {
-    const saved = getSaved();
-    if (saved) {
-      setFormState(saved);
-      setHasDraft(true);
-    }
+    const saved = read();
+    if (saved) { valueRef.current = saved; setState({ key, value: saved }); setHasDraft(true); }
   };
-
   useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
-
-  return { form, setForm, hasDraft, clearDraft, restoreDraft };
+    const saved = read();
+    valueRef.current = saved || initialValue;
+    setState({ key, value: valueRef.current });
+    setHasDraft(Boolean(saved));
+    return () => { clearTimeout(timer.current); flush(); };
+  }, [key, isEditing]);
+  return { form: state.key === key ? state.value : initialValue, setForm, hasDraft: state.key === key && hasDraft, clearDraft, restoreDraft };
 }

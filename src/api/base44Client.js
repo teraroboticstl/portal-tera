@@ -1,3 +1,4 @@
+import { uploadToGoogleDrive } from './googleDriveClient.js';
 import { supabase } from './supabaseClient.js';
 import { adaptedEntities } from './adapters/base44ToSupabaseAdapter.js';
 
@@ -21,42 +22,17 @@ const appLogsShim = {
   }
 };
 
-// Integrações de arquivos mapeadas para o Supabase Storage
+// Integrações de arquivos pelo backend do Drive institucional
 const integrationsShim = {
   Core: {
     /**
-     * Faz upload de arquivos diretamente no Supabase Storage.
+     * Faz upload autenticado pelo backend, preservando a classificação de acesso.
      * Mapeia para a assinatura do SDK antigo para não quebrar as chamadas existentes.
      */
-    async UploadFile({ file, bucketName = 'gallery' }) {
-      const {data:canUpload,error:permissionError}=await supabase.rpc('portal_can_edit');
-      if(permissionError || canUpload!==true)throw new Error('Envio de arquivos restrito a membros integrados e líderes autorizados.');
-      console.log(`[Supabase Storage] Iniciando upload de ${file.name} para o bucket "${bucketName}"...`);
-      
-      // Gerar um nome de arquivo único para evitar colisões
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-      const filePath = `uploads/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) {
-        console.error('[Supabase Storage] Erro ao realizar upload:', error);
-        throw error;
-      }
-
-      // Buscar a URL pública do arquivo enviado
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(filePath);
-
-      console.log('[Supabase Storage] Upload concluído com sucesso. URL pública:', publicUrl);
-      return { file_url: publicUrl };
+    async UploadFile({ file, context = 'seasons', program, subfolder = 'Registros' }) {
+      const result=await uploadToGoogleDrive({file,context,program,subfolder});
+      if(!result?.fileId || !/^[a-zA-Z0-9_-]+$/.test(result.fileId))throw new Error('O servidor não confirmou o arquivo. Tente novamente.');
+      return {file_url:'/api/media/'+result.fileId};
     }
   }
 };

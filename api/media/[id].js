@@ -30,9 +30,11 @@ const ALLOWED_CONTEXTS = new Set([
   'sponsors',
   'featured-news',
   'events',
+  'event-assets',
   'memorial',
   'tir',
   'seasons',
+  'pdi',
   'attachments',
   'fll-missions',
   'fll-audio',
@@ -390,7 +392,7 @@ export default async function handler(req, res) {
       // Políticas de cache:
       // - Mídia pública: cache aberto para navegadores e tags <img>
       // - Mídia privada: não armazena em proxies públicos compartilhados
-      if (access.isPublic) {
+      if (access.isPublic && (fileMeta.appProperties?.context || fileMeta.properties?.context) !== 'event-assets') {
         res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800'); // 1 dia
       } else {
         res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');

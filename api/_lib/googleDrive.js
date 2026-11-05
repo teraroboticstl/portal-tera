@@ -252,11 +252,13 @@ export async function resolveTargetFolder(drive, context, extraMeta = {}) {
     'robots': ['05. Engenharia & Temporadas', 'Robôs'],
     'sponsors': ['01. Institucional & Marketing', 'Patrocinadores'],
     'featured-news': ['01. Institucional & Marketing', 'Destaques e Banners'],
+    'event-assets': ['04. Torneios & Eventos', 'Galeria de Eventos'],
     'events': ['04. Torneios & Eventos', 'Galeria de Eventos'],
     'memorial': ['01. Institucional & Marketing', 'Memorial Histórico'],
     'tir': ['04. Torneios & Eventos', 'TIR'],
     'fll-missions': ['04. Torneios & Eventos', 'FLL BIOGLOW', 'Missões'],
     'fll-audio': ['04. Torneios & Eventos', 'FLL BIOGLOW', 'Áudios'],
+    'pdi': ['99. Outros Arquivos', 'PDI'],
     'ava': ['06. Ambiente Virtual de Aprendizagem'],
     'test': ['99. Testes do Sistema']
   };
@@ -349,13 +351,13 @@ export async function uploadBufferToDrive({
     appProperties: {
       app: 'portal_tera',
       context: context,
-      visibility: isPublic ? 'public' : 'private',
+      visibility: context === 'event-assets' ? 'record' : (isPublic ? 'public' : 'private'),
       uploaderId: uploaderId || 'unknown'
     },
     properties: {
       app: 'portal_tera',
       context: context,
-      visibility: isPublic ? 'public' : 'private'
+      visibility: context === 'event-assets' ? 'record' : (isPublic ? 'public' : 'private')
     }
   };
 

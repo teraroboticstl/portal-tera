@@ -1,3 +1,4 @@
+import PortalMedia from '@/components/common/PortalMedia';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -23,9 +24,11 @@ function MemberForm({ initial, onSave, onClose, isPending }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    try {
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     setForm(p => ({ ...p, photo_url: file_url }));
-    setUploading(false);
+    } catch { toast.error('Não foi possível enviar o arquivo. Tente novamente com um arquivo de até 4 MB.'); }
+    finally { setUploading(false); }
   };
 
   return (
@@ -38,7 +41,7 @@ function MemberForm({ initial, onSave, onClose, isPending }) {
       </div>
       <div>
         <Label className="text-[#B8BDC7] text-xs uppercase tracking-wider mb-1 block">Foto</Label>
-        {form.photo_url && <img src={form.photo_url} alt="foto" className="w-16 h-16 rounded-full object-cover mb-2" />}
+        {form.photo_url && <PortalMedia src={form.photo_url} alt="foto" className="w-16 h-16 rounded-full object-cover mb-2" />}
         <Input type="file" accept="image/*" onChange={handlePhoto} className="bg-[#0B0B0D] border-[#1F222B] text-white text-sm" />
         {uploading && <p className="text-xs text-orange-400 mt-1">Enviando...</p>}
       </div>
@@ -102,7 +105,7 @@ function Content({ user }) {
                 className="bg-[#111217] border border-orange-500/20 rounded-xl p-5">
                 <div className="flex items-start gap-4 mb-4">
                   {m.photo_url ? (
-                    <img src={m.photo_url} alt={m.name} className="w-14 h-14 rounded-full object-cover flex-shrink-0 border-2 border-orange-500/30" />
+                    <PortalMedia src={m.photo_url} alt={m.name} className="w-14 h-14 rounded-full object-cover flex-shrink-0 border-2 border-orange-500/30" />
                   ) : (
                     <div className="w-14 h-14 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0 border-2 border-orange-500/20">
                       <span className="text-xl font-bold text-orange-400">{m.name[0]}</span>

@@ -1,3 +1,7 @@
+import { format } from 'date-fns';
+import MeetingAttachments from './MeetingAttachments';
+import { requestDeadline } from '@/api/requestDeadline';
+import PortalMedia from '@/components/common/PortalMedia';
 import { RECORD_PROGRAMS } from '@/lib/modalities';
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -15,9 +19,10 @@ const PROGRAMS = [...RECORD_PROGRAMS, 'Geral'];
 
 export default function MeetingForm({ meeting = null, onClose, onSuccess, initialProgram = 'FRC' }) {
   const queryClient = useQueryClient();
+  const [formError,setFormError]=useState('');
   const isEditing = !!meeting;
   const { form, setForm, hasDraft, clearDraft } = useDraft('draft_meeting', {
-    date: new Date().toISOString().split('T')[0],
+    date: format(new Date(), 'yyyy-MM-dd'),
     program: initialProgram === 'all' ? 'FRC' : initialProgram,
     participants: [],
     agenda: '',
@@ -26,6 +31,7 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
     pending_items: '',
     responsible_deadlines: '',
     video_urls: [],
+    evidence_images: [], evidence_links: [],
   }, isEditing);
 
   const [editForm, setEditForm] = useState(isEditing ? {
@@ -38,6 +44,7 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
     pending_items: meeting.pending_items || '',
     responsible_deadlines: meeting.responsible_deadlines || '',
     video_urls: meeting.video_urls || [],
+    evidence_images: meeting.evidence_images || [], evidence_links: meeting.evidence_links || [],
   } : null);
 
   const currentForm = isEditing ? editForm : form;
@@ -46,6 +53,7 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
   const [newParticipant, setNewParticipant] = useState('');
   const [newVideo, setNewVideo] = useState('');
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   const addVideo = () => {
     if (newVideo.trim()) {
@@ -65,22 +73,27 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
       toast.error('Apenas arquivos de vídeo são permitidos.');
       return;
     }
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error('Vídeo deve ter no máximo 100MB.');
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Vídeo deve ter no máximo 4 MB; para maiores, use um link do Drive.');
       return;
     }
+    const input=e.target;
     setUploadingVideo(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setCurrentForm({ ...currentForm, video_urls: [...(currentForm.video_urls || []), file_url] });
+    setFormError('');
+    try {
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'seasons', program: currentForm.program });
+    setCurrentForm(previous => ({ ...previous, video_urls: [...(previous.video_urls || []), file_url] }));
     toast.success('Vídeo enviado!');
-    setUploadingVideo(false);
-    e.target.value = '';
+    } catch { setFormError('Falha no envio. O arquivo não foi anexado; você pode salvar o texto sem ele ou tentar novamente. Limite: 4 MB por arquivo.'); }
+    finally { setUploadingVideo(false); input.value=''; }
   };
 
   const createMeeting = useMutation({
-    mutationFn: (data) => base44.entities.MeetingNote.create(data),
+    mutationFn: (data) => requestDeadline(() => base44.entities.MeetingNote.create(data)),
+    onError: () => setFormError('Não foi possível confirmar o salvamento. Seu texto foi preservado. Confira sua conexão, seu nível de acesso e a lista antes de tentar novamente.'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
+      queryClient.invalidateQueries({ queryKey: ['fll-meetings'] });
       clearDraft();
       toast.success('Reunião registrada!');
       onSuccess?.();
@@ -89,7 +102,8 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
   });
 
   const updateMeeting = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.MeetingNote.update(id, data),
+    mutationFn: ({ id, data }) => requestDeadline(() => base44.entities.MeetingNote.update(id, data)),
+    onError: () => setFormError('Não foi possível confirmar o salvamento. Seu texto foi preservado. Confira sua conexão, seu nível de acesso e a lista antes de tentar novamente.'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
       toast.success('Reunião atualizada!');
@@ -100,6 +114,8 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (uploadingVideo || uploadingAttachment) { setFormError('Aguarde o envio do anexo terminar antes de salvar.'); return; }
+    setFormError('');
     if (!currentForm.date || !currentForm.agenda) {
       toast.error('Preencha os campos obrigatórios.');
       return;
@@ -123,14 +139,16 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 min-w-0">
+      {formError && <p role="alert" className="rounded-lg border border-red-500 p-3 text-red-200">{formError}</p>}
+      <p className="text-sm text-gray-400">Anexos opcionais, até 4 MB por arquivo. Para vídeos maiores, adicione um link do Drive restrito à equipe.</p>
       {hasDraft && !isEditing && (
         <div className="flex items-center justify-between bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-4 py-2 text-yellow-400 text-sm">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
             <span>Rascunho salvo automaticamente</span>
           </div>
-          <button type="button" onClick={() => { clearDraft(); setCurrentForm({ date: new Date().toISOString().split('T')[0], program: 'Geral', participants: [], agenda: '', technical_discussions: '', final_decisions: '', pending_items: '', responsible_deadlines: '' }); }} className="text-xs underline hover:text-yellow-300">
+          <button type="button" onClick={() => { setCurrentForm({ date: format(new Date(), 'yyyy-MM-dd'), program: 'Geral', participants: [], agenda: '', technical_discussions: '', final_decisions: '', pending_items: '', responsible_deadlines: '' }); clearDraft(); }} className="text-xs underline hover:text-yellow-300">
             Limpar rascunho
           </button>
         </div>
@@ -138,8 +156,8 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <Label>Data *</Label>
-          <Input
+          <Label htmlFor="Meeting-date">Data *</Label>
+          <Input id="Meeting-date"
             type="date"
             value={currentForm.date}
             onChange={(e) => setCurrentForm({ ...currentForm, date: e.target.value })}
@@ -190,8 +208,8 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
       </div>
 
       <div>
-        <Label>Pauta *</Label>
-        <Textarea
+        <Label htmlFor="Meeting-agenda">Pauta *</Label>
+        <Textarea id="Meeting-agenda"
           value={currentForm.agenda}
           onChange={(e) => setCurrentForm({ ...currentForm, agenda: e.target.value })}
           placeholder="Tópicos a serem discutidos..."
@@ -201,8 +219,8 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
       </div>
 
       <div>
-        <Label>Discussões Técnicas</Label>
-        <Textarea
+        <Label htmlFor="Meeting-technical_discussions">Discussões Técnicas</Label>
+        <Textarea id="Meeting-technical_discussions"
           value={currentForm.technical_discussions}
           onChange={(e) => setCurrentForm({ ...currentForm, technical_discussions: e.target.value })}
           placeholder="Pontos técnicos discutidos..."
@@ -211,8 +229,8 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
       </div>
 
       <div>
-        <Label>Decisões Finais</Label>
-        <Textarea
+        <Label htmlFor="Meeting-final_decisions">Decisões Finais</Label>
+        <Textarea id="Meeting-final_decisions"
           value={currentForm.final_decisions}
           onChange={(e) => setCurrentForm({ ...currentForm, final_decisions: e.target.value })}
           placeholder="O que foi decidido..."
@@ -222,8 +240,8 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <Label>Pendências</Label>
-          <Textarea
+          <Label htmlFor="Meeting-pending_items">Pendências</Label>
+          <Textarea id="Meeting-pending_items"
             value={currentForm.pending_items}
             onChange={(e) => setCurrentForm({ ...currentForm, pending_items: e.target.value })}
             placeholder="Itens pendentes..."
@@ -231,8 +249,8 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
           />
         </div>
         <div>
-          <Label>Responsáveis e Prazos</Label>
-          <Textarea
+          <Label htmlFor="Meeting-responsible_deadlines">Responsáveis e Prazos</Label>
+          <Textarea id="Meeting-responsible_deadlines"
             value={currentForm.responsible_deadlines}
             onChange={(e) => setCurrentForm({ ...currentForm, responsible_deadlines: e.target.value })}
             placeholder="Quem faz o quê e quando..."
@@ -240,6 +258,8 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
           />
         </div>
       </div>
+
+      <MeetingAttachments form={currentForm} setForm={setCurrentForm} uploading={uploadingAttachment} setUploading={setUploadingAttachment} onError={setFormError} />
 
       {/* Video URLs */}
       <div>
@@ -265,14 +285,14 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
         </div>
         <div className="space-y-3">
           {(currentForm.video_urls || []).map((url, i) => {
-            const isFile = url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') || url.includes('.avi') || url.includes('base44.app');
+            const isFile = url.startsWith('/api/media/') || url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') || url.includes('.avi') || url.includes('base44.app');
             return (
               <div key={i} className="bg-[#1A1D24] border border-[#2A2D36] rounded-lg p-2">
                 {isFile ? (
-                  <video src={url} controls className="w-full rounded mb-2 max-h-48" />
+                  <PortalMedia type="video" src={url} controls className="w-full rounded mb-2 max-h-48" />
                 ) : null}
                 <div className="flex items-center gap-2 text-sm">
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate flex-1">{url}</a>
+                  <PortalMedia src={url} type="link" className="text-blue-400 hover:underline truncate flex-1">{url}</PortalMedia>
                   <button type="button" onClick={() => removeVideo(i)} className="text-red-500 hover:text-red-400 flex-shrink-0">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -283,12 +303,13 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4 border-t border-[#1F222B]">
+      <div className="sticky bottom-0 bg-[#111217] flex flex-wrap justify-end gap-3 py-4 border-t border-[#1F222B]">
+        {formError && <p role="alert" className="w-full text-sm text-red-200">{formError}</p>}
         <Button type="button" variant="outline" onClick={onClose} className="border-[#1F222B]">
           <X className="w-4 h-4 mr-2" />
           Cancelar
         </Button>
-        <Button type="submit" className="bg-[#E10600] hover:bg-[#E10600]/90" disabled={createMeeting.isPending || updateMeeting.isPending} >
+        <Button type="submit" className="bg-[#E10600] hover:bg-[#E10600]/90" disabled={uploadingVideo || uploadingAttachment || createMeeting.isPending || updateMeeting.isPending} >
           <Save className="w-4 h-4 mr-2" />
           {meeting ? 'Salvar Alterações' : 'Registrar Reunião'}
         </Button>

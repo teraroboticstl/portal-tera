@@ -1,3 +1,6 @@
+import { format } from 'date-fns';
+import { requestDeadline } from '@/api/requestDeadline';
+import PortalMedia from '@/components/common/PortalMedia';
 import { RECORD_PROGRAMS } from '@/lib/modalities';
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -16,9 +19,10 @@ const PROGRAMS = RECORD_PROGRAMS;
 
 export default function DailyLogForm({ log = null, onClose, onSuccess, initialProgram = 'FRC' }) {
   const queryClient = useQueryClient();
+  const [formError,setFormError]=useState('');
   const isEditing = !!log;
   const { form, setForm, hasDraft, clearDraft } = useDraft('draft_dailylog', {
-    date: new Date().toISOString().split('T')[0],
+    date: format(new Date(), 'yyyy-MM-dd'),
     program: initialProgram === 'all' ? 'FRC' : initialProgram,
     log_type: 'Build',
     participants: [],
@@ -58,7 +62,8 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
   const [uploadingVideo, setUploadingVideo] = useState(false);
 
   const createLog = useMutation({
-    mutationFn: (data) => base44.entities.DailyLog.create(data),
+    mutationFn: (data) => requestDeadline(() => base44.entities.DailyLog.create(data)),
+    onError: () => setFormError('Não foi possível confirmar o salvamento. Seu texto foi preservado. Confira sua conexão, seu nível de acesso e a lista antes de tentar novamente.'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily-logs'] });
       clearDraft();
@@ -69,7 +74,8 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
   });
 
   const updateLog = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.DailyLog.update(id, data),
+    mutationFn: ({ id, data }) => requestDeadline(() => base44.entities.DailyLog.update(id, data)),
+    onError: () => setFormError('Não foi possível confirmar o salvamento. Seu texto foi preservado. Confira sua conexão, seu nível de acesso e a lista antes de tentar novamente.'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily-logs'] });
       toast.success('Log atualizado com sucesso!');
@@ -80,6 +86,8 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (uploadingVideo || uploading) { setFormError('Aguarde o envio do anexo terminar antes de salvar.'); return; }
+    setFormError('');
     if (!currentForm.date || !currentForm.what_was_done) {
       toast.error('Preencha os campos obrigatórios.');
       return;
@@ -122,16 +130,20 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
       toast.error('Apenas PNG, JPG e WebP são permitidos.');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Imagem deve ter no máximo 5MB.');
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Imagem deve ter no máximo 4 MB.');
       return;
     }
 
+    const input=e.target;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setCurrentForm({ ...currentForm, evidence_images: [...currentForm.evidence_images, file_url] });
+    setFormError('');
+    try {
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'seasons', program: currentForm.program });
+    setCurrentForm(previous => ({ ...previous, evidence_images: [...(previous.evidence_images || []), file_url] }));
     toast.success('Imagem enviada!');
-    setUploading(false);
+    } catch { setFormError('Falha no envio. O arquivo não foi anexado; você pode salvar o texto sem ele ou tentar novamente. Limite: 4 MB por arquivo.'); }
+    finally { setUploading(false); input.value=''; }
   };
 
   const removeImage = (index) => {
@@ -156,20 +168,25 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
       toast.error('Apenas arquivos de vídeo são permitidos.');
       return;
     }
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error('Vídeo deve ter no máximo 100MB.');
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error('Vídeo deve ter no máximo 4 MB; para maiores, use um link do Drive.');
       return;
     }
+    const input=e.target;
     setUploadingVideo(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setCurrentForm({ ...currentForm, video_urls: [...(currentForm.video_urls || []), file_url] });
+    setFormError('');
+    try {
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'seasons', program: currentForm.program });
+    setCurrentForm(previous => ({ ...previous, video_urls: [...(previous.video_urls || []), file_url] }));
     toast.success('Vídeo enviado!');
-    setUploadingVideo(false);
-    e.target.value = '';
+    } catch { setFormError('Falha no envio. O arquivo não foi anexado; você pode salvar o texto sem ele ou tentar novamente. Limite: 4 MB por arquivo.'); }
+    finally { setUploadingVideo(false); input.value=''; }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 min-w-0">
+      {formError && <p role="alert" className="rounded-lg border border-red-500 p-3 text-red-200">{formError}</p>}
+      <p className="text-sm text-gray-400">Anexos opcionais, até 4 MB por arquivo. Para vídeos maiores, adicione um link do Drive restrito à equipe.</p>
       {/* Rascunho salvo automaticamente */}
       {hasDraft && !isEditing && (
         <div className="flex items-center justify-between bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-4 py-2 text-yellow-400 text-sm">
@@ -177,7 +194,7 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
             <FileText className="w-4 h-4" />
             <span>Rascunho salvo automaticamente</span>
           </div>
-          <button type="button" onClick={() => { clearDraft(); setCurrentForm({ date: new Date().toISOString().split('T')[0], program: 'FRC', log_type: 'Build', participants: [], what_was_done: '', decisions_made: '', problems_found: '', solutions: '', next_steps: '', evidence_links: [], evidence_images: [] }); }} className="text-xs underline hover:text-yellow-300">
+          <button type="button" onClick={() => { setCurrentForm({ date: format(new Date(), 'yyyy-MM-dd'), program: 'FRC', log_type: 'Build', participants: [], what_was_done: '', decisions_made: '', problems_found: '', solutions: '', next_steps: '', evidence_links: [], evidence_images: [] }); clearDraft(); }} className="text-xs underline hover:text-yellow-300">
             Limpar rascunho
           </button>
         </div>
@@ -185,8 +202,8 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
 
       <div className="grid md:grid-cols-3 gap-4">
         <div>
-          <Label>Data *</Label>
-          <Input
+          <Label htmlFor="DailyLog-date">Data *</Label>
+          <Input id="DailyLog-date"
             type="date"
             value={currentForm.date}
             onChange={(e) => setCurrentForm({ ...currentForm, date: e.target.value })}
@@ -254,8 +271,8 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
         <h3 className="font-bold text-[#E10600]">📋 Registro (Padrão Judge Ready)</h3>
         
         <div>
-          <Label>O que foi feito *</Label>
-          <Textarea
+          <Label htmlFor="DailyLog-what_was_done">O que foi feito *</Label>
+          <Textarea id="DailyLog-what_was_done"
             value={currentForm.what_was_done}
             onChange={(e) => setCurrentForm({ ...currentForm, what_was_done: e.target.value })}
             placeholder="Descreva as atividades realizadas..."
@@ -265,8 +282,8 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
         </div>
 
         <div>
-          <Label>Decisões tomadas</Label>
-          <Textarea
+          <Label htmlFor="DailyLog-decisions_made">Decisões tomadas</Label>
+          <Textarea id="DailyLog-decisions_made"
             value={currentForm.decisions_made}
             onChange={(e) => setCurrentForm({ ...currentForm, decisions_made: e.target.value })}
             placeholder="Quais decisões foram tomadas e por quê..."
@@ -276,8 +293,8 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
 
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <Label>Problemas encontrados</Label>
-            <Textarea
+            <Label htmlFor="DailyLog-problems_found">Problemas encontrados</Label>
+            <Textarea id="DailyLog-problems_found"
               value={currentForm.problems_found}
               onChange={(e) => setCurrentForm({ ...currentForm, problems_found: e.target.value })}
               placeholder="O que não funcionou..."
@@ -285,8 +302,8 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
             />
           </div>
           <div>
-            <Label>Soluções aplicadas</Label>
-            <Textarea
+            <Label htmlFor="DailyLog-solutions">Soluções aplicadas</Label>
+            <Textarea id="DailyLog-solutions"
               value={currentForm.solutions}
               onChange={(e) => setCurrentForm({ ...currentForm, solutions: e.target.value })}
               placeholder="O que aprendemos e melhoramos..."
@@ -296,8 +313,8 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
         </div>
 
         <div>
-          <Label>Próximos passos</Label>
-          <Textarea
+          <Label htmlFor="DailyLog-next_steps">Próximos passos</Label>
+          <Textarea id="DailyLog-next_steps"
             value={currentForm.next_steps}
             onChange={(e) => setCurrentForm({ ...currentForm, next_steps: e.target.value })}
             placeholder="O que fazer a seguir..."
@@ -351,7 +368,7 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
         <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
           {currentForm.evidence_images.map((img, i) => (
             <div key={i} className="relative group">
-              <img src={img} alt={`Evidência ${i + 1}`} className="w-full h-24 object-cover rounded-lg" />
+              <PortalMedia src={img} alt={`Evidência ${i + 1}`} className="w-full h-24 object-cover rounded-lg" />
               <button
                 type="button"
                 onClick={() => removeImage(i)}
@@ -388,14 +405,14 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
         </div>
         <div className="space-y-3">
           {(currentForm.video_urls || []).map((url, i) => {
-            const isFile = url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') || url.includes('.avi') || url.includes('base44.app');
+            const isFile = url.startsWith('/api/media/') || url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') || url.includes('.avi') || url.includes('base44.app');
             return (
               <div key={i} className="bg-[#1A1D24] border border-[#2A2D36] rounded-lg p-2">
                 {isFile ? (
-                  <video src={url} controls className="w-full rounded mb-2 max-h-48" />
+                  <PortalMedia type="video" src={url} controls className="w-full rounded mb-2 max-h-48" />
                 ) : null}
                 <div className="flex items-center gap-2 text-sm">
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate flex-1">{url}</a>
+                  <PortalMedia src={url} type="link" className="text-blue-400 hover:underline truncate flex-1">{url}</PortalMedia>
                   <button type="button" onClick={() => removeVideo(i)} className="text-red-500 hover:text-red-400 flex-shrink-0">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -407,12 +424,13 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-[#1F222B]">
+      <div className="sticky bottom-0 bg-[#111217] flex flex-wrap justify-end gap-3 py-4 border-t border-[#1F222B]">
+        {formError && <p role="alert" className="w-full text-sm text-red-200">{formError}</p>}
         <Button type="button" variant="outline" onClick={onClose} className="border-[#1F222B]">
           <X className="w-4 h-4 mr-2" />
           Cancelar
         </Button>
-        <Button type="submit" className="bg-[#E10600] hover:bg-[#E10600]/90" disabled={createLog.isPending || updateLog.isPending}>
+        <Button type="submit" className="bg-[#E10600] hover:bg-[#E10600]/90" disabled={uploadingVideo || uploading || createLog.isPending || updateLog.isPending}>
           <Save className="w-4 h-4 mr-2" />
           {log ? 'Salvar Alterações' : 'Criar Log'}
         </Button>
