@@ -1,3 +1,5 @@
+import PortalMedia from '@/components/common/PortalMedia';
+import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -71,13 +73,15 @@ function PhotoUpload({ value, onChange }) {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    try {
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'pdi' });
     onChange(file_url);
-    setUploading(false);
+    } catch { toast.error('Não foi possível enviar o arquivo. Tente novamente com um arquivo de até 4 MB.'); }
+    finally { setUploading(false); }
   };
   return (
     <div className="flex items-center gap-3">
-      {value && <img src={value} alt="foto" className="w-14 h-14 rounded-full object-cover border-2 border-[#E10600]/50" />}
+      {value && <PortalMedia src={value} alt="foto" className="w-14 h-14 rounded-full object-cover border-2 border-[#E10600]/50" />}
       <label className="cursor-pointer flex items-center gap-2 px-3 py-2 bg-[#111217] border border-[#1F222B] rounded-lg text-xs text-[#B8BDC7] hover:border-[#E10600]/50 hover:text-white transition-colors">
         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
         {uploading ? 'Enviando...' : (value ? 'Trocar foto' : 'Carregar foto')}
@@ -218,7 +222,7 @@ function PDICard({ pdi, onEdit, onDelete, onUpdateProgress, isAdmin }) {
       <div className="bg-[#111217] rounded-2xl overflow-hidden shadow-sm border border-[#1F222B] flex flex-col flex-1">
       <div className="flex justify-center pt-6 pb-3">
         {pdi.photo_url ? (
-          <img src={pdi.photo_url} alt={pdi.member_name}
+          <PortalMedia src={pdi.photo_url} alt={pdi.member_name}
             className="w-24 h-24 rounded-2xl object-cover border-2 border-[#E10600]/40 shadow" />
         ) : (
           <div className="w-24 h-24 rounded-2xl bg-[#1F222B] border-2 border-[#1F222B] flex items-center justify-center">

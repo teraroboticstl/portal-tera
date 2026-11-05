@@ -129,7 +129,7 @@ export default function TeraEmDestaque({ user: propUser }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingEdit(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'featured-news' });
     setEditingCard(c => ({ ...c, photo: file_url }));
     setUploadingEdit(false);
   };
@@ -138,7 +138,7 @@ export default function TeraEmDestaque({ user: propUser }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingAdd(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'featured-news' });
     setAddForm(f => ({ ...f, photo: file_url }));
     setUploadingAdd(false);
   };

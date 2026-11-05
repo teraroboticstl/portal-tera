@@ -1,3 +1,4 @@
+import { encodeRecord, decodeRecord, isStructuredRecord } from '../../lib/recordCodec.js';
 import { projectModalities, projectCategories, mergeProjectLinks } from '../../lib/modalities.js';
 import { supabase } from '../supabaseClient.js';
 
@@ -113,17 +114,18 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       mapped.website = mapped.link;
     } else if (['daily_logs', 'meeting_notes', 'priorities', 'prototype_tests'].includes(actualTableName)) {
       mapped.program = item.program || item.category || 'Geral';
-      const textToCheck = item.content || item.description || item.title || '';
+      const textToCheck = item.content || item.result || item.description || item.title || '';
       const tagMatch = textToCheck.match(/\[season_tag:([^\]]+)\]/);
       if (tagMatch) {
         mapped.season_tag = tagMatch[1];
+        if (mapped.result) mapped.result = mapped.result.replace(/\s*\[season_tag:[^\]]+\]/, '');
         if (mapped.content) mapped.content = mapped.content.replace(/\s*\[season_tag:[^\]]+\]/, '');
         if (mapped.description) mapped.description = mapped.description.replace(/\s*\[season_tag:[^\]]+\]/, '');
         if (mapped.title) mapped.title = mapped.title.replace(/\s*\[season_tag:[^\]]+\]/, '');
       }
     }
 
-    return mapped;
+    return decodeRecord(actualTableName, mapped);
   };
 
   const getSelectQuery = () => {
@@ -283,9 +285,15 @@ export const createEntityAdapter = (entityName, tableName = '') => {
      */
     async create(payload) {
       await assertWriteAccess();
-      console.log(`[Supabase Adapter] Criando registro em ${entityName} no Supabase...`, payload);
+      console.log(`[Supabase Adapter] Criando registro em ${entityName} no Supabase...`, isStructuredRecord(actualTableName) ? '[conteúdo privado omitido]' : payload);
       
-      const sanitized = { ...payload };
+      const sanitized = encodeRecord(actualTableName, payload);
+      if (actualTableName === 'daily_logs') {
+        const {data,error}=await supabase.auth.getUser();
+        if(error || !data?.user?.id)throw new Error('Sessão expirada. Entre novamente.');
+        sanitized.user_id=data.user.id;
+        delete sanitized.user_name;
+      }
       delete sanitized.id;
       delete sanitized.created_date;
 
@@ -439,7 +447,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
             } else if (actualTableName === 'priorities') {
               sanitized.title = `${sanitized.title || ''} [season_tag:${sTag}]`.trim();
             } else if (actualTableName === 'prototype_tests') {
-              sanitized.description = `${sanitized.description || ''}\n[season_tag:${sTag}]`.trim();
+              sanitized.result = `${sanitized.result || ''}\n[season_tag:${sTag}]`.trim();
             }
           }
         }
@@ -493,9 +501,17 @@ export const createEntityAdapter = (entityName, tableName = '') => {
      */
     async update(id, payload) {
       await assertWriteAccess();
-      console.log(`[Supabase Adapter] Atualizando ID ${id} de ${entityName} no Supabase...`, payload);
+      console.log(`[Supabase Adapter] Atualizando ID ${id} de ${entityName} no Supabase...`, isStructuredRecord(actualTableName) ? '[conteúdo privado omitido]' : payload);
       
-      const sanitized = { ...payload };
+      let recordPayload=payload;
+      if(isStructuredRecord(actualTableName)) {
+        const {data:existing,error}=await supabase.from(actualTableName).select('*').eq('id',id).single();
+        if(error)throw error;
+        recordPayload={...mapItem(existing),...payload};
+        delete recordPayload.created_date;
+      }
+      const sanitized = encodeRecord(actualTableName, recordPayload);
+      if(actualTableName==='daily_logs'){delete sanitized.user_id;delete sanitized.user_name;}
       delete sanitized.id;
       delete sanitized.created_date;
 
@@ -677,7 +693,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
             } else if (actualTableName === 'priorities') {
               sanitized.title = `${sanitized.title || ''} [season_tag:${sTag}]`.trim();
             } else if (actualTableName === 'prototype_tests') {
-              sanitized.description = `${sanitized.description || ''}\n[season_tag:${sTag}]`.trim();
+              sanitized.result = `${sanitized.result || ''}\n[season_tag:${sTag}]`.trim();
             }
           }
         }

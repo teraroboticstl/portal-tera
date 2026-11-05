@@ -1,3 +1,4 @@
+import RecordAttachments from '@/components/internal/RecordAttachments';
 import { OBR_CATEGORIES, matchesProgram, initialProgram } from '@/lib/modalities';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -46,7 +47,7 @@ function InternalLogsContent({ user }) {
   
   const canEditLog = (log) => {
     if (!userCanEdit(user)) return false;
-    return isAdmin(user) || log.created_by === user.email;
+    return isAdmin(user) || log.user_id === user.id;
   };
 
   const canDeleteLog = (log) => {
@@ -79,7 +80,7 @@ function InternalLogsContent({ user }) {
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4 min-w-0">
           <Filter className="w-4 h-4 text-[#B8BDC7]" />
           <Tabs value={filterProgram.startsWith('OBR') ? 'OBR' : filterProgram} onValueChange={setFilterProgram}>
             <TabsList className="bg-[#111217] border border-[#1F222B] h-auto flex-wrap">
@@ -112,13 +113,13 @@ function InternalLogsContent({ user }) {
                 className="bg-[#111217] border border-[#1F222B] rounded-xl p-6 hover:border-[#E10600]/30 transition-colors"
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0 break-words">
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <Badge variant={log.program?.toLowerCase()}>{log.program}</Badge>
                       <Badge>{log.log_type}</Badge>
                       <span className="flex items-center gap-1 text-sm text-[#B8BDC7]">
                         <Calendar className="w-4 h-4" />
-                        {format(new Date(log.date), "d 'de' MMMM, yyyy", { locale: ptBR })}
+                        {format(new Date(log.date + 'T12:00:00'), "d 'de' MMMM, yyyy", { locale: ptBR })}
                       </span>
                     </div>
                     <p className="text-[#F5F7FA] mb-2 line-clamp-2">{log.what_was_done}</p>
@@ -168,7 +169,7 @@ function InternalLogsContent({ user }) {
 
         {/* Create/Edit Dialog */}
         <Dialog open={showForm || !!editingLog} onOpenChange={() => { setShowForm(false); setEditingLog(null); }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-4xl max-h-[85dvh] w-[calc(100%-1rem)] overflow-x-hidden overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingLog ? 'Editar Log' : 'Novo Log Diário'}</DialogTitle>
             </DialogHeader>
@@ -181,7 +182,7 @@ function InternalLogsContent({ user }) {
 
         {/* View Dialog */}
         <Dialog open={!!viewingLog} onOpenChange={() => setViewingLog(null)}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-3xl max-h-[85dvh] w-[calc(100%-1rem)] overflow-x-hidden overflow-y-auto">
             {viewingLog && (
               <>
                 <DialogHeader>
@@ -190,10 +191,11 @@ function InternalLogsContent({ user }) {
                     <Badge>{viewingLog.log_type}</Badge>
                   </div>
                   <DialogTitle>
-                    {format(new Date(viewingLog.date), "d 'de' MMMM, yyyy", { locale: ptBR })}
+                    {format(new Date(viewingLog.date + 'T12:00:00'), "d 'de' MMMM, yyyy", { locale: ptBR })}
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 mt-4">
+                  <RecordAttachments record={viewingLog} />
                   {viewingLog.participants?.length > 0 && (
                     <div>
                       <h4 className="font-medium text-[#E10600] mb-2">Participantes</h4>
@@ -230,18 +232,6 @@ function InternalLogsContent({ user }) {
                     <div>
                       <h4 className="font-medium text-[#E10600] mb-2">Próximos passos</h4>
                       <p className="text-[#B8BDC7] whitespace-pre-wrap">{viewingLog.next_steps}</p>
-                    </div>
-                  )}
-                  {viewingLog.evidence_images?.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-[#E10600] mb-2">Evidências</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {viewingLog.evidence_images.map((img, i) => (
-                          <a key={i} href={img} target="_blank" rel="noopener noreferrer">
-                            <img src={img} alt={`Evidência ${i + 1}`} className="w-full h-32 object-cover rounded-lg" />
-                          </a>
-                        ))}
-                      </div>
                     </div>
                   )}
                 </div>

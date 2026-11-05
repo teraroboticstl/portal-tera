@@ -1,3 +1,4 @@
+import { requestDeadline } from '@/api/requestDeadline';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -30,7 +31,7 @@ function MeetingCard({ m, onEdit, onDelete, canEditItem }) {
             <p className="font-bold text-sm truncate">{m.agenda}</p>
             <div className="flex items-center gap-3 mt-1 text-xs text-[#B8BDC7]">
               <span>{format(new Date(m.date + 'T12:00:00'), "d 'de' MMM, yyyy", { locale: ptBR })}</span>
-              {m.participants && <span className="flex items-center gap-1 truncate"><Users className="w-3 h-3 flex-shrink-0" />{m.participants}</span>}
+              {m.participants && <span className="flex items-center gap-1 truncate"><Users className="w-3 h-3 flex-shrink-0" />{Array.isArray(m.participants) ? m.participants.join(', ') : m.participants}</span>}
             </div>
           </div>
         </div>
@@ -67,7 +68,7 @@ function MeetingCard({ m, onEdit, onDelete, canEditItem }) {
 }
 
 function MeetingForm({ initial, onSave, onClose, isPending }) {
-  const [form, setForm] = useState(initial || EMPTY);
+  const [form, setForm] = useState(initial ? {...initial,participants:Array.isArray(initial.participants) ? initial.participants.join(', ') : initial.participants || ''} : EMPTY);
   const f = (key) => ({ value: form[key], onChange: e => setForm(p => ({ ...p, [key]: e.target.value })) });
   return (
     <div className="space-y-4">
@@ -103,8 +104,8 @@ function Content({ user }) {
   });
 
   const save = useMutation({
-    mutationFn: d => editing ? base44.entities.MeetingNote.update(editing.id, d) : base44.entities.MeetingNote.create({ ...d, program: 'FLL' }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['fll-meetings'] }); toast.success(editing ? 'Atualizada!' : 'Reunião criada!'); setShowForm(false); setEditing(null); },
+    mutationFn: d => requestDeadline(() => editing ? base44.entities.MeetingNote.update(editing.id, d) : base44.entities.MeetingNote.create({ ...d, program: 'FLL' })),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['fll-meetings'] }); qc.invalidateQueries({queryKey:['meetings']}); toast.success(editing ? 'Atualizada!' : 'Reunião criada!'); setShowForm(false); setEditing(null); },
   });
   const del = useMutation({
     mutationFn: id => base44.entities.MeetingNote.delete(id),
@@ -116,7 +117,7 @@ function Content({ user }) {
   return (
     <InternalPageLayout user={user} currentPage="InternalFLLMeetings" title="FLL — Reuniões">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-2xl font-bold flex items-center gap-2"><Calendar className="w-6 h-6 text-orange-500" /> Reuniões FLL</h2>
             <p className="text-[#B8BDC7] text-sm mt-1">Atas, decisões e próximos passos</p>
@@ -140,7 +141,7 @@ function Content({ user }) {
         )}
 
         <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); setEditing(null); } }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-2xl max-h-[85dvh] w-[calc(100%-1rem)] overflow-x-hidden overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? 'Editar Reunião' : 'Nova Reunião'}</DialogTitle></DialogHeader>
             <MeetingForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} />
           </DialogContent>

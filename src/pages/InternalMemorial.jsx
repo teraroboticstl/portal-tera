@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -109,8 +110,11 @@ function InternalMemorialContent({ user }) {
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setFormData({ ...formData, images: [...formData.images, file_url] });
+      try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'memorial' });
+      setFormData(previous => ({ ...previous, images: [...previous.images, file_url] }));
+      } catch { toast.error('Falha no envio do arquivo. Limite: 4 MB.'); }
+      finally { e.target.value=''; }
     }
   };
 

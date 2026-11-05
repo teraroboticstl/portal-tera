@@ -1,3 +1,5 @@
+import PortalMedia from '@/components/common/PortalMedia';
+import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -136,8 +138,11 @@ function InternalEventGalleryContent({ user }) {
   const handleCoverUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setEventForm({ ...eventForm, cover_image: file_url });
+      try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'event-assets' });
+      setEventForm(previous => ({ ...previous, cover_image: file_url }));
+      } catch { toast.error('Falha no envio da capa. Limite: 4 MB.'); }
+      finally { e.target.value=''; }
     }
   };
 
@@ -145,7 +150,8 @@ function InternalEventGalleryContent({ user }) {
     const file = e.target.files?.[0];
     if (file && selectedEvent) {
       setUploadingMedia(true);
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'event-assets' });
       await createMediaMutation.mutateAsync({
         event_id: selectedEvent.id,
         media_type: type,
@@ -153,7 +159,8 @@ function InternalEventGalleryContent({ user }) {
         is_public: false,
         order: (mediaByEvent[selectedEvent.id]?.length || 0) + 1,
       });
-      setUploadingMedia(false);
+      } catch { toast.error('Não foi possível enviar o arquivo. Tente novamente com um arquivo de até 4 MB.'); }
+    finally { setUploadingMedia(false); }
     }
   };
 
@@ -195,7 +202,7 @@ function InternalEventGalleryContent({ user }) {
                   <Card className="bg-[#111217] border-[#1F222B] hover:border-[#E10600]/50 transition-all">
                     {event.cover_image && (
                       <div className="aspect-video overflow-hidden rounded-t-lg">
-                        <img src={event.cover_image} alt={event.title} className="w-full h-full object-cover" />
+                        <PortalMedia src={event.cover_image} alt={event.title} className="w-full h-full object-cover" />
                       </div>
                     )}
                     <CardContent className="pt-4">
@@ -273,7 +280,7 @@ function InternalEventGalleryContent({ user }) {
                   <div key={media.id} className="relative group">
                     <div className="aspect-square overflow-hidden rounded-lg bg-[#1F222B]">
                       {media.media_type === 'photo' ? (
-                        <img src={media.media_url} alt="" className="w-full h-full object-cover" />
+                        <PortalMedia src={media.media_url} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Video className="w-12 h-12 text-gray-600" />
@@ -281,7 +288,7 @@ function InternalEventGalleryContent({ user }) {
                       )}
                     </div>
                     {userCanEdit && (
-                      <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute top-2 right-2 flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => toggleMediaVisibility.mutate({ id: media.id, is_public: !media.is_public })}
                           className="p-2 bg-black/70 rounded-full hover:bg-black transition-colors"

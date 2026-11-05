@@ -114,7 +114,7 @@ export default function GoogleDriveTestManagement({ user }) {
 
         <p className="text-xs text-[#B8BDC7]">
           Utilize o botão acima para gerar a URL de consentimento offline e autorizar o acesso da conta <strong className="text-white">teraroboticstl@gmail.com</strong>.
-          Após a autorização, a página retornará o token de atualização permanente para ser cadastrado com segurança no servidor.
+          Após a autorização, a credencial será armazenada de forma protegida no servidor. Nenhuma cópia de token é necessária.
         </p>
 
         {authUrl && (
