@@ -177,13 +177,13 @@ function InternalBoardDiaryContent({ user }) {
         {/* Filters */}
         <div className="flex flex-wrap gap-4">
           <Tabs value={filterProgram} onValueChange={setFilterProgram}>
-            <TabsList className="bg-[#111217] border border-[#1F222B]">
+            <TabsList className="bg-[#111217] border border-[#1F222B] h-auto flex flex-wrap justify-start">
               <TabsTrigger value="FRC" className="data-[state=active]:bg-red-600">FRC</TabsTrigger>
               <TabsTrigger value="FTC" className="data-[state=active]:bg-orange-500">FTC</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Tabs value={filterSection} onValueChange={setFilterSection}>
-            <TabsList className="bg-[#111217] border border-[#1F222B]">
+          <Tabs value={filterSection} onValueChange={setFilterSection} className="min-w-0 max-w-full">
+            <TabsList className="bg-[#111217] border border-[#1F222B] h-auto flex flex-wrap justify-start">
               <TabsTrigger value="all" className="data-[state=active]:bg-[#E10600]">Todas</TabsTrigger>
               <TabsTrigger value="Engenharia" className="data-[state=active]:bg-blue-600">Engenharia</TabsTrigger>
               <TabsTrigger value="Programação" className="data-[state=active]:bg-green-600">Programação</TabsTrigger>

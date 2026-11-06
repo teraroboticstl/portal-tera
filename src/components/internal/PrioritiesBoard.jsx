@@ -1,3 +1,5 @@
+import FormLoadError from '@/components/common/FormLoadError';
+import FormSaveError from '@/components/common/FormSaveError';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -9,6 +11,11 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
 const CATEGORIES = {
+  'SEM CLASSIFICAÇÃO': {
+    title: 'SEM CLASSIFICAÇÃO', description: 'Registros antigos ainda sem classificação estratégica',
+    color: 'gray', icon: Star, bgClass: 'bg-gray-900/20 border-gray-700/50',
+    textClass: 'text-gray-400', iconBgClass: 'bg-gray-600'
+  },
   PRECISAMOS: {
     title: 'PRECISAMOS',
     description: 'Itens obrigatórios para competir bem',
@@ -50,11 +57,11 @@ const CATEGORIES = {
 export default function PrioritiesBoard({ program }) {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [newPriority, setNewPriority] = useState({ title: '', category: 'PRECISAMOS' });
+  const [newPriority, setNewPriority] = useState({ title: '', priority_group: 'PRECISAMOS' });
 
-  const { data: priorities = [], isLoading } = useQuery({
+  const { data: priorities = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['priorities', program],
-    queryFn: () => base44.entities.Priority.filter({ program }, 'order')
+    queryFn: () => base44.entities.Priority.filter({ program }, 'created_date')
   });
 
   const createPriority = useMutation({
@@ -62,7 +69,7 @@ export default function PrioritiesBoard({ program }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['priorities', program] });
       setShowForm(false);
-      setNewPriority({ title: '', category: 'PRECISAMOS' });
+      setNewPriority({ title: '', priority_group: 'PRECISAMOS' });
       toast.success('Prioridade adicionada!');
     }
   });
@@ -76,14 +83,15 @@ export default function PrioritiesBoard({ program }) {
   });
 
   const prioritiesByCategory = Object.keys(CATEGORIES).reduce((acc, cat) => {
-    acc[cat] = priorities.filter(p => p.category === cat);
+    acc[cat] = priorities.filter(p => p.priority_group === cat);
     return acc;
   }, {});
 
+  if(isError)return <FormLoadError onRetry={refetch} />;
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <TrendingUp className="w-6 h-6 text-[#E10600]" />
@@ -152,7 +160,7 @@ export default function PrioritiesBoard({ program }) {
 
       {/* Dialog para Nova Prioridade */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="bg-[#111217] border-[#1F222B]">
+        <DialogContent className="bg-[#111217] border-[#1F222B] max-h-[90dvh] overflow-y-auto text-white">
           <DialogHeader>
             <DialogTitle className="text-[#F5F7FA]">Nova Prioridade</DialogTitle>
           </DialogHeader>
@@ -180,9 +188,9 @@ export default function PrioritiesBoard({ program }) {
                   <button
                     key={key}
                     type="button"
-                    onClick={() => setNewPriority({ ...newPriority, category: key })}
+                    onClick={() => setNewPriority({ ...newPriority, priority_group: key })}
                     className={`p-3 rounded-lg border-2 transition-all ${
-                      newPriority.category === key
+                      newPriority.priority_group === key
                         ? `${cat.bgClass} border-${cat.color}-700`
                         : 'bg-[#111217] border-[#1F222B]'
                     }`}
@@ -192,7 +200,8 @@ export default function PrioritiesBoard({ program }) {
                 ))}
               </div>
             </div>
-            <Button type="submit" className="w-full bg-[#E10600] hover:bg-[#E10600]/90">
+            <FormSaveError error={createPriority.error} />
+            <Button type="submit" disabled={createPriority.isPending} className="w-full bg-[#E10600] hover:bg-[#E10600]/90">
               Adicionar Prioridade
             </Button>
           </form>

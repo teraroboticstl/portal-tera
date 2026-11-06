@@ -36,3 +36,10 @@ Em 06/11/2026, snapshot cifrado das onze tabelas (todas com zero registros naque
 
 Validação da árvore exata de release, excluindo os doze arquivos do protótipo Gemini preexistente: 209 testes aprovados, zero falhas/pulos, lint e build concluídos. Dependências locais foram reutilizadas, sem instalação ou alteração de lockfile. O build Windows utilizou o tratamento já existente de WINDOWS_NATIVE_REALPATH_EPERM; Vercel deve reconstruir a partir do Git, nunca reutilizar o dist local com configuração pública sintética. Os doze arquivos preexistentes tiveram hashes preservados.
 
+
+## Complemento do smoke web
+
+O console do teste publicado revelou outro contrato incorreto no quadro estratégico FTC/FRC: prioridades eram ordenadas por order inexistente e o formulário confundia categoria estratégica com category, que é a modalidade protegida pelo banco. Sem nova migração: program continua mapeado para category físico; area recebe Geral apenas em criações sem área; priority_group é guardado em description com o codec versionado já usado nos registros, preservando descrição e modalidade em edições parciais. Registros legados sem classificação aparecem em SEM CLASSIFICAÇÃO, sem inferir importância. Testes do adaptador real cobrem criação/edição/consulta, separação FRC/FTC, grupo inválido e preservação do legado. Nenhum dado de prioridade existente foi reescrito.
+
+No viewport 375x812, o contraste dos botões Cancelar e o envolvimento dos filtros do Diário de Bordo também foram ajustados. Testes web não equivalem a execução de todos os fluxos de cada modalidade por todos os perfis ou a teste em aparelho físico.
+

@@ -291,6 +291,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       console.log(`[Supabase Adapter] Criando registro em ${entityName} no Supabase...`, (isStructuredRecord(actualTableName) || hasFormContract(actualTableName) || ['pdis','pdi_frcs'].includes(actualTableName)) ? '[conteúdo privado omitido]' : payload);
       
       const sanitized = encodeRecord(actualTableName, payload);
+      if(actualTableName==='priorities'&&!sanitized.area)sanitized.area='Geral';
       if(actualTableName==='board_diaries'){
         const {data,error}=await supabase.auth.getUser();
         if(error||!data?.user?.id)throw new Error('Sessão expirada. Entre novamente.');

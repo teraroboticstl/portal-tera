@@ -63,6 +63,9 @@ test('real adapter creates/updates/reads all form contracts against production c
  {skip:!process.env.PDI_TEST_PGLITE_MODULE},async()=>{
  const {PGlite}=await import(pathToFileURL(process.env.PDI_TEST_PGLITE_MODULE).href);const db=new PGlite();
  const fixture=JSON.parse(await fs.readFile(new URL('./fixtures/legacyFormSchema.json',import.meta.url),'utf8'));
+ const prioritySchema=JSON.parse(await fs.readFile(new URL('./fixtures/prioritySchema.json',import.meta.url),'utf8'));
+ fixture.columns.priorities=prioritySchema.columns;
+ fixture.checks.push(...prioritySchema.checks.map(constraint=>({table:'priorities',constraint})));
  const actor='90000000-0000-0000-0000-000000000001';
  try{
  await db.exec('CREATE FUNCTION uuid_generate_v4() RETURNS uuid LANGUAGE sql AS $$SELECT gen_random_uuid()$$;');
@@ -122,5 +125,16 @@ test('real adapter creates/updates/reads all form contracts against production c
  for(const status of ['em_teste','concluida','descartada']){const row=await mission.create({...samples.fll_missions,status});assert.equal(row.status,status);}
  const tasks=module.namespace.createEntityAdapter('Task','fll_tasks');
  for(const status of ['pendente','em_andamento','concluida']){const row=await tasks.create({...samples.fll_tasks,status});assert.equal(row.status,status);}
+ const priority=module.namespace.createEntityAdapter('Priority','priorities');
+ const strategic=await priority.create({title:'Prioridade fictícia',program:'FRC',priority_group:'QUEREMOS',description:'Texto anterior'});
+ assert.equal(strategic.category,'FRC');assert.equal(strategic.program,'FRC');assert.equal(strategic.priority_group,'QUEREMOS');assert.equal(strategic.area,'Geral');
+ const changed=await priority.update(strategic.id,{title:'Título alterado'});
+ assert.equal(changed.description,'Texto anterior');assert.equal(changed.priority_group,'QUEREMOS');assert.equal(changed.category,'FRC');
+ assert.equal((await priority.filter({program:'FRC'},'created_date')).length,1);
+ assert.equal((await priority.filter({program:'FTC'},'created_date')).length,0);
+ await assert.rejects(priority.create({title:'Inválido',program:'FRC',priority_group:'admin'}),/Grupo de prioridade inválido/);
+ await db.exec("INSERT INTO priorities(title,area,category,description) VALUES('Legado','Geral','FTC','Descrição antiga')");
+ const legacy=(await priority.filter({program:'FTC'},'created_date'))[0];
+ assert.equal(legacy.priority_group,'SEM CLASSIFICAÇÃO');assert.equal(legacy.description,'Descrição antiga');
  }finally{await db.close();}
 });
