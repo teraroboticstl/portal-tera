@@ -86,7 +86,7 @@ export default function DemandBoard({actor,board,onBoardChange}) {
       <p className="mt-2 text-xs text-gray-500">Marcar uma demanda como concluída risca o texto. Isso não gera pontos no PDI.</p>
     </div>
     <div className="flex flex-wrap items-end gap-3">
-      <label className="text-sm flex-1 min-w-0 max-w-sm">Quadro<select aria-label="Quadro de demandas" value={board} disabled={busy} onChange={e=>onBoardChange(e.target.value)} className="ava-input w-full mt-1 min-h-11">
+      <label className="block w-full sm:flex-1 sm:min-w-56 max-w-sm text-sm">Quadro<select aria-label="Quadro de demandas" value={board} disabled={busy} onChange={e=>onBoardChange(e.target.value)} className="ava-input w-full mt-1 min-h-11">
         {(packet?.boards||[board]).map(b=><option key={b} value={b}>{DEMAND_BOARDS[b]}</option>)}
       </select></label>
       <Button variant="outline" disabled={busy||!packet} className="min-h-11" onClick={()=>{setArchived(v=>!v);setCursors([null]);setError('');}}>{archived?'Ver cartões ativos':'Ver arquivados'}</Button>
