@@ -80,6 +80,9 @@ export default function InternalHeader({ user, title, onMenuClick }) {
               </DropdownMenuItem>
             )}
             
+            <DropdownMenuItem asChild>
+              <Link to="/MyPDI" className="text-[#B8BDC7]">Meu PDI</Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-[#1F222B]" />
             
             <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-[#E10600]">

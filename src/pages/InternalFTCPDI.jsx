@@ -6,7 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Target, Wrench, BookOpen, Star, MessageSquare,
-  Plus, ChevronDown, ChevronUp,
+ ChevronDown, ChevronUp,
   CheckCircle, Save, X, Upload, Loader2, FileText, ExternalLink
 } from 'lucide-react';
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
@@ -362,7 +362,7 @@ function PDICard({ pdi, onEdit, onDelete, onUpdateProgress, isAdmin }) {
             Editar
           </button>
           <span className="text-[#1F222B]">|</span>
-          <button onClick={() => onDelete(pdi.id)}
+          <button disabled={!isAdmin || Boolean(pdi.registration_version)} onClick={() => onDelete(pdi.id)}
             className="text-xs text-red-400 hover:text-red-300 transition-colors">
             Excluir
           </button>
@@ -425,30 +425,26 @@ function PDICard({ pdi, onEdit, onDelete, onUpdateProgress, isAdmin }) {
 
 function InternalFTCPDIContent({ user }) {
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
   const [editingPDI, setEditingPDI] = useState(null);
 
-  const { data: pdis = [], isLoading } = useQuery({
-    queryKey: ['pdis-ftc'],
-    queryFn: () => base44.entities.PDI.list('-created_date'),
+  const { data: pdis = [], isLoading, isError } = useQuery({
+    queryKey: ['pdis-ftc', user?.id],
+    gcTime: 0,
+    queryFn: () => base44.entities.PDI.filter({ modality: 'FTC' }, '-created_date'),
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.PDI.create(data),
-    onSuccess: () => { queryClient.invalidateQueries(['pdis-ftc']); setShowForm(false); },
-  });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.PDI.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries(['pdis-ftc']); setEditingPDI(null); },
+    onSuccess: () => { queryClient.invalidateQueries({queryKey:['pdis-ftc']}); setEditingPDI(null); },
   });
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.PDI.delete(id),
-    onSuccess: () => queryClient.invalidateQueries(['pdis-ftc']),
+    onSuccess: () => queryClient.invalidateQueries({queryKey:['pdis-ftc']}),
   });
 
   const handleSave = (data) => {
     if (editingPDI) updateMutation.mutate({ id: editingPDI.id, data });
-    else createMutation.mutate(data);
+
   };
 
   const handleUpdateProgress = (id, val) => {
@@ -462,6 +458,10 @@ function InternalFTCPDIContent({ user }) {
   return (
     <InternalPageLayout user={user} currentPage="InternalFTCPDI" title="PDI — Membros FTC">
       <div className="space-y-6">
+        {isError && <p role="alert">Falha ao carregar os PDIs. Atualize a página para tentar novamente.</p>}
+        {(updateMutation.isError || deleteMutation.isError) && <p role="alert">Não foi possível salvar a alteração com suas permissões. Nenhum sucesso foi confirmado.</p>}
+
+        <p className="text-sm text-gray-300">O PDI é criado automaticamente ao concluir o questionário, um por modalidade. Quem já respondeu não precisa cadastrar novamente.</p>
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
@@ -470,7 +470,7 @@ function InternalFTCPDIContent({ user }) {
             <div className="flex-1">
               <h2 className="text-xl font-black text-white mb-1">PDI — Plano de Desenvolvimento Individual</h2>
               <p className="text-sm text-[#B8BDC7] leading-relaxed">
-                Equipe FTC · Foco no <strong className="text-white">processo e aprendizado</strong>, não em desempenho competitivo. Pode ser visualizado por juízes durante entrevistas.
+                Equipe FTC · Foco no <strong className="text-white">processo e aprendizado</strong>, não em desempenho competitivo. Visível somente ao titular e aos administradores.
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
                 {['Foco em aprendizado', 'Sem comparação entre membros', 'Conteúdo educacional', 'Valores FIRST'].map(t => (
@@ -480,11 +480,7 @@ function InternalFTCPDIContent({ user }) {
                 ))}
               </div>
             </div>
-            {!showForm && !editingPDI && (
-              <Button onClick={() => setShowForm(true)} className="bg-[#E10600] hover:bg-[#b00500] text-white flex-shrink-0">
-                <Plus className="w-4 h-4 mr-1" /> Novo PDI
-              </Button>
-            )}
+
           </div>
 
           <div className="grid grid-cols-3 gap-3 mt-5">
@@ -503,17 +499,17 @@ function InternalFTCPDIContent({ user }) {
 
         {/* Form */}
         <AnimatePresence>
-          {(showForm || editingPDI) && (
+          {editingPDI && (
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               className="bg-[#0B0B0D] border border-[#E10600]/30 rounded-2xl p-6">
-              <h3 className="font-black text-white mb-4">{editingPDI ? 'Editar PDI' : 'Novo PDI'}</h3>
+              <h3 className="font-black text-white mb-4">Editar PDI</h3>
               <div className="flex gap-4 items-start">
                 <div className="flex-1">
                   <PDIForm
                     initial={editingPDI}
                     onSave={handleSave}
-                    onCancel={() => { setShowForm(false); setEditingPDI(null); }}
-                    isAdmin={isAdmin}
+                    onCancel={() => { setEditingPDI(null); }}
+                    isAdmin={isAdmin && !editingPDI?.registration_version}
                   />
                 </div>
                 {editingPDI && (
@@ -527,13 +523,13 @@ function InternalFTCPDIContent({ user }) {
         </AnimatePresence>
 
         {/* List */}
-        {isLoading ? (
+        {isError ? null : isLoading ? (
           <p className="text-sm text-[#B8BDC7]">Carregando...</p>
-        ) : pdis.length === 0 && !showForm ? (
+        ) : pdis.length === 0 ? (
           <div className="bg-[#111217] border border-[#1F222B] rounded-xl p-10 text-center">
             <User className="w-10 h-10 text-[#B8BDC7] mx-auto mb-3" />
             <p className="text-sm text-[#B8BDC7]">Nenhum PDI registrado ainda.</p>
-            <p className="text-xs text-[#B8BDC7]/60 mt-1">Clique em "Novo PDI" para começar.</p>
+            <p className="text-xs text-[#B8BDC7]/60 mt-1">O PDI é criado ao concluir o cadastro. Se você já concluiu, procure o administrador.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -541,7 +537,7 @@ function InternalFTCPDIContent({ user }) {
               <PDICard key={pdi.id} pdi={pdi}
                 isAdmin={isAdmin}
                 onUpdateProgress={handleUpdateProgress}
-                onEdit={(p) => { setEditingPDI(p); setShowForm(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                onEdit={(p) => { setEditingPDI(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                 onDelete={(id) => { if (confirm('Excluir este PDI?')) deleteMutation.mutate(id); }}
               />
             ))}

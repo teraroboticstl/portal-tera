@@ -49,3 +49,12 @@ O cadastro anterior de trajetória continua independente e pode exibir seu convi
 ### Para ativar em produção
 
 Não publicar o frontend antes do schema compatível: RPC ausente bloqueia a Área Interna por segurança. Exige backup verificável e plano de recuperação do banco, conferência de schema/grants/RLS efetivos, cinco sessões de teste e aprovação da ativação com ciência do bloqueio. Nenhuma dessas verificações deve ser presumida a partir de testes com fixtures.
+
+## 05/11/2026 — geração automática de PDIs após questionário
+
+- Corrigida a diferença entre proposta de cadastro e PDI exibido nas abas: geração por UUID e modalidade, incluindo respostas já concluídas, sem reenviar questionário.
+- Removido Novo PDI das telas FTC/FRC e bloqueada a criação manual pela API do cliente.
+- Mantidos os registros manuais anteriores e as respostas originais. Nenhum vínculo baseado em nome.
+- Meu PDI no perfil e Todos os PDIs no administrador; privacidade aplicada no banco e paginação.
+- Backup cifrado das tabelas envolvidas, com hash e restauração isolada verificados. Na restauração de 20 cadastros, os 16 concluídos geraram 24 PDIs; uma segunda reconciliação manteve os mesmos registros.
+- Nenhuma nota de IA ou pontuação por preenchimento: PDIs novos começam com avaliação pendente.

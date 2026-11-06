@@ -285,7 +285,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
      */
     async create(payload) {
       await assertWriteAccess();
-      console.log(`[Supabase Adapter] Criando registro em ${entityName} no Supabase...`, isStructuredRecord(actualTableName) ? '[conteúdo privado omitido]' : payload);
+      console.log(`[Supabase Adapter] Criando registro em ${entityName} no Supabase...`, (isStructuredRecord(actualTableName) || ['pdis','pdi_frcs'].includes(actualTableName)) ? '[conteúdo privado omitido]' : payload);
       
       const sanitized = encodeRecord(actualTableName, payload);
       if (actualTableName === 'daily_logs') {
@@ -501,7 +501,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
      */
     async update(id, payload) {
       await assertWriteAccess();
-      console.log(`[Supabase Adapter] Atualizando ID ${id} de ${entityName} no Supabase...`, isStructuredRecord(actualTableName) ? '[conteúdo privado omitido]' : payload);
+      console.log(`[Supabase Adapter] Atualizando ID ${id} de ${entityName} no Supabase...`, (isStructuredRecord(actualTableName) || ['pdis','pdi_frcs'].includes(actualTableName)) ? '[conteúdo privado omitido]' : payload);
       
       let recordPayload=payload;
       if(isStructuredRecord(actualTableName)) {

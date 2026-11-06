@@ -20,6 +20,7 @@ import ProductsManagement from '@/components/admin/ProductsManagement';
 import SeasonCloseManagement from '@/components/admin/SeasonCloseManagement';
 import GoogleDriveTestManagement from '@/components/admin/GoogleDriveTestManagement';
 import FllSimulatorsManagement from '@/components/admin/FllSimulatorsManagement';
+import MemberPdis from '@/components/internal/MemberPdis';
 import PageVisibilityManagement from '@/components/admin/PageVisibilityManagement';
 import { Bot } from 'lucide-react';
 
@@ -27,7 +28,7 @@ import { Bot } from 'lucide-react';
 const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com'];
 
 // Identificadores válidos das guias do Painel Admin
-const VALID_ADMIN_TABS = [
+const VALID_ADMIN_TABS = ['pdis',
   'users',
   'tournament',
   'robots',
@@ -173,6 +174,7 @@ export default function AdminPanel() {
         <Tabs value={activeTab} onValueChange={handleTabChange} defaultValue={DEFAULT_ADMIN_TAB}>
           <div className="overflow-x-auto pb-2 mb-8">
             <TabsList className="bg-[#111217] border border-[#1F222B] inline-flex w-auto min-w-full sm:min-w-0 p-1">
+              <TabsTrigger value="pdis" className="data-[state=active]:bg-[#E10600]">Todos os PDIs</TabsTrigger>
               <TabsTrigger value="page_visibility" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
                 Visibilidade de Páginas
               </TabsTrigger>
@@ -211,6 +213,7 @@ export default function AdminPanel() {
             </TabsList>
           </div>
 
+          <TabsContent value="pdis"><MemberPdis all /></TabsContent>
           <TabsContent value="page_visibility"><PageVisibilityManagement /></TabsContent>
           <TabsContent value="users">
             <UsersManagement />
