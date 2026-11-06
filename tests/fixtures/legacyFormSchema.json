@@ -1,0 +1,555 @@
+{
+  "notice": "Production column/check metadata only, confirmed 2026-11-06. Contains no member records or credentials.",
+  "columns": {
+    "fll_missions": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": "uuid_generate_v4()",
+        "nullable": "NO"
+      },
+      {
+        "name": "mission_number",
+        "type": "integer",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "max_score",
+        "type": "integer",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "name": "current_score",
+        "type": "integer",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "default": "'Não Iniciada'::text",
+        "nullable": "NO"
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "fll_tasks": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": "uuid_generate_v4()",
+        "nullable": "NO"
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "default": "'pendente'::text",
+        "nullable": "NO"
+      },
+      {
+        "name": "area",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "assignee_id",
+        "type": "uuid",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "assignee_name",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "deadline",
+        "type": "date",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "fll_innovation_projects": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": "uuid_generate_v4()",
+        "nullable": "NO"
+      },
+      {
+        "name": "problem_definition",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "proposed_solution",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "experts_consulted",
+        "type": "ARRAY",
+        "default": "'{}'::text[]",
+        "nullable": "NO"
+      },
+      {
+        "name": "presentation_status",
+        "type": "text",
+        "default": "'Em Desenvolvimento'::text",
+        "nullable": "NO"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "fll_core_values": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": "uuid_generate_v4()",
+        "nullable": "NO"
+      },
+      {
+        "name": "value_name",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "evidence",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "activity_example",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "fll_judge_preps": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": "uuid_generate_v4()",
+        "nullable": "NO"
+      },
+      {
+        "name": "category",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "question",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "key_points",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "responsible_student",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "fll_members": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": "uuid_generate_v4()",
+        "nullable": "NO"
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "role",
+        "type": "text",
+        "default": "'Membro'::text",
+        "nullable": "NO"
+      },
+      {
+        "name": "avatar_url",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "subsystem",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "bio",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "fll_attachments": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": "uuid_generate_v4()",
+        "nullable": "NO"
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "type",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "missions_served",
+        "type": "ARRAY",
+        "default": "'{}'::text[]",
+        "nullable": "NO"
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "default": "'Protótipo'::text",
+        "nullable": "NO"
+      },
+      {
+        "name": "notes",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "board_diaries": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": "uuid_generate_v4()",
+        "nullable": "NO"
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "content",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "author_id",
+        "type": "uuid",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "author_name",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "date",
+        "type": "date",
+        "default": "CURRENT_DATE",
+        "nullable": "NO"
+      },
+      {
+        "name": "category",
+        "type": "text",
+        "default": "'Geral'::text",
+        "nullable": "NO"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "team_logs": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": "uuid_generate_v4()",
+        "nullable": "NO"
+      },
+      {
+        "name": "user_id",
+        "type": "uuid",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "user_name",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "content",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "date",
+        "type": "date",
+        "default": "CURRENT_DATE",
+        "nullable": "NO"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "project_risks": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": "uuid_generate_v4()",
+        "nullable": "NO"
+      },
+      {
+        "name": "risk",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "category",
+        "type": "text",
+        "default": "'Técnico'::text",
+        "nullable": "NO"
+      },
+      {
+        "name": "probability",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "impact",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "mitigation",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "contingency",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "responsible",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "program",
+        "type": "text",
+        "default": "'Geral'::text",
+        "nullable": "NO"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "esg_initiatives": [
+      {
+        "name": "id",
+        "type": "uuid",
+        "default": "uuid_generate_v4()",
+        "nullable": "NO"
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "pillar",
+        "type": "text",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "default": "'Ideia'::text",
+        "nullable": "NO"
+      },
+      {
+        "name": "impact_description",
+        "type": "text",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp with time zone",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "table": "fll_judge_preps",
+      "constraint": "CHECK ((category = ANY (ARRAY['Robot Design'::text, 'Innovation Project'::text, 'Core Values'::text])))"
+    },
+    {
+      "table": "fll_missions",
+      "constraint": "CHECK ((status = ANY (ARRAY['Não Iniciada'::text, 'Em Desenvolvimento'::text, 'Consistente'::text])))"
+    },
+    {
+      "table": "fll_tasks",
+      "constraint": "CHECK ((area = ANY (ARRAY['Robot Design'::text, 'Inovação'::text, 'Core Values'::text, 'Geral'::text])))"
+    },
+    {
+      "table": "fll_tasks",
+      "constraint": "CHECK ((status = ANY (ARRAY['pendente'::text, 'em_progresso'::text, 'concluida'::text])))"
+    }
+  ]
+}

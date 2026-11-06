@@ -1,3 +1,5 @@
+import FormLoadError from '@/components/common/FormLoadError';
+import FormSaveError from '@/components/common/FormSaveError';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -10,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { formatPortalDate as format } from '@/lib/formRecovery';
 import { ptBR } from 'date-fns/locale';
 import ProtectedRoute, { canEdit } from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
@@ -27,11 +29,12 @@ const VALUES_META = {
 const VALUES_LIST = Object.keys(VALUES_META);
 const EMPTY = { date: new Date().toISOString().split('T')[0], value: 'Descoberta', activity: '', reflection: '', participants: '' };
 
-function CVForm({ initial, onSave, onClose, isPending }) {
+function CVForm({ initial, onSave, onClose, isPending, error }) {
   const [form, setForm] = useState(initial || EMPTY);
   const f = (key) => ({ value: form[key] || '', onChange: e => setForm(p => ({ ...p, [key]: e.target.value })) });
   return (
     <div className="space-y-4">
+      <FormSaveError error={error} />
       <div className="grid grid-cols-2 gap-3">
         <div><Label className="text-[#B8BDC7] text-xs uppercase tracking-wider mb-1 block">Data</Label>
           <Input type="date" {...f('date')} className="bg-[#0B0B0D] border-[#1F222B] text-white" /></div>
@@ -65,7 +68,7 @@ function Content({ user }) {
   const [editing, setEditing] = useState(null);
   const qc = useQueryClient();
 
-  const { data: entries = [], isLoading } = useQuery({
+  const { data: entries = [], isLoading, isError: loadFailed, refetch: retryLoad } = useQuery({
     queryKey: ['fll-core-values'],
     queryFn: () => base44.entities.FLLCoreValues.list('-date'),
   });
@@ -79,6 +82,7 @@ function Content({ user }) {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['fll-core-values'] }); toast.success('Excluído!'); },
   });
 
+  if(loadFailed)return <InternalPageLayout user={user} currentPage="InternalFLLCoreValues" title="FLL — Core Values"><FormLoadError onRetry={retryLoad} /></InternalPageLayout>;
   return (
     <InternalPageLayout user={user} currentPage="InternalFLLCoreValues" title="FLL — Core Values">
       <div className="space-y-6">
@@ -148,9 +152,9 @@ function Content({ user }) {
         )}
 
         <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); setEditing(null); } }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg">
+          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg max-h-[90dvh] overflow-y-auto text-white">
             <DialogHeader><DialogTitle>{editing ? 'Editar Atividade' : 'Nova Atividade — Core Values'}</DialogTitle></DialogHeader>
-            <CVForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} />
+            <CVForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} error={save.error} />
           </DialogContent>
         </Dialog>
       </div>

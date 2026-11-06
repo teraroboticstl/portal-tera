@@ -100,7 +100,10 @@ export async function isFileReferencedInDb(fileId) {
       { name: 'materiais AVA', res: avaMediaRes }
     ];
 
-    const recordReferences=await Promise.all([['daily_logs','content'],['meeting_notes','content'],['prototype_tests','result']].map(async ([table,column])=>({name:table,res:await supabaseServer.from(table).select('id',{head:true,count:'exact'}).ilike(column,searchPattern)})));
+    const recordReferences=await Promise.all([['daily_logs','content'],['meeting_notes','content'],['prototype_tests','result'],
+      ['fll_attachments','portal_form_data->>file_url'],['fll_members','avatar_url'],
+      ['fll_innovation_projects','portal_form_data->>links'],['board_diaries','portal_form_data->>links']
+    ].map(async ([table,column])=>({name:table,res:await supabaseServer.from(table).select('id',{head:true,count:'exact'}).ilike(column,searchPattern)})));
     queryChecks.push(...recordReferences);
     for (const check of queryChecks) {
       if (check.res?.error) {

@@ -8,7 +8,7 @@ import { Rocket, BookOpen, FlaskConical, ArrowRight, Calendar } from 'lucide-rea
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import Badge from '@/components/common/Badge';
-import { format } from 'date-fns';
+import { formatPortalDate as format } from '@/lib/formRecovery';
 import { ptBR } from 'date-fns/locale';
 import PrioritiesBoard from '@/components/internal/PrioritiesBoard';
 
