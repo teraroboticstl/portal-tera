@@ -53,7 +53,7 @@ function MissionForm({ initial, onSave, onClose, isPending, error }) {
       <div><Label className="text-[#B8BDC7] text-xs uppercase tracking-wider mb-1 block">Notas</Label>
         <Textarea {...f('notes')} className="bg-[#0B0B0D] border-[#1F222B] text-white min-h-[80px] resize-none" placeholder="Observações sobre a missão..." /></div>
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="outline" onClick={onClose} className="border-[#1F222B]">Cancelar</Button>
+        <Button variant="outline" onClick={onClose} className="border-[#1F222B] bg-[#111217] text-[#B8BDC7] hover:bg-[#1F222B] hover:text-white">Cancelar</Button>
         <Button onClick={() => onSave(form)} disabled={!form.name || isPending} className="bg-orange-600 hover:bg-orange-700">
           {isPending ? 'Salvando...' : 'Salvar'}
         </Button>

@@ -189,7 +189,7 @@ export default function DiaryForm({ entry, program, onClose }) {
 
       <FormSaveError error={save.error} />
       <div className="flex justify-end gap-2 pt-2">
-        <Button variant="outline" onClick={onClose} className="border-[#1F222B]">
+        <Button variant="outline" onClick={onClose} className="border-[#1F222B] bg-[#111217] text-[#B8BDC7] hover:bg-[#1F222B] hover:text-white">
           <X className="w-4 h-4 mr-1" /> Cancelar
         </Button>
         <Button

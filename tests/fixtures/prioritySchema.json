@@ -1,0 +1,64 @@
+{
+  "checks": [
+    "CHECK ((area = ANY (ARRAY['Mecânica'::text, 'Programação'::text, 'Elétrica'::text, 'Marketing'::text, 'Geral'::text])))",
+    "CHECK (((category = ANY (ARRAY['FLL'::text, 'FTC'::text, 'FRC'::text, 'Geral'::text])) OR (category = ANY (ARRAY['OBR'::text, 'OBR Resgate Nível 1'::text, 'OBR Resgate Nível 2'::text, 'OBR Artística Nível 1'::text, 'OBR Artística Nível 2'::text]))))",
+    "CHECK ((status = ANY (ARRAY['Pendente'::text, 'Em Progresso'::text, 'Concluído'::text])))",
+    "CHECK ((urgency = ANY (ARRAY['Alta'::text, 'Média'::text, 'Baixa'::text])))"
+  ],
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "default": "uuid_generate_v4()",
+      "nullable": "NO"
+    },
+    {
+      "name": "title",
+      "type": "text",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "default": null,
+      "nullable": "YES"
+    },
+    {
+      "name": "area",
+      "type": "text",
+      "default": null,
+      "nullable": "NO"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "default": "'Pendente'::text",
+      "nullable": "NO"
+    },
+    {
+      "name": "urgency",
+      "type": "text",
+      "default": "'Média'::text",
+      "nullable": "NO"
+    },
+    {
+      "name": "category",
+      "type": "text",
+      "default": "'Geral'::text",
+      "nullable": "NO"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "default": "now()",
+      "nullable": "NO"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "default": "now()",
+      "nullable": "NO"
+    }
+  ]
+}
