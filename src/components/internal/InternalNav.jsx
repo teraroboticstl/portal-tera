@@ -14,6 +14,7 @@ const menuItems = [
     category: 'Geral',
     items: [
       { name: 'Dashboard', icon: LayoutDashboard, path: 'AreaInterna' },
+      { name: 'Minhas demandas', icon: ListTodo, path: 'InternalDemands', board: 'personal' },
       { name: 'Operação Tera e ULTRON', icon: ListTodo, path: 'InternalOperations' },
       { name: 'Logs Diários', icon: BookOpen, path: 'InternalLogs' },
       { name: 'Reuniões', icon: Calendar, path: 'InternalMeetings' },
@@ -29,13 +30,14 @@ const menuItems = [
   {
     category: 'OBR — Resgate e Artística',
     color: 'blue',
-    items: [{ name: 'Área OBR e subcategorias', icon: Cpu, path: 'InternalOBR' }],
+    items: [{ name: 'Área OBR e subcategorias', icon: Cpu, path: 'InternalOBR' }, { name: 'Demandas OBR', icon: ListTodo, path: 'InternalDemands', board:'OBR' }],
   },
   {
     category: 'FRC',
     color: 'red',
     items: [
       { name: 'Visão Geral', icon: Target, path: 'InternalFRC' },
+      { name: 'Demandas FRC', icon: ListTodo, path: 'InternalDemands', board:'FRC' },
       { name: 'Scout Rápido', icon: Cpu, path: 'InternalFRCScout' },
       { name: 'PDI Membros', icon: FileText, path: 'InternalFRCPDI' },
       { name: 'Diário de Bordo', icon: BookOpen, path: 'InternalBoardDiary' },
@@ -47,6 +49,7 @@ const menuItems = [
     color: 'orange',
     items: [
       { name: 'Visão Geral', icon: Cpu, path: 'InternalFTC' },
+      { name: 'Demandas FTC', icon: ListTodo, path: 'InternalDemands', board:'FTC' },
       { name: 'PDI Membros', icon: BookOpen, path: 'InternalFTCPDI' },
       { name: 'Diário de Bordo', icon: FileText, path: 'InternalBoardDiary' },
     ]
@@ -56,6 +59,7 @@ const menuItems = [
     color: 'yellow',
     items: [
       { name: 'Dashboard FLL', icon: Rocket, path: 'InternalFLLDashboard' },
+      { name: 'Demandas FLL', icon: ListTodo, path: 'InternalDemands', board:'FLL' },
       { name: 'Reuniões', icon: Calendar, path: 'InternalFLLMeetings' },
       { name: 'Missões', icon: Target, path: 'InternalFLLMissions' },
       { name: 'Proj. Inovação', icon: Lightbulb, path: 'InternalFLLInnovation' },
@@ -125,11 +129,11 @@ export default function InternalNav({ currentPage, onClose, isAdmin }) {
             </h3>
             <div className="space-y-1">
               {section.items.map((item) => {
-                const isActive = currentPage === item.path;
+                const isActive = currentPage === item.path && (!item.board || (new URLSearchParams(location.search).get('board')||'personal')===item.board);
                 return (
                   <Link
                     key={item.name}
-                    to={createPageUrl(item.path)}
+                    to={`${createPageUrl(item.path)}${item.board?`?board=${item.board}`:''}`}
                     onClick={onClose}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
                       isActive
