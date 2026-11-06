@@ -84,7 +84,10 @@ export async function validateUserAuth(authHeaderOrToken) {
       portal_can_edit: !accessError && access?.portal_can_edit === true,
       access_level: access?.access_level || 'public',
       ava_status: access?.ava_status || 'pending',
-      ava_admin: !accessError && access?.ava_admin === true
+      ava_admin: !accessError && access?.ava_admin === true,
+      modality_access_enabled: !accessError && access?.modality_access_enabled === true,
+      all_modalities: !accessError && access?.all_modalities === true,
+      allowed_modalities: !accessError && Array.isArray(access?.allowed_modalities) ? access.allowed_modalities : []
     }
   };
 

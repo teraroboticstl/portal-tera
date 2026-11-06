@@ -72,8 +72,9 @@ const archiveItem = { name: 'Arquivo de Temporadas', icon: Archive, path: 'Inter
 
 export default function InternalNav({ currentPage, onClose, isAdmin }) {
   const location = useLocation();
-  const { canShow } = usePageVisibility();
-  const visibleSections = menuItems.map(section => ({ ...section, items: section.items.filter(item => canShow(item.path)) }))
+  const { canShow, canShowModality } = usePageVisibility();
+  const sectionMode = {'OBR — Resgate e Artística':'OBR','FRC':'FRC','FTC - DECODE':'FTC','FLL':'FLL'};
+  const visibleSections = menuItems.filter(section => !sectionMode[section.category] || canShowModality(sectionMode[section.category])).map(section => ({ ...section, items: section.items.filter(item => canShow(item.path)) }))
     .filter(section => section.items.length > 0);
 
   return (

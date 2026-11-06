@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { getDriveErrorInfo, getGoogleDriveClient, resolveTargetFolder, sanitizeFileName, uploadBufferToDrive } from '../_lib/googleDrive.js';
 import { verifyMediaAccess, isFileReferencedInDb, invalidateFileDbCache } from '../_lib/mediaSecurity.js';
 import { validateUserAuth, validateUploadPermission, supabaseServer } from '../_lib/supabaseServer.js';
+import { canUseProgram } from '../_lib/modalityAccess.js';
 import { parseMultipart } from '../_lib/multipart.js';
 import { cacheAudioBytes } from '../_lib/fllAudioStorage.js';
 
@@ -166,6 +167,7 @@ export default async function handler(req, res) {
         subfolder: fields.subfolder,
         recordId: fields.recordId
       };
+      if (!canUseProgram(authenticatedUser.profile,fields.program)) return res.status(403).json({error:'Modalidade não autorizada para sua conta.'});
 
       const targetFolderId = await resolveTargetFolder(drive, context, extraMeta);
 

@@ -1,4 +1,5 @@
 import { getRootFolderId } from './googleDrive.js';
+import { canUseProgram } from './modalityAccess.js';
 import { supabaseServer, validateUserAuth, createScopedUserSupabaseClient } from './supabaseServer.js';
 
 // Cache em memória para verificações de pastas e registros públicos (evita sobrecarga no Drive e Supabase)
@@ -439,6 +440,9 @@ async function handlePrivateAccess({ fileMeta, req }) {
       };
     }
 
+    if (!canUseProgram(authenticatedUser.profile,fileMeta.appProperties?.program)) {
+      return {allowed:false,statusCode:403,isPublic:false,error:'Acesso restrito',message:'Modalidade não autorizada para sua conta.'};
+    }
     if (fileMeta.appProperties?.context === 'pdi' && !authenticatedUser.profile?.is_admin && fileMeta.appProperties?.uploaderId !== authenticatedUser.id) {
       return {allowed:false,statusCode:403,isPublic:false,error:'Acesso restrito',message:'Anexo pessoal restrito ao autor e administrador.'};
     }

@@ -24,6 +24,12 @@ export const INTERNAL_PAGES = [
   ['InternalSeasonArchive', 'Arquivo de Temporadas'],
 ];
 export const visibilityKey = page => INTERNAL_PAGES.find(([key]) => key.toLowerCase() === String(page).toLowerCase())?.[0];
+export function canDisplayModality(program, snapshot, actor) {
+  if (!actor || snapshot?.actor !== actor) return false;
+  if (snapshot.is_admin === true || snapshot.all_modalities === true) return true;
+  const mode = program?.startsWith('OBR ') ? 'OBR' : program;
+  return mode === 'Geral' || snapshot.modalities?.includes(mode) === true;
+}
 export function canDisplayPage(page, snapshot, actor) {
   const key = visibilityKey(page);
   if (!key) return true;

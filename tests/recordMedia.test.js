@@ -72,17 +72,18 @@ test('media security: private PDI is author/admin only and record references pre
 });
 
 test('actual upload endpoint accepts new private/record contexts without public sharing',async()=>{
- let context='seasons',upload,deny=false;
+ let context='seasons',upload,deny=false,program='FTC';
  const m=await moduleWith(new URL('../api/media/[id].js',import.meta.url),{
   '/crypto':{default:{createHash:()=>({update:()=>({digest:()=> 'synthetic-digest'})})}},
   '/googleDrive.js':{getDriveErrorInfo:()=>({status:500,code:'failure',message:'Falha'}),getGoogleDriveClient:()=>({files:{get:async()=>({data:{id:'synthetic-file-123',appProperties:{context},mimeType:'image/png',size:1}})}}),resolveTargetFolder:async()=> 'private-folder',sanitizeFileName:name=>name,uploadBufferToDrive:async params=>{upload=params;return {id:'synthetic-file',name:'fixture.png',mimeType:'image/png'};}},
   '/mediaSecurity.js':{verifyMediaAccess:()=>({allowed:true,isPublic:true}),isFileReferencedInDb:()=>{},invalidateFileDbCache:()=>{}},
-  '/supabaseServer.js':{supabaseServer:{},validateUserAuth:async()=>{if(deny)throw Error('unauthorized');return {id:'actor',email:'synthetic@example.invalid',profile:{}};},validateUploadPermission:()=>{}},
-  '/multipart.js':{parseMultipart:async()=>({fields:{context},file:{buffer:new Uint8Array([1]),size:1,mimeType:'image/png',filename:'fixture.png'}})},
+  '/supabaseServer.js':{supabaseServer:{},validateUserAuth:async()=>{if(deny)throw Error('unauthorized');return {id:'actor',email:'synthetic@example.invalid',profile:{portal_internal:true,modality_access_enabled:true,allowed_modalities:['FTC']}};},validateUploadPermission:()=>{}},
+  '/multipart.js':{parseMultipart:async()=>({fields:{context,program},file:{buffer:new Uint8Array([1]),size:1,mimeType:'image/png',filename:'fixture.png'}})},
   '/fllAudioStorage.js':{cacheAudioBytes:()=>{}}
  });
  function response(){return {code:0,body:null,headers:{},setHeader(key,value){this.headers[key]=value;},status(code){this.code=code;return this;},json(body){this.body=body;return this;},end(){return this;}};}
  for(context of ['seasons','pdi','event-assets']){const res=response();await m.default({method:'POST',headers:{authorization:'Bearer synthetic'}},res);assert.equal(res.code,200,JSON.stringify(res.body));assert.equal(upload.context,context);assert.equal(upload.isPublic,false);assert.equal(upload.uploaderId,'actor');}
+ upload=null;program='FRC';const blocked=response();await m.default({method:'POST',headers:{authorization:'Bearer synthetic'}},blocked);assert.equal(blocked.code,403);assert.equal(upload,null);
  upload=null;deny=true;const res=response();await m.default({method:'POST',headers:{}},res);assert.equal(res.code,401);assert.equal(upload,null);
  context='event-assets';const head=response();await m.default({method:'HEAD',url:'/api/media/synthetic-file-123',headers:{}},head);assert.equal(head.code,200);assert.match(head.headers['Cache-Control'],/no-store/);
 });

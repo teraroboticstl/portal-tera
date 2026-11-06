@@ -6,10 +6,10 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { transform } from 'sucrase';
 import { pathToFileURL } from 'node:url';
-import { INTERNAL_PAGES, canDisplayPage, visibilityKey } from '../src/lib/internalPageVisibility.js';
+import { INTERNAL_PAGES, canDisplayPage, canDisplayModality, visibilityKey } from '../src/lib/internalPageVisibility.js';
 import { createPageVisibilityClient } from '../src/api/pageVisibilityClient.js';
 
-const packet = (admin=false) => ({ actor:'member', is_admin:admin,
+const packet = (admin=false) => ({ actor:'member', is_admin:admin, all_modalities:true,
   pages:Object.fromEntries(INTERNAL_PAGES.map(([key])=>[key,{visible:true,revision:0}])) });
 
 test('catalogue covers all internal routes except administrative audit; recovery/public routes cannot be hidden', () => {
@@ -84,7 +84,7 @@ test('real sidebar removes hidden links; admin tab renders Show/Hide and denies 
       'lucide-react':new Proxy({}, {get:()=>()=>null}),
       '@tanstack/react-query':{useQueryClient:()=>({})},
       '@/lib/internalPageVisibility':{INTERNAL_PAGES},
-      '@/lib/usePageVisibility':{usePageVisibility:()=>({actor:'member',snapshot:data,canShow:page=>canDisplayPage(page,data,'member')})}};
+      '@/lib/usePageVisibility':{usePageVisibility:()=>({actor:'member',snapshot:data,canShow:page=>canDisplayPage(page,data,'member'),canShowModality:mode=>canDisplayModality(mode,data,'member')})}};
     vm.runInNewContext(transform(source,{transforms:['jsx','imports']}).code,{module,exports:module.exports,require:name=>mocks[name]});
     return module.exports.default;
   };
@@ -95,6 +95,13 @@ test('real sidebar removes hidden links; admin tab renders Show/Hide and denies 
   assert.match(render(Nav),/href="\/InternalLogs"/);
   assert.match(render(Management),/Somente administradores/);
   assert.doesNotMatch(render(Management),/aria-label="Mostrar/);
+  data.all_modalities=false;data.modalities=['FTC'];
+  assert.match(render(Nav),/href="\/InternalFTC"/);
+  assert.doesNotMatch(render(Nav),/href="\/InternalFRC"|href="\/InternalFLLDashboard"|href="\/InternalOBR"/);
+  data.modalities=['FRC','OBR'];
+  assert.match(render(Nav),/href="\/InternalFRC"/);
+  assert.match(render(Nav),/href="\/InternalOBR"/);
+  assert.doesNotMatch(render(Nav),/href="\/InternalFTC"/);
   data.is_admin=true;
   assert.match(render(Nav),/href="\/InternalRiskAnalysis"/);
   assert.match(render(Management),/aria-label="Mostrar Análise de Risco"/);

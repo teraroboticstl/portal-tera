@@ -1,3 +1,4 @@
+import { usePageVisibility } from '@/lib/usePageVisibility';
 import { format } from 'date-fns';
 import { requestDeadline } from '@/api/requestDeadline';
 import PortalMedia from '@/components/common/PortalMedia';
@@ -15,15 +16,18 @@ import { toast } from "sonner";
 import { useDraft } from './useDraft';
 
 const LOG_TYPES = ['Reunião', 'Build', 'CAD', 'Programação', 'Teste', 'Divulgação'];
-const PROGRAMS = RECORD_PROGRAMS;
+const PROGRAMS = [...RECORD_PROGRAMS, 'Geral'];
 
 export default function DailyLogForm({ log = null, onClose, onSuccess, initialProgram = 'FRC' }) {
   const queryClient = useQueryClient();
+  const {canShowModality}=usePageVisibility();
+  const allowedPrograms=PROGRAMS.filter(canShowModality);
+  const defaultProgram=allowedPrograms.includes(initialProgram)?initialProgram:(allowedPrograms[0] || 'Geral');
   const [formError,setFormError]=useState('');
   const isEditing = !!log;
   const { form, setForm, hasDraft, clearDraft } = useDraft('draft_dailylog', {
     date: format(new Date(), 'yyyy-MM-dd'),
-    program: initialProgram === 'all' ? 'FRC' : initialProgram,
+    program: defaultProgram,
     log_type: 'Build',
     participants: [],
     what_was_done: '',
@@ -218,7 +222,7 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#111217] border-[#1F222B] text-white [&_*]:text-white">
-              {PROGRAMS.map((p) => (
+              {allowedPrograms.map((p) => (
                 <SelectItem key={p} value={p}>{p}</SelectItem>
               ))}
             </SelectContent>

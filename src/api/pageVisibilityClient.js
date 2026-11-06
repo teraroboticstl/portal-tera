@@ -16,7 +16,9 @@ export function createPageVisibilityClient(client) {
         if (typeof row?.visible !== 'boolean' || !Number.isSafeInteger(row.revision) || row.revision < 0) throw new Error();
         pages[key] = { visible: row.visible, revision: row.revision };
       }
-      return { actor, is_admin: data.is_admin, pages };
+      return { actor, is_admin: data.is_admin, pages,
+        all_modalities: data.all_modalities === true,
+        modalities: Array.isArray(data.modalities) ? data.modalities.filter(x=>['FLL','FTC','FRC','OBR'].includes(x)) : [] };
     } catch { throw new Error('Não foi possível confirmar a visibilidade. Atualize e tente novamente; se persistir, contate o administrador.'); }
   }
   return {

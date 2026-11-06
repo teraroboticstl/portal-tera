@@ -1,5 +1,13 @@
 # Novidades do ULTRON
 
+## 06/11/2026 — acesso por modalidade
+
+- Menus, dashboard e rotas internas respeitam as modalidades autorizadas; administrador e líder mantêm todas.
+- Painel Admin → Usuários → Modalidades permite trocar ou acumular acessos individualmente, com revisão concorrente e auditoria.
+- Liberação inicial pelos questionários já concluídos, autorizada pelo administrador; mudanças futuras do questionário não liberam novas modalidades.
+- RLS e mídias internas classificadas verificam o escopo no servidor. Registros gerais e conteúdos públicos mantêm suas regras.
+- Nenhum PDI, registro, conta ou matrícula é apagado ou substituído.
+
 ## 29/10/2026 — Recuperação limitada ao PDI validada
 
 - Restaurados public/auth/extensions do backup real em PostgreSQL local; migração, pendências, preservação dos dados anteriores, matriz de autorização, conclusão/idempotência e rollback passaram.

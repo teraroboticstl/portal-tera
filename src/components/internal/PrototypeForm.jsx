@@ -1,3 +1,4 @@
+import { usePageVisibility } from '@/lib/usePageVisibility';
 import { format } from 'date-fns';
 import { requestDeadline } from '@/api/requestDeadline';
 import PortalMedia from '@/components/common/PortalMedia';
@@ -14,16 +15,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-const PROGRAMS = RECORD_PROGRAMS;
+const PROGRAMS = [...RECORD_PROGRAMS, 'Geral'];
 const CONCLUSIONS = ['Aprovado', 'Refazer', 'Cancelado'];
 
 export default function PrototypeForm({ prototype = null, onClose, onSuccess, initialProgram = 'FRC' }) {
   const queryClient = useQueryClient();
+  const {canShowModality}=usePageVisibility();
+  const allowedPrograms=PROGRAMS.filter(canShowModality);
+  const defaultProgram=allowedPrograms.includes(initialProgram)?initialProgram:(allowedPrograms[0] || 'Geral');
   const [formError,setFormError]=useState('');
   const isEditing = !!prototype;
   const { form, setForm, hasDraft, clearDraft } = useDraft('draft_prototype', {
     date: format(new Date(), 'yyyy-MM-dd'),
-    program: initialProgram === 'all' ? 'FRC' : initialProgram,
+    program: defaultProgram,
     subsystem: '',
     hypothesis: '',
     test_method: '',
@@ -210,7 +214,7 @@ export default function PrototypeForm({ prototype = null, onClose, onSuccess, in
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#111217] border-[#1F222B] text-white [&_*]:text-white">
-              {PROGRAMS.map((p) => (
+              {allowedPrograms.map((p) => (
                 <SelectItem key={p} value={p}>{p}</SelectItem>
               ))}
             </SelectContent>

@@ -1,3 +1,4 @@
+import {usePageVisibility} from '@/lib/usePageVisibility';
 import React,{useState} from 'react';
 import {Button} from '@/components/ui/button';
 import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
@@ -7,6 +8,7 @@ import {loadSources,saveWork} from '@/api/teamOperationsClient';
 import '@/pages/AVA.css';
 const blank=kind=>({kind,title:'',description:'',program:'Geral',area:'Geral',season:'',status:'planned',priority:'medium',progress:0,responsible_id:null,due_on:null,goal_id:null,task_id:null,depends_on:[],blocker:'',acceptance:'',occurred_on:['activity','meeting'].includes(kind)?teamToday():null,is_historical:false,origin:'',participants:[],evidence:[],legacy_refs:[]});
 export default function WorkItemForm({initial,kind,items,roster,onClose,onSaved}){
+ const {canShowModality}=usePageVisibility();
  const [form,setForm]=useState(initial?structuredClone(initial):blank(kind));
  const [error,setError]=useState(''),[busy,setBusy]=useState(false),[referenceQuery,setReferenceQuery]=useState(''),[sources,setSources]=useState([]),[searching,setSearching]=useState(false);
  const record=['activity','meeting'].includes(form.kind);
@@ -21,7 +23,7 @@ export default function WorkItemForm({initial,kind,items,roster,onClose,onSaved}
  {error&&<p role="alert" className="text-red-300">{error}</p>}
  {input('title','Título',{required:true})}
  {text('description',form.kind==='meeting'?'Pauta, discussões, decisões e encaminhamentos':'Descrição e contexto',12000)}
- <div className="grid sm:grid-cols-2 gap-4">{select('program','Modalidade',[...RECORD_PROGRAMS,'Geral'].map(v=>[v,v]))}{input('area','Área de atuação',{max:100,required:true})}{input('season','Temporada / ciclo (opcional)',{max:120})}
+ <div className="grid sm:grid-cols-2 gap-4">{select('program','Modalidade',[...RECORD_PROGRAMS,'Geral'].filter(canShowModality).map(v=>[v,v]))}{input('area','Área de atuação',{max:100,required:true})}{input('season','Temporada / ciclo (opcional)',{max:120})}
  {select('responsible_id',record?'Responsável pelo acompanhamento (opcional)':'Responsável',[['','Não definido'],...roster.map(u=>[u.id,u.full_name])])}
  {!record&&<>{select('status','Status',Object.entries(WORK_STATUS))}{select('priority','Prioridade',Object.entries(WORK_PRIORITY))}{input('due_on','Prazo (opcional)',{type:'date'})}</>}
  {form.kind!=='goal'&&select('goal_id','Vincular a uma meta',[['','Sem vínculo'],...items.filter(i=>i.kind==='goal').map(i=>[i.id,i.title+(i.archived?' (arquivada)':'')])])}
