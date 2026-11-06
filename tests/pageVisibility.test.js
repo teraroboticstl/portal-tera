@@ -122,6 +122,12 @@ test('isolated PostgreSQL: RLS, admin-only mutation, persistence, revision confl
       CREATE FUNCTION public.is_admin() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT auth.uid()='${admin}'::uuid $$;
       CREATE FUNCTION public.portal_internal_access() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT auth.uid() IN ('${admin}'::uuid,'${member}'::uuid,'${trainee}'::uuid) $$;`);
     await db.exec(migration);
+    // Current catalogue includes the new demands route. Validate the additive
+    // migration composition rather than rewriting the historical seed list.
+    await db.exec(`CREATE TABLE profiles(id uuid PRIMARY KEY);
+      CREATE FUNCTION public.portal_can_edit() RETURNS boolean LANGUAGE sql STABLE AS $$SELECT public.portal_internal_access()$$;
+      CREATE FUNCTION public.portal_has_modality(text) RETURNS boolean LANGUAGE sql STABLE AS $$SELECT public.portal_internal_access()$$;`);
+    await db.exec(fs.readFileSync(new URL('../supabase/migrations/20261106_demand_boards.sql',import.meta.url),'utf8'));
     const login=async(id,role='authenticated')=>{await db.exec('RESET ROLE');await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec(`SET ROLE ${role}`);};
     const snap=async()=> (await db.query('SELECT public.portal_page_visibility_snapshot() AS result')).rows[0].result;
     const set=async(page,visible,rev)=>db.query('SELECT public.portal_page_visibility_set($1,$2,$3) AS result',[page,visible,rev]);

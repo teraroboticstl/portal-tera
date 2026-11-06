@@ -1,5 +1,6 @@
 // Explicit catalogue: public/AVA pages and recovery/admin entry points cannot be hidden.
 export const INTERNAL_PAGES = [
+  ['InternalDemands', 'Demandas pessoais e das modalidades'],
   ['InternalOperations', 'Operação Tera e ULTRON'],
   ['InternalLogs', 'Logs Diários'], ['InternalMeetings', 'Reuniões'],
   ['InternalPrototypes', 'Protótipos'], ['InternalMemorial', 'Memorial'],

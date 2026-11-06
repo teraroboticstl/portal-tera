@@ -83,6 +83,9 @@ export default function InternalHeader({ user, title, onMenuClick }) {
             <DropdownMenuItem asChild>
               <Link to="/MyPDI" className="text-[#B8BDC7]">Meu PDI</Link>
             </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/InternalDemands?board=personal" className="text-[#B8BDC7]">Minhas demandas</Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-[#1F222B]" />
             
             <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-[#E10600]">
