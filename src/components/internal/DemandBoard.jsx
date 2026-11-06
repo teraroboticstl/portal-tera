@@ -21,7 +21,7 @@ export function DemandCard({card,editable,busy,onToggle,onEdit,onArchive}) {
     {!card.items.length&&<p className="text-gray-500 text-sm py-2">Lista vazia. Edite o cartão para adicionar uma demanda.</p>}
     {done.length>0&&<details className="mt-2 text-sm"><summary className="cursor-pointer min-h-11 py-3 text-gray-400">{done.length} {done.length===1?'item concluído':'itens concluídos'}</summary><div>{done.map(row)}</div></details>}
     <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-white/10 text-xs text-gray-500">
-      <span className="mr-auto">{done.length}/{card.items.length} concluídos</span>
+      <span className="w-full sm:w-auto sm:mr-auto">{done.length}/{card.items.length} concluídos</span>
       {editable&&!card.archived&&<Button variant="ghost" className="min-h-11 text-gray-300" aria-label={`Editar ${card.title}`} disabled={busy} onClick={onEdit}><Pencil className="w-4 h-4 mr-2" />Editar</Button>}
       {editable&&<Button variant="ghost" className={`min-h-11 ${card.archived?'text-gray-300':'text-red-400 hover:text-red-300'}`} disabled={busy} onClick={onArchive} aria-label={`${card.archived?'Restaurar':'Excluir'} ${card.title}`}>
         {card.archived?<RotateCcw className="w-4 h-4 mr-2" />:<Trash2 className="w-4 h-4 mr-2" />}{card.archived?'Restaurar':'Excluir'}</Button>}
