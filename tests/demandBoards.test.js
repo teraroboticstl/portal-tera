@@ -34,15 +34,22 @@ test('slow/unavailable service times out instead of leaving a permanent spinner'
 test('actual card UI checks completed rows, strikes text, keeps long text inert and exposes restore',async()=>{
  const source=await readFile(new URL('../src/components/internal/DemandBoard.jsx',import.meta.url),'utf8');
  const wrapper=({children,...props})=>React.createElement('button',props,children);
- const mocks={react:React,'@tanstack/react-query':{},'lucide-react':Object.fromEntries(['Plus','Pencil','Archive','RotateCcw','X'].map(k=>[k,()=>null])),
-  '@/api/supabaseClient':{supabase:{}},'@/api/demandBoardsClient':{createDemandBoardsClient:()=>({})},'@/components/ui/button':{Button:wrapper},'@/components/ui/dialog':{}};
+ const container=({children})=>React.createElement('div',null,children);
+ const mocks={react:React,'@tanstack/react-query':{},'lucide-react':Object.fromEntries(['Plus','Pencil','Trash2','RotateCcw','X'].map(k=>[k,()=>null])),
+  '@/api/supabaseClient':{supabase:{}},'@/api/demandBoardsClient':{createDemandBoardsClient:()=>({})},'@/components/ui/button':{Button:wrapper},'@/components/ui/dialog':Object.fromEntries(['Dialog','DialogContent','DialogHeader','DialogTitle','DialogDescription'].map(k=>[k,container]))};
  const module={exports:{}};vm.runInNewContext(transform(source,{transforms:['jsx','imports']}).code,{module,exports:module.exports,require:name=>mocks[name]});
  const html=renderToStaticMarkup(React.createElement(module.exports.DemandCard,{card:{...card,items:[{...item,text:'<script>alert(1)</script>',done:true}]},editable:true}));
  assert.match(html,/line-through/);assert.match(html,/checked=""/);assert.match(html,/1 item concluído/);assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);
+ assert.match(html,/aria-label="Excluir Regional"/);
  const archived=renderToStaticMarkup(React.createElement(module.exports.DemandCard,{card:{...card,archived:true},editable:true}));
  assert.match(archived,/Restaurar/);assert.match(archived,/disabled=""/);
+ assert.doesNotMatch(archived,/>Excluir</);
  const readOnly=renderToStaticMarkup(React.createElement(module.exports.DemandCard,{card,editable:false}));
- assert.doesNotMatch(readOnly,/>Editar<|>Arquivar</);assert.match(readOnly,/disabled=""/);
+ assert.doesNotMatch(readOnly,/>Editar<|>Excluir</);assert.match(readOnly,/disabled=""/);
+ const personalConfirm=renderToStaticMarkup(React.createElement(module.exports.DemandRemovalConfirm,{card:{...card,items:[{...item,done:true}]},busy:false}));
+ assert.match(personalConfirm,/Lixeira/);assert.match(personalConfirm,/restaurá-los/);assert.match(personalConfirm,/Cancelar/);assert.match(personalConfirm,/Excluir caixa/);assert.doesNotMatch(personalConfirm,/item pendente|todo o quadro/);
+ const sharedConfirm=renderToStaticMarkup(React.createElement(module.exports.DemandRemovalConfirm,{card:{...card,board:'FRC'},busy:true,error:'Atualize o quadro'}));
+ assert.match(sharedConfirm,/1 item pendente/);assert.match(sharedConfirm,/todo o quadro da modalidade/);assert.match(sharedConfirm,/Excluindo/);assert.match(sharedConfirm,/disabled=""/);assert.match(sharedConfirm,/role="alert"/);
 });
 
 test('isolated PostgreSQL: own-only notes, modality boards, all roles, revisions, idempotence, archival and non-destructive rollback',

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Archive, RotateCcw, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, RotateCcw, X } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { createDemandBoardsClient, DEMAND_BOARDS } from '@/api/demandBoardsClient';
 import { Button } from '@/components/ui/button';
@@ -23,10 +23,21 @@ export function DemandCard({card,editable,busy,onToggle,onEdit,onArchive}) {
     <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-white/10 text-xs text-gray-500">
       <span className="mr-auto">{done.length}/{card.items.length} concluídos</span>
       {editable&&!card.archived&&<Button variant="ghost" className="min-h-11 text-gray-300" aria-label={`Editar ${card.title}`} disabled={busy} onClick={onEdit}><Pencil className="w-4 h-4 mr-2" />Editar</Button>}
-      {editable&&<Button variant="ghost" className="min-h-11 text-gray-300" disabled={busy} onClick={onArchive} aria-label={`${card.archived?'Restaurar':'Arquivar'} ${card.title}`}>
-        {card.archived?<RotateCcw className="w-4 h-4 mr-2" />:<Archive className="w-4 h-4 mr-2" />}{card.archived?'Restaurar':'Arquivar'}</Button>}
+      {editable&&<Button variant="ghost" className={`min-h-11 ${card.archived?'text-gray-300':'text-red-400 hover:text-red-300'}`} disabled={busy} onClick={onArchive} aria-label={`${card.archived?'Restaurar':'Excluir'} ${card.title}`}>
+        {card.archived?<RotateCcw className="w-4 h-4 mr-2" />:<Trash2 className="w-4 h-4 mr-2" />}{card.archived?'Restaurar':'Excluir'}</Button>}
     </div>
   </article>;
+}
+export function DemandRemovalConfirm({card,busy,error,onCancel,onConfirm}) {
+  const pending=card.items.filter(item=>!item.done).length;
+  return <Dialog open onOpenChange={open=>{if(!open&&!busy)onCancel();}}><DialogContent className="ava-shell bg-[#111217] border-white/20 text-white w-[calc(100%_-_2rem)] max-w-md max-h-[90dvh] overflow-y-auto">
+    <DialogHeader><DialogTitle>Excluir caixa de demandas?</DialogTitle><DialogDescription>A caixa e todos os seus itens sairão do quadro e irão para a Lixeira. Você poderá restaurá-los depois.</DialogDescription></DialogHeader>
+    <p className="font-medium whitespace-pre-wrap [overflow-wrap:anywhere]">{card.title}</p>
+    {pending>0&&<p className="text-sm text-amber-200">Esta caixa ainda tem {pending} {pending===1?'item pendente':'itens pendentes'}.</p>}
+    {card.board!=='personal'&&<p className="text-sm text-gray-300">Esta alteração vale para todo o quadro da modalidade.</p>}
+    {error&&<p role="alert" className="text-red-300">{error}</p>}
+    <div className="flex flex-wrap justify-end gap-3"><Button variant="outline" className="min-h-11" disabled={busy} onClick={onCancel}>Cancelar</Button><Button className="min-h-11 bg-[#E10600] hover:bg-red-700" disabled={busy} onClick={onConfirm}>{busy?'Excluindo…':'Excluir caixa'}</Button></div>
+  </DialogContent></Dialog>;
 }
 export function DemandEditor({initial,onClose,onSave,busy,saveError}) {
   const [title,setTitle]=useState(initial?.title||'');
@@ -60,6 +71,7 @@ export default function DemandBoard({actor,board,onBoardChange}) {
   const [archived,setArchived]=useState(false);
   const [cursors,setCursors]=useState([null]);
   const [editor,setEditor]=useState(null);
+  const [removal,setRemoval]=useState(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const after=cursors.at(-1);
@@ -72,6 +84,7 @@ export default function DemandBoard({actor,board,onBoardChange}) {
     try{
       await api.write(actor,action,payload,board);
       setEditor(null);
+      setRemoval(null);
       await cache.invalidateQueries({queryKey:['demand-cards',actor]});
     }catch(e){setError(e.message);}
     finally{setBusy(false);}
@@ -89,7 +102,7 @@ export default function DemandBoard({actor,board,onBoardChange}) {
       <label className="block w-full sm:flex-1 sm:min-w-56 max-w-sm text-sm">Quadro<select aria-label="Quadro de demandas" value={board} disabled={busy} onChange={e=>onBoardChange(e.target.value)} className="ava-input w-full mt-1 min-h-11">
         {(packet?.boards||[board]).map(b=><option key={b} value={b}>{DEMAND_BOARDS[b]}</option>)}
       </select></label>
-      <Button variant="outline" disabled={busy||!packet} className="min-h-11" onClick={()=>{setArchived(v=>!v);setCursors([null]);setError('');}}>{archived?'Ver cartões ativos':'Ver arquivados'}</Button>
+      <Button variant="outline" disabled={busy||!packet} className="min-h-11" onClick={()=>{setArchived(v=>!v);setCursors([null]);setError('');}}>{archived?'Ver cartões ativos':'Lixeira'}</Button>
       {packet?.can_edit&&!archived&&<Button disabled={busy} className="min-h-11 bg-[#E10600]" onClick={()=>setEditor({id:crypto.randomUUID(),initial:null})}><Plus className="w-4 h-4 mr-2" />Nova caixa</Button>}
       <Button variant="ghost" disabled={busy||query.isFetching} className="min-h-11" onClick={()=>query.refetch()}>Atualizar</Button>
     </div>
@@ -98,12 +111,13 @@ export default function DemandBoard({actor,board,onBoardChange}) {
     {error&&<p role="alert" className="text-red-300">{error}</p>}
     {packet&&<>
       {!packet.can_edit&&<p className="text-sm text-amber-200">Seu nível permite consultar este quadro. Para editar demandas da modalidade, peça a liberação ao administrador.</p>}
-      {!packet.items.length&&<div className="rounded-2xl border border-dashed border-gray-700 p-8 text-gray-400 text-center">{archived?'Nenhum cartão arquivado.':'Nenhuma caixa neste quadro ainda.'}{packet.can_edit&&!archived&&' Use “Nova caixa” para começar.'}</div>}
+      {!packet.items.length&&<div className="rounded-2xl border border-dashed border-gray-700 p-8 text-gray-400 text-center">{archived?'Nenhuma caixa na lixeira.':'Nenhuma caixa neste quadro ainda.'}{packet.can_edit&&!archived&&' Use “Nova caixa” para começar.'}</div>}
       <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 items-start">{packet.items.map(card=><DemandCard key={card.id} card={card} editable={packet.can_edit} busy={busy}
         onToggle={(item,done)=>write('toggle',{id:card.id,revision:card.revision,item:item.id,done})}
-        onEdit={()=>setEditor({id:card.id,initial:card})} onArchive={()=>write('archive',{id:card.id,revision:card.revision,archived:!card.archived})} />)}</div>
+        onEdit={()=>setEditor({id:card.id,initial:card})} onArchive={()=>{if(card.archived)write('archive',{id:card.id,revision:card.revision,archived:false});else{setError('');setRemoval(card);}}} />)}</div>
       <div className="flex gap-3 flex-wrap">{cursors.length>1&&<Button variant="outline" disabled={busy} onClick={()=>setCursors(old=>old.slice(0,-1))}>Página anterior</Button>}{packet.has_more&&<Button variant="outline" disabled={busy} onClick={()=>setCursors(old=>[...old,packet.next_cursor])}>Mais cartões</Button>}</div>
     </>}
     {editor&&packet?.can_edit&&<DemandEditor key={editor.id} initial={editor.initial} busy={busy} saveError={error} onClose={()=>setEditor(null)} onSave={save} />}
+    {removal&&packet?.can_edit&&<DemandRemovalConfirm card={removal} busy={busy} error={error} onCancel={()=>setRemoval(null)} onConfirm={()=>write('archive',{id:removal.id,revision:removal.revision,archived:true})} />}
   </section>;
 }

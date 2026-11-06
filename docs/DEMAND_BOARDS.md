@@ -4,7 +4,7 @@
 
 Menu da Área Interna → Minhas demandas, ou menu do perfil → Minhas demandas. Cada seção FRC/FTC/FLL/OBR também oferece seu quadro compartilhado. A página `/InternalDemands` alterna entre quadro pessoal e modalidades autorizadas. `?board=FRC` seleciona FRC sem liberar acesso por URL.
 
-Use Nova caixa, dê um título, preencha uma demanda por linha e salve. Marcar a caixa de seleção move o item para o grupo expansível de concluídos e risca seu texto; desmarcar reabre. Editar altera título/linhas. Arquivar retira o cartão do quadro ativo; Ver arquivados permite restaurar. Não existe exclusão permanente nessa interface. Linhas vazias são ignoradas, até 80 itens por cartão, 500 caracteres por item e 160 no título. Cartão vazio é permitido.
+Use Nova caixa, dê um título, preencha uma demanda por linha e salve. Marcar a caixa de seleção move o item para o grupo expansível de concluídos e risca seu texto; desmarcar reabre. Editar altera título/linhas. Excluir retira a caixa inteira do quadro ativo após confirmação; Lixeira permite restaurar a caixa com todos os seus itens. A confirmação avisa se há itens pendentes e se a caixa pertence ao quadro compartilhado. A exclusão é recuperável e reutiliza o arquivamento existente (archived), sem apagar linhas do banco. Não existe exclusão permanente nessa interface. Linhas vazias são ignoradas, até 80 itens por cartão, 500 caracteres por item e 160 no título. Cartão vazio é permitido.
 
 Interface preta/vermelha, grade responsiva, textos com quebra e alvos principais de pelo menos 44px. Cartões e modal usam os componentes existentes, sem incorporar Google Keep ou vincular conta Google.
 
