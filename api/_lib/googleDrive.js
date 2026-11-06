@@ -1,3 +1,4 @@
+import { getStoredGoogleRefreshToken } from './googleOAuthStore.js';
 import { google } from 'googleapis';
 import { Readable } from 'stream';
 import fs from 'fs';
@@ -171,10 +172,10 @@ function createLocalDriveFallback() {
  * Cria ou retorna o cliente oficial do Google Drive v3 autenticado com OAuth2 offline
  * (ou fallback seguro para persistência local de bytes caso variáveis não estejam presentes)
  */
-export function getGoogleDriveClient() {
+export async function getGoogleDriveClient() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
+  const refreshToken = await getStoredGoogleRefreshToken();
 
   if (!clientId || !clientSecret || !refreshToken) {
     if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
@@ -252,11 +253,13 @@ export async function resolveTargetFolder(drive, context, extraMeta = {}) {
     'robots': ['05. Engenharia & Temporadas', 'Robôs'],
     'sponsors': ['01. Institucional & Marketing', 'Patrocinadores'],
     'featured-news': ['01. Institucional & Marketing', 'Destaques e Banners'],
+    'event-assets': ['04. Torneios & Eventos', 'Galeria de Eventos'],
     'events': ['04. Torneios & Eventos', 'Galeria de Eventos'],
     'memorial': ['01. Institucional & Marketing', 'Memorial Histórico'],
     'tir': ['04. Torneios & Eventos', 'TIR'],
     'fll-missions': ['04. Torneios & Eventos', 'FLL BIOGLOW', 'Missões'],
     'fll-audio': ['04. Torneios & Eventos', 'FLL BIOGLOW', 'Áudios'],
+    'pdi': ['99. Outros Arquivos', 'PDI'],
     'ava': ['06. Ambiente Virtual de Aprendizagem'],
     'test': ['99. Testes do Sistema']
   };
@@ -349,13 +352,13 @@ export async function uploadBufferToDrive({
     appProperties: {
       app: 'portal_tera',
       context: context,
-      visibility: isPublic ? 'public' : 'private',
+      visibility: context === 'event-assets' ? 'record' : (isPublic ? 'public' : 'private'),
       uploaderId: uploaderId || 'unknown'
     },
     properties: {
       app: 'portal_tera',
       context: context,
-      visibility: isPublic ? 'public' : 'private'
+      visibility: context === 'event-assets' ? 'record' : (isPublic ? 'public' : 'private')
     }
   };
 

@@ -99,6 +99,8 @@ export async function isFileReferencedInDb(fileId) {
       { name: 'materiais AVA', res: avaMediaRes }
     ];
 
+    const recordReferences=await Promise.all([['daily_logs','content'],['meeting_notes','content'],['prototype_tests','result']].map(async ([table,column])=>({name:table,res:await supabaseServer.from(table).select('id',{head:true,count:'exact'}).ilike(column,searchPattern)})));
+    queryChecks.push(...recordReferences);
     for (const check of queryChecks) {
       if (check.res?.error) {
         console.error(`[mediaSecurity] Erro na consulta de ${check.name} para o arquivo ${fileId}:`, check.res.error);
@@ -111,7 +113,7 @@ export async function isFileReferencedInDb(fileId) {
       }
     }
 
-    const entities = [];
+    const entities = recordReferences.filter(item=>item.res?.count>0).map(item=>item.name);
     if (avaMediaRes?.count > 0) entities.push('materiais AVA');
     if (productsRes?.count && productsRes.count > 0) entities.push('produtos');
     if (projectsRes?.count && projectsRes.count > 0) entities.push('projetos');
@@ -173,12 +175,12 @@ export function invalidateFileDbCache(fileId) {
  * @param {string} fileId
  * @returns {Promise<boolean>}
  */
-export async function isFileInPublicRecords(fileId) {
+export async function isFileInPublicRecords(fileId, fresh = false) {
   if (!fileId) return false;
 
   const now = Date.now();
   const cached = publicRecordCache.get(fileId);
-  if (cached && cached.expiresAt > now) {
+  if (!fresh && cached && cached.expiresAt > now) {
     return cached.isPublic;
   }
 
@@ -376,7 +378,7 @@ export async function verifyMediaAccess({ drive, fileMeta, req }) {
   const isExplicitPublicFlag = fileMeta.appProperties?.isPublic === 'true' || fileMeta.appProperties?.isPublic === true;
   const isExplicitPrivateFlag = fileMeta.appProperties?.isPublic === 'false' || fileMeta.appProperties?.isPublic === false;
 
-  const isPrivateContext = ['ava', 'test', 'seasons', 'admin', 'internal', 'engineering'].includes(contextTag);
+  const isPrivateContext = ['pdi', 'ava', 'test', 'seasons', 'admin', 'internal', 'engineering'].includes(contextTag);
   const isMarkedPrivate = visibilityTag === 'private' || isExplicitPrivateFlag || isPrivateContext || folderIsPrivate;
 
   // Se o arquivo for classificado como PRIVADO por qualquer um dos critérios, a privacidade prevalece incondicionalmente
@@ -386,7 +388,7 @@ export async function verifyMediaAccess({ drive, fileMeta, req }) {
 
   // 4. Se não for privado, verificar se é comprovadamente PÚBLICO
   // Critério A: Está ativamente referenciado em tabelas públicas do Supabase (products, projects, robots, sponsors, etc.)
-  const existsInPublicDb = await isFileInPublicRecords(fileMeta.id);
+  const existsInPublicDb = await isFileInPublicRecords(fileMeta.id, contextTag === 'event-assets');
   if (existsInPublicDb) {
     return { allowed: true, statusCode: 200, isPublic: true };
   }
@@ -437,6 +439,9 @@ async function handlePrivateAccess({ fileMeta, req }) {
       };
     }
 
+    if (fileMeta.appProperties?.context === 'pdi' && !authenticatedUser.profile?.is_admin && fileMeta.appProperties?.uploaderId !== authenticatedUser.id) {
+      return {allowed:false,statusCode:403,isPublic:false,error:'Acesso restrito',message:'Anexo pessoal restrito ao autor e administrador.'};
+    }
     // Se for contexto de testes do sistema, exige perfil de administrador
     const isTestFile = (fileMeta.appProperties?.context === 'test');
     if (isTestFile && !authenticatedUser.profile?.is_admin) {

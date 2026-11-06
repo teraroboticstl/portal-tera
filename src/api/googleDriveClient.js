@@ -1,3 +1,4 @@
+import { requestDeadline } from './requestDeadline.js';
 import { supabase } from './supabaseClient.js';
 
 /**
@@ -25,6 +26,8 @@ export async function uploadToGoogleDrive(params = {}) {
     throw new Error('Nenhum arquivo fornecido para upload.');
   }
 
+  if(file.size>4*1024*1024)throw new Error('Envio direto limitado a 4 MB. Para vídeos maiores, use o campo de link do Drive com acesso restrito à equipe.');
+  return requestDeadline(async signal => {
   // 1. Obter o token JWT da sessão atual do Supabase Auth
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
@@ -44,6 +47,7 @@ export async function uploadToGoogleDrive(params = {}) {
 
   // 3. Chamar o endpoint server-side
   const response = await fetch('/api/media/upload', {
+    signal,
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`
@@ -68,12 +72,14 @@ export async function uploadToGoogleDrive(params = {}) {
   }
 
   return result.data;
+  },90000);
 }
 
 /**
  * Obtém a URL de autorização OAuth da conta institucional (apenas administradores)
  */
 export async function getGoogleAuthUrl() {
+  return requestDeadline(async signal => {
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token;
 
@@ -82,6 +88,7 @@ export async function getGoogleAuthUrl() {
   }
 
   const response = await fetch('/api/auth/google/url', {
+    signal,
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -93,6 +100,7 @@ export async function getGoogleAuthUrl() {
   }
 
   return result;
+  });
 }
 
 /**

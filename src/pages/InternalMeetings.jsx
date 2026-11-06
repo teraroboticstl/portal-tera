@@ -1,3 +1,4 @@
+import RecordAttachments from '@/components/internal/RecordAttachments';
 import { OBR_CATEGORIES, matchesProgram, initialProgram } from '@/lib/modalities';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -71,7 +72,7 @@ function InternalMeetingsContent({ user }) {
           )}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4 min-w-0">
           <Filter className="w-4 h-4 text-[#B8BDC7]" />
           <Tabs value={filterProgram.startsWith('OBR') ? 'OBR' : filterProgram} onValueChange={setFilterProgram}>
             <TabsList className="bg-[#111217] border border-[#1F222B] h-auto flex-wrap">
@@ -104,12 +105,12 @@ function InternalMeetingsContent({ user }) {
                 className="bg-[#111217] border border-[#1F222B] rounded-xl p-6 hover:border-[#E10600]/30 transition-colors"
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0 break-words">
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <Badge variant={meeting.program?.toLowerCase()}>{meeting.program}</Badge>
                       <span className="flex items-center gap-1 text-sm text-[#B8BDC7]">
                         <Calendar className="w-4 h-4" />
-                        {format(new Date(meeting.date), "d 'de' MMMM, yyyy", { locale: ptBR })}
+                        {format(new Date(meeting.date + 'T12:00:00'), "d 'de' MMMM, yyyy", { locale: ptBR })}
                       </span>
                     </div>
                     <h3 className="font-bold text-lg mb-2">Pauta: {meeting.agenda && meeting.agenda.length > 80 ? meeting.agenda.substring(0, 80) + '...' : meeting.agenda}</h3>
@@ -148,7 +149,7 @@ function InternalMeetingsContent({ user }) {
         )}
 
         <Dialog open={showForm || !!editingMeeting} onOpenChange={() => { setShowForm(false); setEditingMeeting(null); }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-3xl max-h-[85dvh] w-[calc(100%-1rem)] overflow-x-hidden overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingMeeting ? 'Editar Reunião' : 'Nova Reunião'}</DialogTitle>
             </DialogHeader>
@@ -160,16 +161,17 @@ function InternalMeetingsContent({ user }) {
         </Dialog>
 
         <Dialog open={!!viewingMeeting} onOpenChange={() => setViewingMeeting(null)}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-3xl max-h-[85dvh] w-[calc(100%-1rem)] overflow-x-hidden overflow-y-auto">
             {viewingMeeting && (
               <>
                 <DialogHeader>
                   <Badge variant={viewingMeeting.program?.toLowerCase()}>{viewingMeeting.program}</Badge>
                   <DialogTitle className="mt-2">
-                    {format(new Date(viewingMeeting.date), "d 'de' MMMM, yyyy", { locale: ptBR })}
+                    {format(new Date(viewingMeeting.date + 'T12:00:00'), "d 'de' MMMM, yyyy", { locale: ptBR })}
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 mt-4">
+                  <RecordAttachments record={viewingMeeting} />
                   {viewingMeeting.participants?.length > 0 && (
                     <div>
                       <h4 className="font-medium text-[#E10600] mb-2">Participantes</h4>

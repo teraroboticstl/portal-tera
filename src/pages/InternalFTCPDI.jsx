@@ -1,3 +1,5 @@
+import PortalMedia from '@/components/common/PortalMedia';
+import { toast } from 'sonner';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -73,15 +75,17 @@ function PhotoUpload({ value, onChange }) {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    try {
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'pdi' });
     onChange(file_url);
-    setUploading(false);
+    } catch { toast.error('Não foi possível enviar o arquivo. Tente novamente com um arquivo de até 4 MB.'); }
+    finally { setUploading(false); }
   };
 
   return (
     <div className="flex items-center gap-3">
       {value && (
-        <img src={value} alt="foto" className="w-14 h-14 rounded-full object-cover border-2 border-[#E10600]/50" />
+        <PortalMedia src={value} alt="foto" className="w-14 h-14 rounded-full object-cover border-2 border-[#E10600]/50" />
       )}
       <label className="cursor-pointer flex items-center gap-2 px-3 py-2 bg-[#111217] border border-[#1F222B] rounded-lg text-xs text-[#B8BDC7] hover:border-[#E10600]/50 hover:text-white transition-colors">
         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -100,11 +104,13 @@ function CertificatesUpload({ value = [], onChange }) {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    try {
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'pdi' });
     const name = nameInput.trim() || file.name.replace(/\.[^.]+$/, '');
     onChange([...value, { name, url: file_url }]);
     setNameInput('');
-    setUploading(false);
+    } catch { toast.error('Não foi possível enviar o arquivo. Tente novamente com um arquivo de até 4 MB.'); }
+    finally { setUploading(false); }
     e.target.value = '';
   };
 
@@ -118,10 +124,10 @@ function CertificatesUpload({ value = [], onChange }) {
             <div key={i} className="flex items-center gap-2 bg-[#111217] border border-[#1F222B] rounded-lg px-3 py-2">
               <FileText className="w-4 h-4 text-orange-400 flex-shrink-0" />
               <span className="text-sm text-white flex-1 truncate">{cert.name}</span>
-              <a href={cert.url} target="_blank" rel="noopener noreferrer"
+              <PortalMedia src={cert.url} type="link"
                 className="text-blue-400 hover:text-blue-300 p-1">
                 <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              </PortalMedia>
               <button onClick={() => remove(i)} className="text-red-400 hover:text-red-300 p-1">
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -305,7 +311,7 @@ function PDICard({ pdi, onEdit, onDelete, onUpdateProgress, isAdmin }) {
       {/* Photo */}
       <div className="flex justify-center pt-6 pb-3">
         {pdi.photo_url ? (
-          <img src={pdi.photo_url} alt={pdi.member_name}
+          <PortalMedia src={pdi.photo_url} alt={pdi.member_name}
             className="w-24 h-24 rounded-2xl object-cover border-2 border-[#E10600]/40 shadow" />
         ) : (
           <div className="w-24 h-24 rounded-2xl bg-[#1F222B] border-2 border-[#1F222B] flex items-center justify-center">
@@ -397,12 +403,12 @@ function PDICard({ pdi, onEdit, onDelete, onUpdateProgress, isAdmin }) {
                   </div>
                   <div className="space-y-1">
                     {pdi.certificates.map((cert, i) => (
-                      <a key={i} href={cert.url} target="_blank" rel="noopener noreferrer"
+                      <PortalMedia key={i} src={cert.url} type="link"
                         className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 bg-[#111217] rounded-lg px-3 py-2 border border-[#1F222B] transition-colors">
                         <FileText className="w-3.5 h-3.5 flex-shrink-0" />
                         <span className="flex-1 truncate">{cert.name}</span>
                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                      </a>
+                      </PortalMedia>
                     ))}
                   </div>
                 </div>
