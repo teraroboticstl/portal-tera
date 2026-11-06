@@ -1,3 +1,4 @@
+import { usePageVisibility } from '@/lib/usePageVisibility';
 import { format } from 'date-fns';
 import MeetingAttachments from './MeetingAttachments';
 import { requestDeadline } from '@/api/requestDeadline';
@@ -19,11 +20,14 @@ const PROGRAMS = [...RECORD_PROGRAMS, 'Geral'];
 
 export default function MeetingForm({ meeting = null, onClose, onSuccess, initialProgram = 'FRC' }) {
   const queryClient = useQueryClient();
+  const {canShowModality}=usePageVisibility();
+  const allowedPrograms=PROGRAMS.filter(canShowModality);
+  const defaultProgram=allowedPrograms.includes(initialProgram)?initialProgram:(allowedPrograms[0] || 'Geral');
   const [formError,setFormError]=useState('');
   const isEditing = !!meeting;
   const { form, setForm, hasDraft, clearDraft } = useDraft('draft_meeting', {
     date: format(new Date(), 'yyyy-MM-dd'),
-    program: initialProgram === 'all' ? 'FRC' : initialProgram,
+    program: defaultProgram,
     participants: [],
     agenda: '',
     technical_discussions: '',
@@ -172,7 +176,7 @@ export default function MeetingForm({ meeting = null, onClose, onSuccess, initia
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#111217] border-[#1F222B] text-white [&_*]:text-white">
-              {PROGRAMS.map((p) => (
+              {allowedPrograms.map((p) => (
                 <SelectItem key={p} value={p}>{p}</SelectItem>
               ))}
             </SelectContent>
