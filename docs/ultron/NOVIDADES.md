@@ -1,5 +1,11 @@
 # Novidades do ULTRON
 
+## 06/11/2026 — nível Técnico
+
+- Novo nível Técnico com os mesmos poderes do administrador, gerenciável no painel de usuários.
+- Identificação distinta sem substituir os mecanismos administrativos existentes do banco, APIs, modalidades, PDI ou AVA.
+- Atribuição autenticada pelo administrador, auditoria e proteção contra autopromoção. A instalação não promove contas automaticamente.
+
 ## 06/11/2026 — acesso por modalidade
 
 - Menus, dashboard e rotas internas respeitam as modalidades autorizadas; administrador e líder mantêm todas.

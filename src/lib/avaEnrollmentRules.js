@@ -5,8 +5,8 @@ export function studentCatalog(data) {
 }
 
 export function enrollmentRows(data,user) {
-  const level=accessLevel(user),internal=['trainee','member','leader'].includes(level);
-  const authorized=!!user && (level==='leader' || user.access?.ava_status==='active');
+  const level=accessLevel(user),internal=['trainee','member','leader','technician'].includes(level);
+  const authorized=!!user && (['leader','technician'].includes(level) || user.access?.ava_status==='active');
   return (data.tracks || []).map(track=>{
     const enrollment=(data.enrollments || []).find(e=>e.user_id===user?.id && e.track_id===track.id);
     const audienceAllowed=track.audience==='all' || (track.audience==='tera' && internal) || (track.audience==='external' && !internal);

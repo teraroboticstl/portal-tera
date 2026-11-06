@@ -1,11 +1,14 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {ACCESS_LEVELS,accessLevel,canEditInternal} from '../src/lib/accessLevels.js';
-test('Five access levels preserve read-only training and explicit external scope',()=>{
- assert.equal(ACCESS_LEVELS.length,5);
+test('Six access levels preserve read-only training and explicit external scope',()=>{
+ assert.equal(ACCESS_LEVELS.length,6);
  assert.equal(accessLevel(null),'public');
  for(const level of ['public','student','trainee'])assert.equal(canEditInternal({access_level:level,status:'approved'}),false);
- for(const level of ['member','leader'])assert.equal(canEditInternal({access_level:level,status:'approved'}),true);
+ for(const level of ['member','leader','technician'])assert.equal(canEditInternal({access_level:level,status:'approved'}),true);
+ assert.equal(accessLevel({role:'admin',access_level:'technician'}),'technician');
+ assert.equal(accessLevel({role:'admin',access:{access_level:'technician'}}),'technician');
+ assert.equal(accessLevel({role:'admin',access_level:'leader'}),'leader');
  assert.equal(canEditInternal({access_level:'member',status:'pending'}),false);
  assert.equal(canEditInternal({access_level:'member',status:'approved',portal_can_edit:false}),false);
  assert.equal(accessLevel({status:'approved',member_role:'user'}),'trainee');
