@@ -1,3 +1,5 @@
+import FormLoadError from '@/components/common/FormLoadError';
+import FormSaveError from '@/components/common/FormSaveError';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -22,11 +24,12 @@ const CAT_META = {
 
 const EMPTY = { category: 'Robot Game', question: '', answer: '', notes: '', ready: false };
 
-function PrepForm({ initial, onSave, onClose, isPending }) {
+function PrepForm({ initial, onSave, onClose, isPending, error }) {
   const [form, setForm] = useState(initial || EMPTY);
   const f = (key) => ({ value: form[key] || '', onChange: e => setForm(p => ({ ...p, [key]: e.target.value })) });
   return (
     <div className="space-y-4">
+      <FormSaveError error={error} />
       <div><Label className="text-[#B8BDC7] text-xs uppercase tracking-wider mb-1 block">Categoria</Label>
         <Select value={form.category} onValueChange={v => setForm(p => ({ ...p, category: v }))}>
           <SelectTrigger className="bg-[#0B0B0D] border-[#1F222B] text-white"><SelectValue /></SelectTrigger>
@@ -63,7 +66,7 @@ function Content({ user }) {
   const [activeTab, setActiveTab] = useState('Robot Game');
   const qc = useQueryClient();
 
-  const { data: items = [], isLoading } = useQuery({
+  const { data: items = [], isLoading, isError: loadFailed, refetch: retryLoad } = useQuery({
     queryKey: ['fll-judge-prep'],
     queryFn: () => base44.entities.FLLJudgePrep.list(),
   });
@@ -81,6 +84,7 @@ function Content({ user }) {
   const filtered = items.filter(i => i.category === activeTab);
   const readyCount = filtered.filter(i => i.ready).length;
 
+  if(loadFailed)return <InternalPageLayout user={user} currentPage="InternalFLLJudgePrep" title="FLL — Prep. Juízes"><FormLoadError onRetry={retryLoad} /></InternalPageLayout>;
   return (
     <InternalPageLayout user={user} currentPage="InternalFLLJudgePrep" title="FLL — Prep. Juízes">
       <div className="space-y-6">
@@ -164,9 +168,9 @@ function Content({ user }) {
         )}
 
         <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); setEditing(null); } }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg">
+          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg max-h-[90dvh] overflow-y-auto text-white">
             <DialogHeader><DialogTitle>{editing ? 'Editar Pergunta' : 'Nova Pergunta'}</DialogTitle></DialogHeader>
-            <PrepForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} />
+            <PrepForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} error={save.error} />
           </DialogContent>
         </Dialog>
       </div>

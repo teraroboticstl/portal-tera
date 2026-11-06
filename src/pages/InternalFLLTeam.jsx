@@ -1,3 +1,5 @@
+import FormLoadError from '@/components/common/FormLoadError';
+import FormSaveError from '@/components/common/FormSaveError';
 import PortalMedia from '@/components/common/PortalMedia';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -15,7 +17,7 @@ import InternalPageLayout from '@/components/internal/InternalPageLayout';
 
 const EMPTY = { name: '', photo_url: '', role: '', skills: '', contributions: '', order: 0 };
 
-function MemberForm({ initial, onSave, onClose, isPending }) {
+function MemberForm({ initial, onSave, onClose, isPending, error }) {
   const [form, setForm] = useState(initial || EMPTY);
   const [uploading, setUploading] = useState(false);
   const f = (key) => ({ value: form[key] || '', onChange: e => setForm(p => ({ ...p, [key]: e.target.value })) });
@@ -25,7 +27,7 @@ function MemberForm({ initial, onSave, onClose, isPending }) {
     if (!file) return;
     setUploading(true);
     try {
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'seasons', program: 'FLL' });
     setForm(p => ({ ...p, photo_url: file_url }));
     } catch { toast.error('Não foi possível enviar o arquivo. Tente novamente com um arquivo de até 4 MB.'); }
     finally { setUploading(false); }
@@ -33,6 +35,7 @@ function MemberForm({ initial, onSave, onClose, isPending }) {
 
   return (
     <div className="space-y-4">
+      <FormSaveError error={error} />
       <div className="grid grid-cols-2 gap-3">
         <div><Label className="text-[#B8BDC7] text-xs uppercase tracking-wider mb-1 block">Nome *</Label>
           <Input {...f('name')} className="bg-[#0B0B0D] border-[#1F222B] text-white" /></div>
@@ -64,7 +67,7 @@ function Content({ user }) {
   const [editing, setEditing] = useState(null);
   const qc = useQueryClient();
 
-  const { data: members = [], isLoading } = useQuery({
+  const { data: members = [], isLoading, isError: loadFailed, refetch: retryLoad } = useQuery({
     queryKey: ['fll-members'],
     queryFn: () => base44.entities.FLLMember.list('order'),
   });
@@ -78,6 +81,7 @@ function Content({ user }) {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['fll-members'] }); toast.success('Excluído!'); },
   });
 
+  if(loadFailed)return <InternalPageLayout user={user} currentPage="InternalFLLTeam" title="FLL — Equipe"><FormLoadError onRetry={retryLoad} /></InternalPageLayout>;
   return (
     <InternalPageLayout user={user} currentPage="InternalFLLTeam" title="FLL — Equipe">
       <div className="space-y-6">
@@ -130,9 +134,9 @@ function Content({ user }) {
         )}
 
         <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); setEditing(null); } }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg">
+          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg max-h-[90dvh] overflow-y-auto text-white">
             <DialogHeader><DialogTitle>{editing ? 'Editar Membro' : 'Novo Membro'}</DialogTitle></DialogHeader>
-            <MemberForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} />
+            <MemberForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} error={save.error} />
           </DialogContent>
         </Dialog>
       </div>

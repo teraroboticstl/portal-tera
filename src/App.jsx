@@ -14,6 +14,7 @@ import InternalEventGallery from './pages/InternalEventGallery';
 import TIR2026 from './pages/TIR2026';
 import TIRAdmin from './pages/TIRAdmin';
 import MyPDI from './pages/MyPDI';
+import PortalErrorBoundary from './components/common/PortalErrorBoundary';
 import InternalDemands from './pages/InternalDemands';
 
 import InternalCADAssistant from './pages/InternalCADAssistant';
@@ -138,7 +139,7 @@ const AuthenticatedApp = () => {
 function App() {
 
   return (
-    <AuthProvider>
+    <PortalErrorBoundary><AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <NavigationTracker />
@@ -147,7 +148,7 @@ function App() {
         <Toaster />
         <SonnerToaster theme="dark" position="top-center" closeButton />
       </QueryClientProvider>
-    </AuthProvider>
+    </AuthProvider></PortalErrorBoundary>
   )
 }
 

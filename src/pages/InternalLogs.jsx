@@ -14,7 +14,7 @@ import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import DailyLogForm from '@/components/internal/DailyLogForm';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import Badge from '@/components/common/Badge';
-import { format } from 'date-fns';
+import { formatPortalDate as format } from '@/lib/formRecovery';
 import { ptBR } from 'date-fns/locale';
 
 function InternalLogsContent({ user }) {

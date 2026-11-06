@@ -16,7 +16,7 @@ export default function Badge({ children, variant = 'default', className = '' })
   return (
     <span className={`
       inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
-      ${variants[variant] || (variant.startsWith('obr') ? variants.obr : variants.default)}
+      ${variants[variant] || (typeof variant==='string' && variant.startsWith('obr') ? variants.obr : variants.default)}
       ${className}
     `}>
       {children}

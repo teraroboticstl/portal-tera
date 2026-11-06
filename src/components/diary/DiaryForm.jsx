@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Save, X, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import FormSaveError from '@/components/common/FormSaveError';
 
 const DRAFT_KEY = 'diary_draft_v1';
 const DRAFT_TTL = 5 * 60 * 1000; // 5 minutos
@@ -186,6 +187,7 @@ export default function DiaryForm({ entry, program, onClose }) {
         ))}
       </div>
 
+      <FormSaveError error={save.error} />
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="outline" onClick={onClose} className="border-[#1F222B]">
           <X className="w-4 h-4 mr-1" /> Cancelar

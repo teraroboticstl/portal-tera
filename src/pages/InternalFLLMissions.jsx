@@ -1,3 +1,5 @@
+import FormLoadError from '@/components/common/FormLoadError';
+import FormSaveError from '@/components/common/FormSaveError';
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -21,7 +23,7 @@ const STATUS_META = {
 
 const EMPTY = { name: '', max_score: 0, best_score: 0, status: 'em_teste', notes: '', order: 0 };
 
-function MissionForm({ initial, onSave, onClose, isPending }) {
+function MissionForm({ initial, onSave, onClose, isPending, error }) {
   const [form, setForm] = useState(initial || EMPTY);
   const f = (key, type = 'text') => ({
     value: form[key],
@@ -29,6 +31,7 @@ function MissionForm({ initial, onSave, onClose, isPending }) {
   });
   return (
     <div className="space-y-4">
+      <FormSaveError error={error} />
       <div><Label className="text-[#B8BDC7] text-xs uppercase tracking-wider mb-1 block">Nome da Missão *</Label>
         <Input {...f('name')} placeholder="Ex: Quadra de Rebocagem" className="bg-[#0B0B0D] border-[#1F222B] text-white" /></div>
       <div className="grid grid-cols-3 gap-3">
@@ -64,7 +67,7 @@ function Content({ user }) {
   const [editing, setEditing] = useState(null);
   const qc = useQueryClient();
 
-  const { data: missions = [], isLoading } = useQuery({
+  const { data: missions = [], isLoading, isError: loadFailed, refetch: retryLoad } = useQuery({
     queryKey: ['fll-missions'],
     queryFn: () => base44.entities.FLLMission.list('order'),
   });
@@ -81,6 +84,7 @@ function Content({ user }) {
   const totalMax = missions.reduce((s, m) => s + (m.max_score || 0), 0);
   const totalBest = missions.reduce((s, m) => s + (m.best_score || 0), 0);
 
+  if(loadFailed)return <InternalPageLayout user={user} currentPage="InternalFLLMissions" title="FLL — Missões"><FormLoadError onRetry={retryLoad} /></InternalPageLayout>;
   return (
     <InternalPageLayout user={user} currentPage="InternalFLLMissions" title="FLL — Missões">
       <div className="space-y-6">
@@ -156,9 +160,9 @@ function Content({ user }) {
         )}
 
         <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); setEditing(null); } }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg">
+          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg max-h-[90dvh] overflow-y-auto text-white">
             <DialogHeader><DialogTitle>{editing ? 'Editar Missão' : 'Nova Missão'}</DialogTitle></DialogHeader>
-            <MissionForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} />
+            <MissionForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} error={save.error} />
           </DialogContent>
         </Dialog>
       </div>

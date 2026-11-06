@@ -1,6 +1,7 @@
 import { encodeRecord, decodeRecord, isStructuredRecord } from '../../lib/recordCodec.js';
 import { projectModalities, projectCategories, mergeProjectLinks } from '../../lib/modalities.js';
 import { supabase } from '../supabaseClient.js';
+import { hasFormContract, encodeForm, decodeForm, formColumn, formOrder } from '../../lib/legacyFormContracts.js';
 
 /**
  * Tradutor e adaptador de chamadas CRUD NoSQL para SQL (Supabase).
@@ -17,9 +18,11 @@ export const createEntityAdapter = (entityName, tableName = '') => {
     .replace(/^_/, ''); // Remove leading underscore se houver
 
   const actualTableName = tableName || defaultTable;
+  const run=query=>hasFormContract(actualTableName)&&typeof query?.abortSignal==='function'
+    ?query.abortSignal(AbortSignal.timeout(20000)):query;
   async function assertWriteAccess(){
     if(!["audit_logs","board_diaries","daily_logs","esg_initiatives","fll_attachments","fll_core_values","fll_innovation_projects","fll_judge_preps","fll_members","fll_missions","fll_tasks","frc_scouts","internal_projects","matches","meeting_notes","onshape_configs","pdi_frcs","pdis","priorities","project_risks","prototype_tests","scout_ftcs","team_knowledge_bases","team_logs","teams","tournament_configs","projects","tir_equipes","tir_regras","tir_fotos","robots","products","sponsors","seasons","event_galleries","event_medias","tournament_memorials"].includes(actualTableName))return;
-    const {data,error}=await supabase.rpc('portal_can_edit');
+    const {data,error}=await run(supabase.rpc('portal_can_edit'));
     if(error || data!==true)throw new Error('Seu nível permite apenas consulta. Edição restrita a membros integrados e líderes.');
   }
 
@@ -125,7 +128,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
       }
     }
 
-    return decodeRecord(actualTableName, mapped);
+    return decodeForm(actualTableName, decodeRecord(actualTableName, mapped));
   };
 
   const getSelectQuery = () => {
@@ -167,12 +170,12 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         ascending = false;
       }
 
-      req = req.order(orderField, { ascending });
+      req = req.order(formOrder(actualTableName,orderField), { ascending });
 
-      const { data, error } = await req;
+      const { data, error } = await run(req);
 
       if (error) {
-        console.error(`[Supabase Adapter] Erro ao buscar no Supabase (${entityName}):`, error);
+        console.error(`[Supabase Adapter] Erro ao buscar no Supabase (${entityName}):`, hasFormContract(actualTableName)?{code:error.code}:error);
         throw error;
       }
       return mapItems(data) || [];
@@ -227,7 +230,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
 
       // Aplicar filtros simples de igualdade
       Object.entries(cleanFilters).forEach(([key, val]) => {
-        req = req.eq(key, val);
+        req = req.eq(formColumn(actualTableName,key), val);
       });
 
       if (order) {
@@ -240,7 +243,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         if (actualTableName === 'seasons' && orderField === 'created_date') {
           orderField = 'created_at';
         }
-        req = req.order(orderField, { ascending: !isDescending });
+        req = req.order(formOrder(actualTableName,orderField), { ascending: !isDescending });
       } else {
         req = req.order('created_at', { ascending: false });
       }
@@ -249,10 +252,10 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         req = req.limit(limit);
       }
 
-      const { data, error } = await req;
+      const { data, error } = await run(req);
 
       if (error) {
-        console.error(`[Supabase Adapter] Erro ao filtrar no Supabase (${entityName}):`, error);
+        console.error(`[Supabase Adapter] Erro ao filtrar no Supabase (${entityName}):`, hasFormContract(actualTableName)?{code:error.code}:error);
         throw error;
       }
       let items = mapItems(data) || [];
@@ -274,7 +277,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         .single();
 
       if (error) {
-        console.error(`[Supabase Adapter] Erro ao obter no Supabase (${entityName}):`, error);
+        console.error(`[Supabase Adapter] Erro ao obter no Supabase (${entityName}):`, hasFormContract(actualTableName)?{code:error.code}:error);
         throw error;
       }
       return mapItem(data);
@@ -285,9 +288,15 @@ export const createEntityAdapter = (entityName, tableName = '') => {
      */
     async create(payload) {
       await assertWriteAccess();
-      console.log(`[Supabase Adapter] Criando registro em ${entityName} no Supabase...`, (isStructuredRecord(actualTableName) || ['pdis','pdi_frcs'].includes(actualTableName)) ? '[conteúdo privado omitido]' : payload);
+      console.log(`[Supabase Adapter] Criando registro em ${entityName} no Supabase...`, (isStructuredRecord(actualTableName) || hasFormContract(actualTableName) || ['pdis','pdi_frcs'].includes(actualTableName)) ? '[conteúdo privado omitido]' : payload);
       
       const sanitized = encodeRecord(actualTableName, payload);
+      if(actualTableName==='board_diaries'){
+        const {data,error}=await supabase.auth.getUser();
+        if(error||!data?.user?.id)throw new Error('Sessão expirada. Entre novamente.');
+        sanitized.author_id=data.user.id;
+        sanitized.author_name=data.user.user_metadata?.full_name||'Membro autenticado';
+      }
       if (actualTableName === 'daily_logs') {
         const {data,error}=await supabase.auth.getUser();
         if(error || !data?.user?.id)throw new Error('Sessão expirada. Entre novamente.');
@@ -483,14 +492,14 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         }
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await run(supabase
         .from(actualTableName)
-        .insert([sanitized])
+        .insert([encodeForm(actualTableName,sanitized)])
         .select(getSelectQuery())
-        .single();
+        .single());
 
       if (error) {
-        console.error(`[Supabase Adapter] Erro ao criar no Supabase (${entityName}):`, error);
+        console.error(`[Supabase Adapter] Erro ao criar no Supabase (${entityName}):`, hasFormContract(actualTableName)?{code:error.code}:error);
         throw error;
       }
       return mapItem(data);
@@ -501,9 +510,15 @@ export const createEntityAdapter = (entityName, tableName = '') => {
      */
     async update(id, payload) {
       await assertWriteAccess();
-      console.log(`[Supabase Adapter] Atualizando ID ${id} de ${entityName} no Supabase...`, (isStructuredRecord(actualTableName) || ['pdis','pdi_frcs'].includes(actualTableName)) ? '[conteúdo privado omitido]' : payload);
+      console.log(`[Supabase Adapter] Atualizando ID ${id} de ${entityName} no Supabase...`, (isStructuredRecord(actualTableName) || hasFormContract(actualTableName) || ['pdis','pdi_frcs'].includes(actualTableName)) ? '[conteúdo privado omitido]' : payload);
       
       let recordPayload=payload;
+      let previousFormData={};
+      if(hasFormContract(actualTableName)){
+        const {data:existing,error}=await run(supabase.from(actualTableName).select('portal_form_data').eq('id',id).single());
+        if(error)throw error;
+        previousFormData=existing.portal_form_data||{};
+      }
       if(isStructuredRecord(actualTableName)) {
         const {data:existing,error}=await supabase.from(actualTableName).select('*').eq('id',id).single();
         if(error)throw error;
@@ -728,15 +743,15 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         }
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await run(supabase
         .from(actualTableName)
-        .update(sanitized)
+        .update(encodeForm(actualTableName,sanitized,previousFormData,{isUpdate:true}))
         .eq('id', id)
         .select(getSelectQuery())
-        .single();
+        .single());
 
       if (error) {
-        console.error(`[Supabase Adapter] Erro ao atualizar no Supabase (${entityName}):`, error);
+        console.error(`[Supabase Adapter] Erro ao atualizar no Supabase (${entityName}):`, hasFormContract(actualTableName)?{code:error.code}:error);
         throw error;
       }
       return mapItem(data);
@@ -754,7 +769,7 @@ export const createEntityAdapter = (entityName, tableName = '') => {
         .eq('id', id);
 
       if (error) {
-        console.error(`[Supabase Adapter] Erro ao deletar no Supabase (${entityName}):`, error);
+        console.error(`[Supabase Adapter] Erro ao deletar no Supabase (${entityName}):`, hasFormContract(actualTableName)?{code:error.code}:error);
         throw error;
       }
       return { success: true, id };
