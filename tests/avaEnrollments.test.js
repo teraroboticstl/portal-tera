@@ -19,7 +19,7 @@ test('Enrollment management distinguishes each student and preserves withdrawn p
  assert.equal(rows[3].canEnroll,true);assert.equal(rows[4].canEnroll,false);
 });
 test('Enrollment keeps AVA approval and track audiences separate from portal permissions',()=>{
- for(const level of ['trainee','member','leader']){
+ for(const level of ['trainee','member','leader','technician']){
   const rows=enrollmentRows({tracks},{id:level,status:'approved',access:{access_level:level,ava_status:'active'}});
   assert.equal(rows[1].canEnroll,true);assert.equal(rows[2].canEnroll,false);
  }
