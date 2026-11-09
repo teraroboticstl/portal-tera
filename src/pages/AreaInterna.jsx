@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
-import CountdownTimer from '@/components/CountdownTimer';
+import BusinessDaysCountdown from '@/components/BusinessDaysCountdown';
 import { usePageVisibility } from '@/lib/usePageVisibility';
 
 function StatCard({ value, label, icon: Icon, color = '#E10600' }) {
@@ -162,7 +162,7 @@ function AreaInternaContent({ user }) {
             <span className="w-2 h-2 rounded-full bg-red-500" />
             <span className="text-xs font-bold text-red-500 uppercase tracking-widest">Regional</span>
           </div>
-          <CountdownTimer
+          <BusinessDaysCountdown
             targetDate="2026-12-03T00:00:00-04:00"
             label="Contagem regressiva para o Regional — 03/12/2026"
           />
