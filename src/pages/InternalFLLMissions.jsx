@@ -127,7 +127,7 @@ function Content({ user }) {
                 <motion.div key={m.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
                   className={`bg-[#111217] border ${meta.border} rounded-xl p-5`}>
                   <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-bold text-sm flex-1">{m.name}</h3>
+                    <h3 className="font-bold text-sm text-white flex-1">{m.name}</h3>
                     <span className={`text-xs px-2 py-0.5 rounded ${meta.bg} ${meta.color} font-bold ml-2 flex-shrink-0`}>{meta.label}</span>
                   </div>
                   <div className="flex items-center gap-4 mb-3">
