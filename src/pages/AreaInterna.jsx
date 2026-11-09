@@ -158,7 +158,7 @@ function AreaInternaContent({ user }) {
     <InternalPageLayout user={user} currentPage="AreaInterna" title="Dashboard">
       <div className="mb-8">
         <div className="bg-[#111217] border border-red-500/30 rounded-2xl p-4 sm:p-6">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center justify-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-red-500" />
             <span className="text-xs font-bold text-red-500 uppercase tracking-widest">Regional</span>
           </div>

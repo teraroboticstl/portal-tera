@@ -16,13 +16,13 @@ export default function BusinessDaysCountdown({targetDate,label}) {
     document.addEventListener('visibilitychange',visible);
     return ()=>{clearInterval(timer);document.removeEventListener('visibilitychange',visible);};
   },[targetDate]);
-  return <div className="w-full space-y-4">
-    <div className="flex items-center gap-2"><div className="w-1 h-6 bg-[#E10600] shrink-0" /><h3 className="text-[#F5F7FA] font-medium">{label}</h3></div>
-    <div className="rounded-xl border border-[#1F222B] bg-[#0B0B0D] p-5 text-center max-w-sm" role="status" aria-live="polite" aria-atomic="true">
+  return <div className="w-full space-y-4 text-center">
+    <div className="flex items-center justify-center gap-2"><div className="w-1 h-6 bg-[#E10600] shrink-0" /><h3 className="text-[#F5F7FA] font-medium">{label}</h3></div>
+    <div className="rounded-xl border border-[#1F222B] bg-[#0B0B0D] p-5 text-center max-w-sm mx-auto" role="status" aria-live="polite" aria-atomic="true">
       <p className="text-5xl sm:text-6xl font-bold tabular-nums text-[#E10600]">{String(days).padStart(2,'0')}</p>
       <p className="mt-2 text-sm font-semibold uppercase tracking-wider text-[#B8BDC7]">{days===1?'dia útil restante':'dias úteis restantes'}</p>
     </div>
-    <p className="text-xs text-[#B8BDC7] leading-relaxed">Segunda a sexta, exceto feriados nacionais. Inclui hoje quando útil; o dia do regional não entra na contagem.</p>
-    <details className="text-xs text-[#B8BDC7]"><summary className="cursor-pointer min-h-11 py-3">Como é calculado</summary><p className="leading-relaxed">Referência: horário de Três Lagoas/MS. Nesta contagem são descontados os feriados nacionais de novembro de 2026 (02, 15 e 20/11). Feriados locais, pontos facultativos e recessos da equipe não foram informados.</p></details>
+    <p className="text-xs text-[#B8BDC7] leading-relaxed max-w-xl mx-auto">Segunda a sexta, exceto feriados nacionais. Inclui hoje quando útil; o dia do regional não entra na contagem.</p>
+    <details className="text-xs text-[#B8BDC7] max-w-xl mx-auto"><summary className="cursor-pointer min-h-11 py-3">Como é calculado</summary><p className="leading-relaxed">Referência: horário de Três Lagoas/MS. Nesta contagem são descontados os feriados nacionais de novembro de 2026 (02, 15 e 20/11). Feriados locais, pontos facultativos e recessos da equipe não foram informados.</p></details>
   </div>;
 }
