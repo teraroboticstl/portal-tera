@@ -4,7 +4,7 @@ export const biNumber=value=>value===null||value===undefined?'—':new Intl.Numb
 export const biControl='min-h-11 w-full rounded-xl border border-white/20 bg-[#111217] px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-red-500';
 export const biButton='inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-red-500/50 bg-red-600/10 px-4 py-2 text-white hover:bg-red-600/25 disabled:opacity-50';
 export function BiKpi({label,value,hint}) {
-  return <div className="min-w-0 rounded-2xl border border-white/10 bg-[#111217] p-5"><p className="text-sm text-gray-300">{label}</p><p className="my-2 text-3xl sm:text-4xl font-bold tabular-nums text-white">{biNumber(value)}</p>{hint&&<p className="text-xs leading-relaxed text-gray-400">{hint}</p>}</div>;
+  return <div className="min-w-0 rounded-2xl border border-white/10 bg-[#111217] p-5 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500"><p className="text-sm text-gray-300">{label}</p><p className="my-2 text-3xl sm:text-4xl font-bold tabular-nums text-white">{biNumber(value)}</p>{hint&&<p className="text-xs leading-relaxed text-gray-400">{hint}</p>}</div>;
 }
 export function BiChart({title,data,line=false}) {
   const Chart=line?LineChart:BarChart;

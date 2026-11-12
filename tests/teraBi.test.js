@@ -83,10 +83,10 @@ async function clientModule(auth,fetcher) {
   const module=new vm.SourceTextModule(await fs.readFile(new URL('../src/api/teraBiClient.js',import.meta.url),'utf8'),{context});
   await module.link(specifier=>new vm.SyntheticModule([specifier.includes('supabase')?'supabase':'requestDeadline'],function(){this.setExport(specifier.includes('supabase')?'supabase':'requestDeadline',specifier.includes('supabase')?{auth}:requestDeadline);},{context}));await module.evaluate();return module.namespace;
 }
-test('actual browser client verifies identity before and after retrieval, and public mode omits credentials',async()=>{
+test('actual browser client verifies identity before/after, and public mode sends no Supabase token',async()=>{
   let identity='actor',calls=0;
   const auth={getUser:async()=>({data:{user:{id:identity}}}),getSession:async()=>({data:{session:{user:{id:'actor'},access_token:'synthetic'}}})};
-  const module=await clientModule(auth,async(url,options)=>{calls++;if(url.includes('scope=public')){assert.equal(options.credentials,'omit');assert.equal(options.headers,undefined);return {ok:true,json:async()=>({scope:'public',data:{}})};}assert.equal(options.headers.Authorization,'Bearer synthetic');return {ok:true,json:async()=>({actor:'actor',program:'FTC',rows:[]})};});
+  const module=await clientModule(auth,async(url,options)=>{calls++;if(url.includes('scope=public')){assert.equal(options.credentials,'same-origin');assert.equal(options.headers,undefined);return {ok:true,json:async()=>({scope:'public',data:{}})};}assert.equal(options.headers.Authorization,'Bearer synthetic');return {ok:true,json:async()=>({actor:'actor',program:'FTC',rows:[]})};});
   assert.equal((await module.readTeraBi('FTC','actor')).program,'FTC');
   await module.readPublicBi();identity='changed';await assert.rejects(()=>module.readTeraBi('FTC','actor'),/Sessão inválida/);assert.equal(calls,2);
   identity='actor';const changed=await clientModule(auth,async()=>{identity='changed';return {ok:true,json:async()=>({actor:'actor',program:'FTC',rows:[]})};});await assert.rejects(()=>changed.readTeraBi('FTC','actor'),/sessão mudou/);

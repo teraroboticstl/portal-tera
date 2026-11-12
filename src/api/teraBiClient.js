@@ -15,7 +15,9 @@ export async function readTeraBi(program,actor,signal) {
 }
 export async function readPublicBi({signal}={}) {
   return requestDeadline(async deadline=>{
-    const response=await fetch('/api/bi?scope=public',{signal:signal?AbortSignal.any([signal,deadline]):deadline,credentials:'omit'});
+    // Same-origin cookies allow Vercel Preview protection; no Supabase bearer is sent.
+    // The endpoint ignores visitor identity and always queries with its separate anon client.
+    const response=await fetch('/api/bi?scope=public',{signal:signal?AbortSignal.any([signal,deadline]):deadline,credentials:'same-origin'});
     if(!response.ok)throw Error('Os dados públicos estão temporariamente indisponíveis.');
     const packet=await response.json();if(packet.scope!=='public'||!packet.data)throw Error('Resposta inválida.');return packet;
   },25000);

@@ -13,7 +13,7 @@ export default function TeraDataExperience() {
   const milestones=(data?.milestones||[]).filter(r=>(!program||r.program===program)&&(!year||r.date.startsWith(year)));
   const robots=(data?.robots||[]).filter(r=>!program||r.program===program);
   const groups=['FRC','FTC','FLL','OBR','Geral'].filter(p=>!program||p===program).map(name=>({name,value:milestones.filter(r=>r.program===name).length}));
-  return <main className="min-h-screen bg-[#09090b] text-white pb-16">
+  return <div className="min-h-screen bg-[#09090b] text-white pb-16">
     <header className="relative isolate overflow-hidden border-b border-red-500/20 bg-gradient-to-br from-[#300b0c] via-[#101014] to-black px-5 py-16 sm:py-24"><Cog aria-hidden="true" className="absolute -right-20 -top-12 -z-10 h-80 w-80 text-red-500/10" strokeWidth={1}/><div className="mx-auto max-w-6xl"><p className="text-xs font-bold tracking-[.25em] text-red-400">TERA ROBOTICS / DADOS QUE CONTAM NOSSA HISTÓRIA</p><h1 className="mt-5 text-4xl sm:text-6xl font-black leading-tight max-w-4xl">TERA DATA<br/><span className="text-red-500">EXPERIENCE</span></h1><p className="mt-6 max-w-2xl text-gray-300 leading-relaxed">Da primeira ideia à arena. Explore nossa engenharia, os projetos publicados e a memória da equipe em uma experiência interativa feita com os dados públicos do Portal.</p><div className="mt-7 flex flex-wrap gap-3"><a className={biButton} href="#explorar">Explorar os dados <ArrowUpRight size={18}/></a><Link className={biButton} to="/Projects">Conhecer os projetos</Link></div></div></header>
     <div id="explorar" className="mx-auto max-w-6xl px-5 py-10 space-y-8">
       <div className="flex flex-wrap justify-between items-center gap-3"><h2 className="text-2xl font-bold">A Tera, em perspectiva</h2><button className={biButton} disabled={query.isFetching} onClick={()=>query.refetch()}><RefreshCw size={16}/>Atualizar dados</button></div>
@@ -30,5 +30,5 @@ export default function TeraDataExperience() {
       </>}
       <p className="text-xs text-gray-400">Experiência nativa do Portal Tera. A integração Microsoft Power BI ainda não está configurada. Dados internos de scouting e informações pessoais não compõem esta página.</p>
     </div>
-  </main>;
+  </div>;
 }
