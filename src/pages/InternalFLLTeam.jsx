@@ -134,7 +134,7 @@ function Content({ user }) {
         )}
 
         <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); setEditing(null); } }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg max-h-[90dvh] overflow-y-auto text-white">
+          <DialogContent className="dark bg-[#111217] border-[#1F222B] max-w-lg max-h-[90dvh] overflow-y-auto text-white">
             <DialogHeader><DialogTitle>{editing ? 'Editar Membro' : 'Novo Membro'}</DialogTitle></DialogHeader>
             <MemberForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} error={save.error} />
           </DialogContent>

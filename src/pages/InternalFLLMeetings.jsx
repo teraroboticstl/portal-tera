@@ -141,7 +141,7 @@ function Content({ user }) {
         )}
 
         <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); setEditing(null); } }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-2xl max-h-[85dvh] w-[calc(100%-1rem)] overflow-x-hidden overflow-y-auto">
+          <DialogContent className="dark text-[#F5F7FA] bg-[#111217] border-[#1F222B] max-w-2xl max-h-[85dvh] w-[calc(100%-1rem)] overflow-x-hidden overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? 'Editar Reunião' : 'Nova Reunião'}</DialogTitle></DialogHeader>
             <MeetingForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} />
           </DialogContent>

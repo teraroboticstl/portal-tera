@@ -41,7 +41,7 @@ function CVForm({ initial, onSave, onClose, isPending, error }) {
         <div><Label className="text-[#B8BDC7] text-xs uppercase tracking-wider mb-1 block">Core Value</Label>
           <Select value={form.value} onValueChange={v => setForm(p => ({ ...p, value: v }))}>
             <SelectTrigger className="bg-[#0B0B0D] border-[#1F222B] text-white"><SelectValue /></SelectTrigger>
-            <SelectContent className="bg-[#111217] border-[#1F222B] text-white">
+            <SelectContent className="dark bg-[#111217] border-[#1F222B] text-white">
               {VALUES_LIST.map(v => <SelectItem key={v} value={v}>{VALUES_META[v].emoji} {v}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -152,7 +152,7 @@ function Content({ user }) {
         )}
 
         <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); setEditing(null); } }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg max-h-[90dvh] overflow-y-auto text-white">
+          <DialogContent className="dark bg-[#111217] border-[#1F222B] max-w-lg max-h-[90dvh] overflow-y-auto text-white">
             <DialogHeader><DialogTitle>{editing ? 'Editar Atividade' : 'Nova Atividade — Core Values'}</DialogTitle></DialogHeader>
             <CVForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} error={save.error} />
           </DialogContent>
