@@ -20,7 +20,7 @@ export default function InternalPageLayout({
   usePresence(user, currentPage);
 
   return (
-    <div className="min-h-screen bg-[#0B0B0D]">
+    <div className={`min-h-screen bg-[#0B0B0D]${currentPage?.startsWith('InternalFLL') ? ' dark text-[#F5F7FA]' : ''}`}>
       {/* Desktop Sidebar */}
       <div className="hidden lg:block fixed left-0 top-0 bottom-0 z-50">
         <InternalNav currentPage={currentPage} isAdmin={user?.role === 'admin' || user?.member_role === 'admin'} />

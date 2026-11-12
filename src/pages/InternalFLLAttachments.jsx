@@ -54,7 +54,7 @@ function AttachForm({ initial, onSave, onClose, isPending, error }) {
         <div><Label className="text-[#B8BDC7] text-xs uppercase tracking-wider mb-1 block">Tipo</Label>
           <Select value={form.file_type} onValueChange={v => setForm(p => ({ ...p, file_type: v }))}>
             <SelectTrigger className="bg-[#0B0B0D] border-[#1F222B] text-white"><SelectValue /></SelectTrigger>
-            <SelectContent className="bg-[#111217] border-[#1F222B] text-white">
+            <SelectContent className="dark bg-[#111217] border-[#1F222B] text-white">
               {Object.entries(TYPE_META).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -184,7 +184,7 @@ function Content({ user }) {
         )}
 
         <Dialog open={showForm} onOpenChange={o => { if (!o) setShowForm(false); }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-lg max-h-[90dvh] overflow-y-auto text-white">
+          <DialogContent className="dark bg-[#111217] border-[#1F222B] max-w-lg max-h-[90dvh] overflow-y-auto text-white">
             <DialogHeader><DialogTitle>Adicionar Anexo</DialogTitle></DialogHeader>
             <AttachForm onSave={d => save.mutate(d)} onClose={() => setShowForm(false)} isPending={save.isPending} error={save.error} />
           </DialogContent>

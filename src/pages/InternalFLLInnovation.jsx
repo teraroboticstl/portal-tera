@@ -94,7 +94,7 @@ function ProjectForm({ initial, onSave, onClose, isPending, error }) {
       <div><Label className="text-[#B8BDC7] text-xs uppercase tracking-wider mb-1 block">Status</Label>
         <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
           <SelectTrigger className="bg-[#0B0B0D] border-[#1F222B] text-white"><SelectValue /></SelectTrigger>
-          <SelectContent className="bg-[#111217] border-[#1F222B] text-white">
+          <SelectContent className="dark bg-[#111217] border-[#1F222B] text-white">
             <SelectItem value="rascunho">Rascunho</SelectItem>
             <SelectItem value="em_andamento">Em Andamento</SelectItem>
             <SelectItem value="finalizado">Finalizado</SelectItem>
@@ -175,7 +175,7 @@ function Content({ user }) {
         )}
 
         <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); setEditing(null); } }}>
-          <DialogContent className="bg-[#111217] border-[#1F222B] max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="dark text-[#F5F7FA] bg-[#111217] border-[#1F222B] max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? 'Editar Projeto' : 'Novo Registro'}</DialogTitle></DialogHeader>
             <ProjectForm initial={editing} onSave={d => save.mutate(d)} onClose={() => { setShowForm(false); setEditing(null); }} isPending={save.isPending} error={save.error} />
           </DialogContent>
