@@ -4,7 +4,8 @@
 Painéis nativos React/Recharts, somente leitura. Não são um embed Microsoft Power BI e não dependem de conta Fabric, licença ou novas variáveis. Nenhuma tabela, migração, permissão ou dependência foi adicionada.
 
 - `/TeraDataExperience`: menu público Quem Somos → TERA DATA EXPERIENCE.
-- `/InternalFRCBI`, `/InternalFTCBI`, `/InternalFLLBI`: menu interno de cada modalidade.
+- `/InternalTeraBI`: entrada única **Geral → TERA BI**, com os painéis autorizados da conta. A central fica acessível aos usuários da Área Interna; não libera modalidades adicionais. Sem painel autorizado, orienta consultar a administração.
+- `/InternalFRCBI`, `/InternalFTCBI`, `/InternalFLLBI`: painéis específicos, acessíveis pela central e com link para voltar a ela. A entrada Geral permanece destacada dentro desses painéis.
 - `/api/bi?scope=public`: cliente Supabase anônimo separado, inclusive para visitante administrador. Somente projetos ativos, nomes/modalidades dos robôs e título/data/modalidade/categoria do memorial já públicos. Não retorna descrições, links, lista de membros ou informações privadas.
 - A chamada pública permite somente cookies da mesma origem para a proteção da Vercel no Preview, sem enviar bearer Supabase. O endpoint ignora a identidade do visitante e não eleva a consulta pública.
 - `/api/bi?program=FRC|FTC|FLL`: sessão validada, snapshot de modalidade/visibilidade antes da consulta, RLS do solicitante nas fontes normais e gateway restrito para rounds FLL (detalhado abaixo), projeção de campos e nova validação de sessão/permissões antes da resposta. Sem cache HTTP.
