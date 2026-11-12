@@ -14,6 +14,7 @@ const menuItems = [
     category: 'Geral',
     items: [
       { name: 'Dashboard', icon: LayoutDashboard, path: 'AreaInterna' },
+      { name: 'TERA BI', icon: BarChart3, path: 'InternalTeraBI', activePages:['InternalFRCBI','InternalFTCBI','InternalFLLBI'] },
       { name: 'Minhas demandas', icon: ListTodo, path: 'InternalDemands', board: 'personal' },
       { name: 'Operação Tera e ULTRON', icon: ListTodo, path: 'InternalOperations' },
       { name: 'Logs Diários', icon: BookOpen, path: 'InternalLogs' },
@@ -39,7 +40,6 @@ const menuItems = [
       { name: 'Visão Geral', icon: Target, path: 'InternalFRC' },
       { name: 'Demandas FRC', icon: ListTodo, path: 'InternalDemands', board:'FRC' },
       { name: 'Scout Rápido', icon: Cpu, path: 'InternalFRCScout' },
-      { name: 'TERA BI — FRC', icon: BarChart3, path: 'InternalFRCBI', visibilityPage:'InternalFRCScout' },
       { name: 'PDI Membros', icon: FileText, path: 'InternalFRCPDI' },
       { name: 'Diário de Bordo', icon: BookOpen, path: 'InternalBoardDiary' },
       { name: 'Assistente Geral', icon: Wrench, path: 'InternalCADAssistant' },
@@ -51,7 +51,6 @@ const menuItems = [
     items: [
       { name: 'Visão Geral', icon: Cpu, path: 'InternalFTC' },
       { name: 'Demandas FTC', icon: ListTodo, path: 'InternalDemands', board:'FTC' },
-      { name: 'TERA BI — FTC', icon: BarChart3, path: 'InternalFTCBI', visibilityPage:'InternalFTCScout' },
       { name: 'PDI Membros', icon: BookOpen, path: 'InternalFTCPDI' },
       { name: 'Diário de Bordo', icon: FileText, path: 'InternalBoardDiary' },
     ]
@@ -61,7 +60,6 @@ const menuItems = [
     color: 'yellow',
     items: [
       { name: 'Dashboard FLL', icon: Rocket, path: 'InternalFLLDashboard' },
-      { name: 'TERA BI — FLL', icon: BarChart3, path: 'InternalFLLBI', visibilityPage:'InternalFLLDashboard' },
       { name: 'Demandas FLL', icon: ListTodo, path: 'InternalDemands', board:'FLL' },
       { name: 'Reuniões', icon: Calendar, path: 'InternalFLLMeetings' },
       { name: 'Missões', icon: Target, path: 'InternalFLLMissions' },
@@ -132,7 +130,7 @@ export default function InternalNav({ currentPage, onClose, isAdmin }) {
             </h3>
             <div className="space-y-1">
               {section.items.map((item) => {
-                const isActive = currentPage === item.path && (!item.board || (new URLSearchParams(location.search).get('board')||'personal')===item.board);
+                const isActive = (currentPage === item.path || item.activePages?.includes(currentPage)) && (!item.board || (new URLSearchParams(location.search).get('board')||'personal')===item.board);
                 return (
                   <Link
                     key={item.name}

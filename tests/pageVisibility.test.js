@@ -8,16 +8,18 @@ import { transform } from 'sucrase';
 import { pathToFileURL } from 'node:url';
 import { INTERNAL_PAGES, canDisplayPage, canDisplayModality, visibilityKey } from '../src/lib/internalPageVisibility.js';
 import { createPageVisibilityClient } from '../src/api/pageVisibilityClient.js';
+import {BI_PAGES,BI_METRICS} from '../src/lib/teraBi.js';
 
 const packet = (admin=false) => ({ actor:'member', is_admin:admin, all_modalities:true,
   pages:Object.fromEntries(INTERNAL_PAGES.map(([key])=>[key,{visible:true,revision:0}])) });
 
-test('catalogue covers all internal routes except administrative audit; recovery/public routes cannot be hidden', () => {
+test('catalogue covers content routes; recovery, audit and the permission-filtered BI navigation hub stay available', () => {
   const config=fs.readFileSync(new URL('../src/pages.config.js',import.meta.url),'utf8');
   const app=fs.readFileSync(new URL('../src/App.jsx',import.meta.url),'utf8');
   const names=new Set([...config.matchAll(/"(Internal\w+)":/g),...app.matchAll(/currentPageName="(Internal\w+)"/g)].map(m=>m[1]));
-  for(const name of names) if(name!=='InternalAuditLog') assert.ok(visibilityKey(name),name);
-  for(const page of ['AreaInterna','AdminPanel','SeasonConfig','AVA','Home','InternalAuditLog']) assert.equal(visibilityKey(page),undefined);
+  // The BI hub only links to already managed pages; it does not retrieve scouting.
+  for(const name of names) if(!['InternalAuditLog','InternalTeraBI'].includes(name)) assert.ok(visibilityKey(name),name);
+  for(const page of ['AreaInterna','AdminPanel','SeasonConfig','AVA','Home','InternalAuditLog','InternalTeraBI']) assert.equal(visibilityKey(page),undefined);
   assert.equal(visibilityKey('internalriskanalysis'),'InternalRiskAnalysis');
   assert.equal(new Set(INTERNAL_PAGES.map(([key])=>key)).size,INTERNAL_PAGES.length);
 });
@@ -93,6 +95,7 @@ test('real sidebar removes hidden links; admin tab renders Show/Hide and denies 
   const render=Component=>renderToStaticMarkup(React.createElement(Component));
   assert.doesNotMatch(render(Nav),/href="\/InternalRiskAnalysis"/);
   assert.match(render(Nav),/href="\/InternalLogs"/);
+  assert.match(render(Nav),/href="\/InternalTeraBI"/);
   assert.match(render(Management),/Somente administradores/);
   assert.doesNotMatch(render(Management),/aria-label="Mostrar/);
   data.all_modalities=false;data.modalities=['FTC'];
@@ -106,6 +109,27 @@ test('real sidebar removes hidden links; admin tab renders Show/Hide and denies 
   assert.match(render(Nav),/href="\/InternalRiskAnalysis"/);
   assert.match(render(Management),/aria-label="Mostrar Análise de Risco"/);
   assert.match(render(Management),/aria-label="Ocultar Logs Diários"/);
+});
+
+test('BI navigation hub exposes only freshly authorized modality cards, never hidden or stale-account panels',()=>{
+  let data={...packet(),all_modalities:false,modalities:['FTC']},fetched=true,error=false;
+  const source=fs.readFileSync(new URL('../src/pages/InternalTeraBiHome.jsx',import.meta.url),'utf8'),module={exports:{}};
+  const mocks={
+    'react-router-dom':{Link:({children,to})=>React.createElement('a',{href:to},children)},
+    'lucide-react':new Proxy({},{get:()=>()=>null}),
+    '@/components/internal/ProtectedRoute':{__esModule:true,default:({children})=>React.cloneElement(children,{user:{id:'member'}})},
+    '@/components/internal/InternalPageLayout':{__esModule:true,default:({children})=>React.createElement('main',null,children)},
+    '@/lib/usePageVisibility':{usePageVisibility:()=>({snapshot:data,isFetchedAfterMount:fetched,isError:error,canShow:p=>canDisplayPage(p,data,'member'),canShowModality:p=>canDisplayModality(p,data,'member')})},
+    '@/lib/teraBi':{BI_PAGES,BI_METRICS},'@/components/bi/BiVisuals':{biButton:''}
+  };
+  vm.runInNewContext(transform(source,{transforms:['jsx','imports']}).code,{React,module,exports:module.exports,require:name=>mocks[name]});
+  const render=()=>renderToStaticMarkup(React.createElement(module.exports.default));
+  assert.match(render(),/href="\/InternalFTCBI"/);assert.doesNotMatch(render(),/href="\/InternalFRCBI"|href="\/InternalFLLBI"/);
+  data.pages.InternalFTCScout.visible=false;assert.doesNotMatch(render(),/href="\/InternalFTCBI"/);assert.match(render(),/Nenhum painel/);
+  data.is_admin=true;assert.match(render(),/href="\/InternalFRCBI"/);assert.match(render(),/href="\/InternalFLLBI"/);
+  fetched=false;assert.doesNotMatch(render(),/href="\/InternalFTCBI"/);
+  fetched=true;data.actor='other';assert.doesNotMatch(render(),/href="\/InternalFTCBI"/);
+  data.actor='member';error=true;assert.doesNotMatch(render(),/href="\/InternalFTCBI"/);assert.match(render(),/Tentar novamente/);
 });
 test('isolated PostgreSQL: RLS, admin-only mutation, persistence, revision conflicts, protected routes and rollback', {skip:!runtime}, async()=>{
   const {PGlite}=await import(pathToFileURL(runtime).href);
