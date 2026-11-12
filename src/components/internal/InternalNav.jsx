@@ -6,7 +6,7 @@ import {
   LayoutDashboard, FileText, Target, BookOpen, Lightbulb,
   Cpu, Trophy, Rocket, Settings, ChevronRight, Home, X,
   Users, FlaskConical, Calendar, Image as ImageIcon, Shield, AlertTriangle, Leaf, Wrench, Archive,
-  Heart, ListTodo, HelpCircle, Paperclip
+  Heart, ListTodo, HelpCircle, Paperclip, BarChart3
 } from 'lucide-react';
 
 const menuItems = [
@@ -39,6 +39,7 @@ const menuItems = [
       { name: 'Visão Geral', icon: Target, path: 'InternalFRC' },
       { name: 'Demandas FRC', icon: ListTodo, path: 'InternalDemands', board:'FRC' },
       { name: 'Scout Rápido', icon: Cpu, path: 'InternalFRCScout' },
+      { name: 'TERA BI — FRC', icon: BarChart3, path: 'InternalFRCBI', visibilityPage:'InternalFRCScout' },
       { name: 'PDI Membros', icon: FileText, path: 'InternalFRCPDI' },
       { name: 'Diário de Bordo', icon: BookOpen, path: 'InternalBoardDiary' },
       { name: 'Assistente Geral', icon: Wrench, path: 'InternalCADAssistant' },
@@ -50,6 +51,7 @@ const menuItems = [
     items: [
       { name: 'Visão Geral', icon: Cpu, path: 'InternalFTC' },
       { name: 'Demandas FTC', icon: ListTodo, path: 'InternalDemands', board:'FTC' },
+      { name: 'TERA BI — FTC', icon: BarChart3, path: 'InternalFTCBI', visibilityPage:'InternalFTCScout' },
       { name: 'PDI Membros', icon: BookOpen, path: 'InternalFTCPDI' },
       { name: 'Diário de Bordo', icon: FileText, path: 'InternalBoardDiary' },
     ]
@@ -59,6 +61,7 @@ const menuItems = [
     color: 'yellow',
     items: [
       { name: 'Dashboard FLL', icon: Rocket, path: 'InternalFLLDashboard' },
+      { name: 'TERA BI — FLL', icon: BarChart3, path: 'InternalFLLBI', visibilityPage:'InternalFLLDashboard' },
       { name: 'Demandas FLL', icon: ListTodo, path: 'InternalDemands', board:'FLL' },
       { name: 'Reuniões', icon: Calendar, path: 'InternalFLLMeetings' },
       { name: 'Missões', icon: Target, path: 'InternalFLLMissions' },
@@ -78,7 +81,7 @@ export default function InternalNav({ currentPage, onClose, isAdmin }) {
   const location = useLocation();
   const { canShow, canShowModality } = usePageVisibility();
   const sectionMode = {'OBR — Resgate e Artística':'OBR','FRC':'FRC','FTC - DECODE':'FTC','FLL':'FLL'};
-  const visibleSections = menuItems.filter(section => !sectionMode[section.category] || canShowModality(sectionMode[section.category])).map(section => ({ ...section, items: section.items.filter(item => canShow(item.path)) }))
+  const visibleSections = menuItems.filter(section => !sectionMode[section.category] || canShowModality(sectionMode[section.category])).map(section => ({ ...section, items: section.items.filter(item => canShow(item.visibilityPage||item.path)) }))
     .filter(section => section.items.length > 0);
 
   return (

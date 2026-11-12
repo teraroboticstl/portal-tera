@@ -2,6 +2,7 @@ import mediaHandler from './media/[id].js';
 import authHandler from './auth/google/[action].js';
 import avaHandler from './ava/[action].js';
 import fllHandler from './fll/[action].js';
+import biHandler from './bi.js';
 
 /**
  * Middleware para emular Vercel Serverless Functions durante o desenvolvimento local no Vite
@@ -41,6 +42,10 @@ export async function devApiMiddleware(req, res, next) {
     };
   }
 
+  if (pathname === '/api/bi') {
+    req.query=Object.fromEntries(url.searchParams.entries());
+    return biHandler(req,res);
+  }
   if (pathname.startsWith('/api/ava/')) {
     req.query=Object.fromEntries(url.searchParams.entries());
     if(req.method==='POST' && req.body===undefined){

@@ -30,6 +30,7 @@ const PUBLIC_NAV_ITEMS = [
     children: [
       { label: 'Quem Somos', path: 'About' },
       { label: 'Nossa Equipe', path: 'Team' },
+      { label: 'TERA DATA EXPERIENCE', path: 'TeraDataExperience' },
     ],
   },
   {
