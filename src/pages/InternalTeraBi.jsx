@@ -1,4 +1,4 @@
-import {useMemo,useState} from 'react';
+import {useEffect,useMemo,useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {Link} from 'react-router-dom';
 import {BarChart3,RefreshCw,Download} from 'lucide-react';
@@ -7,17 +7,23 @@ import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import {BiKpi,BiChart,biNumber,biButton,biControl} from '@/components/bi/BiVisuals';
 import {readTeraBi} from '@/api/teraBiClient';
 import {BI_METRICS,summarizeScouting,biCsv} from '@/lib/teraBi';
+import {biPresentation} from '@/lib/teraBiDemo';
 
 function Dashboard({user,program}) {
   const [filters,setFilters]=useState({team:'',event:'',from:'',to:''});
   const [exporting,setExporting]=useState(false),[exportError,setExportError]=useState('');
+  const [demoChoice,setDemoChoice]=useState(null);
   const query=useQuery({queryKey:['tera-bi',user.id,program],queryFn:({signal})=>readTeraBi(program,user.id,signal),staleTime:0,gcTime:0,retry:false,refetchOnMount:'always',refetchOnWindowFocus:'always',refetchInterval:30000});
   // Stale data are never shown while access is being checked again or after a failure.
   const packet=!query.isFetching&&!query.error?query.data:null;
-  const rows=packet?.rows||[];
+  const presentation=biPresentation(program,query.data,demoChoice);
+  const demo=presentation.demo;
+  const rows=packet?presentation.rows:[];
+  useEffect(()=>{setFilters({team:'',event:'',from:'',to:''});setExportError('');},[demo]);
   const summary=useMemo(()=>summarizeScouting(rows,filters),[rows,filters]);
   const set=(key,value)=>setFilters(old=>({...old,[key]:value}));
   async function exportCsv() {
+    if(demo)return;
     setExporting(true);setExportError('');
     try {
       const fresh=await readTeraBi(program,user.id);
@@ -32,21 +38,22 @@ function Dashboard({user,program}) {
     {query.error&&<div role="alert" className="rounded-xl border border-red-500/50 p-5"><p>{query.error.message}</p><button className={biButton+' mt-3'} onClick={()=>query.refetch()}>Tentar novamente</button></div>}
     {packet&&<>
       <nav aria-label="Painéis por modalidade" className="flex flex-wrap gap-2">{packet.boards.map(mode=><Link key={mode} to={`/Internal${mode}BI`} aria-current={mode===program?'page':undefined} className={biButton+(mode===program?' bg-red-600/40':'')}>{mode}</Link>)}</nav>
-      <p className="text-sm text-gray-300">{packet.coverage}. Atualizado em {new Date(packet.updated_at).toLocaleString('pt-BR')}.</p>
-      {packet.partial&&<p role="status" className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-200">Cobertura parcial: uma fonte atingiu o limite de 5.000 registros. Filtros e indicadores abrangem somente os registros carregados.</p>}
+      {program==='FRC'&&<section className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 space-y-3"><p className="font-semibold text-amber-200">{demo?'Demonstração FRC — dados fictícios':'Visualizando dados reais de scouting'}</p><p className="text-sm text-gray-300">{demo?'Estes valores servem apenas para visualizar os gráficos. Não representam resultados da equipe e não são gravados no banco.':'Você pode visualizar exemplos fictícios sem alterar os registros reais.'}</p><button className={biButton} onClick={()=>setDemoChoice(!demo)}>{demo?'Ver dados reais':'Ver demonstração'}</button></section>}
+      <p className="text-sm text-gray-300">{demo?'Fonte: exemplos locais de demonstração. Exportação desativada neste modo.':`${packet.coverage}. Atualizado em ${new Date(packet.updated_at).toLocaleString('pt-BR')}.`}</p>
+      {!demo&&packet.partial&&<p role="status" className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-200">Cobertura parcial: uma fonte atingiu o limite de 5.000 registros. Filtros e indicadores abrangem somente os registros carregados.</p>}
       <section aria-label="Filtros de scouting" className="grid gap-4 rounded-2xl border border-white/10 bg-[#111217] p-4 sm:grid-cols-2">
-        <label className="text-sm space-y-2"><span>Equipe</span><select className={biControl} value={filters.team} onChange={e=>set('team',e.target.value)}><option value="">Todas as equipes autorizadas</option>{[...new Set(rows.map(r=>r.team))].sort().map(value=><option key={value}>{value}</option>)}</select></label>
+        <label className="text-sm space-y-2"><span>Equipe</span><select className={biControl} value={filters.team} onChange={e=>set('team',e.target.value)}><option value="">{demo?'Todas as equipes fictícias':'Todas as equipes autorizadas'}</option>{[...new Set(rows.map(r=>r.team))].sort().map(value=><option key={value}>{value}</option>)}</select></label>
         <label className="text-sm space-y-2"><span>Evento / temporada</span><select className={biControl} value={filters.event} onChange={e=>set('event',e.target.value)}><option value="">Todos os eventos carregados</option>{[...new Set(rows.map(r=>r.event))].sort().map(value=><option key={value}>{value}</option>)}</select></label>
         <label className="text-sm space-y-2"><span>De (data do registro)</span><input type="date" className={biControl+' [color-scheme:dark]'} value={filters.from} onChange={e=>set('from',e.target.value)}/></label>
         <label className="text-sm space-y-2"><span>Até (data do registro)</span><input type="date" className={biControl+' [color-scheme:dark]'} value={filters.to} onChange={e=>set('to',e.target.value)}/></label>
-        <button className={biButton} onClick={()=>setFilters({team:'',event:'',from:'',to:''})}>Limpar filtros</button><button className={biButton} disabled={exporting||!summary.count} onClick={exportCsv}><Download size={17}/>{exporting?'Conferindo acesso…':'Exportar resumo CSV'}</button>
+        <button className={biButton} onClick={()=>setFilters({team:'',event:'',from:'',to:''})}>Limpar filtros</button><button className={biButton} disabled={demo||exporting||!summary.count} onClick={exportCsv}><Download size={17}/>{exporting?'Conferindo acesso…':'Exportar resumo CSV'}</button>
       </section>
       {filters.from&&filters.to&&filters.from>filters.to&&<p role="alert" className="text-amber-200">A data inicial é posterior à final. Ajuste o período.</p>}
       {exportError&&<p role="alert" className="text-red-300">{exportError}</p>}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3"><BiKpi label="Observações" value={summary.count} hint="Pode haver mais de um registro por partida."/><BiKpi label="Equipes no recorte" value={summary.teams.length}/><BiKpi label="Média" value={summary.average} hint={BI_METRICS[program]}/><BiKpi label="Melhor registro" value={summary.best} hint={BI_METRICS[program]}/></div>
       <p className="text-xs leading-relaxed text-gray-400">{summary.measured} de {summary.count} observações possuem valor numérico. Datas seguem o horário de Três Lagoas. {program==='FRC'?'Auto + teleop não inclui endgame e não representa o placar oficial completo.':program==='FTC'?'IEF é o índice registrado no scouting, não o placar oficial da competição.':'Somente regras Bioglow 2026/2027; outras simulações não são misturadas.'} Médias entre eventos e temporadas podem ter regras distintas: selecione um evento para comparar.</p>
-      {!summary.count&&<div className="rounded-2xl border border-dashed border-white/20 p-8 text-center"><h2 className="text-lg font-semibold">Nenhum registro neste recorte</h2><p className="mt-2 text-gray-400">Registre scouting na modalidade ou ajuste os filtros. Nenhum dado de demonstração é utilizado.</p></div>}
-      <div className="grid gap-5 2xl:grid-cols-2"><BiChart title="Média por equipe" data={summary.teams.map(r=>({name:r.name,value:r.average}))}/><BiChart line title="Evolução por data do registro" data={summary.days.map(r=>({name:r.name,value:r.average}))}/></div>
+      {!summary.count&&<div className="rounded-2xl border border-dashed border-white/20 p-8 text-center"><h2 className="text-lg font-semibold">{demo?'Nenhum exemplo neste recorte':'Nenhum registro neste recorte'}</h2><p className="mt-2 text-gray-400">{demo?'Ajuste os filtros para explorar os dados fictícios.':'Registre scouting na modalidade ou ajuste os filtros. Nenhum dado de demonstração é utilizado neste modo.'}</p></div>}
+      <div className="grid gap-5 2xl:grid-cols-2"><BiChart title={demo?'Demonstração — média por equipe':'Média por equipe'} data={summary.teams.map(r=>({name:r.name,value:r.average}))}/><BiChart line title={demo?'Demonstração — evolução ilustrativa':'Evolução por data do registro'} data={summary.days.map(r=>({name:r.name,value:r.average}))}/></div>
       <section className="min-w-0 rounded-2xl border border-white/10 bg-[#111217] p-4"><h2 className="text-lg font-semibold mb-3">Comparativo de equipes</h2><div className="overflow-x-auto"><table className="w-full text-sm text-left"><caption className="sr-only">Resumo do scouting por equipe no recorte</caption><thead><tr>{['Equipe','Observações','Média','Melhor'].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{summary.teams.map(r=><tr key={r.name} className="border-t border-white/10"><th className="p-3 font-medium break-words">{r.name}</th><td className="p-3">{r.records}</td><td className="p-3">{biNumber(r.average)}</td><td className="p-3">{biNumber(r.best)}</td></tr>)}</tbody></table></div></section>
       {program==='FLL'&&<section className="rounded-2xl border border-white/10 bg-[#111217] p-4"><h2 className="text-lg font-semibold">Missões — fotografia atual</h2><p className="my-2 text-sm text-gray-400">Fonte separada dos rounds e independente dos filtros acima; não representa evolução histórica.</p>{!packet.missions.length?<p>Nenhuma missão autorizada cadastrada.</p>:<ul className="divide-y divide-white/10">{packet.missions.map((m,i)=><li key={i} className="py-3 flex flex-wrap justify-between gap-2"><span className="break-words">{m.name}</span><span className="text-sm text-gray-300">{biNumber(m.score)} / {biNumber(m.maximum)} · {m.status}</span></li>)}</ul>}</section>}
     </>}
