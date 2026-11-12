@@ -45,6 +45,8 @@ import PageVisibilityGate from './components/internal/PageVisibilityGate';
 const AVA=lazy(()=>import('./pages/AVA'));
 const AVAAdmin=lazy(()=>import('./pages/AVAAdmin'));
 const InternalOperations=lazy(()=>import('./pages/InternalOperations'));
+const InternalTeraBi=lazy(()=>import('./pages/InternalTeraBi'));
+const TeraDataExperience=lazy(()=>import('./pages/TeraDataExperience'));
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -98,6 +100,8 @@ const AuthenticatedApp = () => {
         />
       ))}
       <Route path="/MyPDI" element={<MyPDI />} />
+      <Route path="/TeraDataExperience" element={<LayoutWrapper currentPageName="TeraDataExperience"><Suspense fallback={<p className="p-8 text-white">Carregando experiência…</p>}><TeraDataExperience/></Suspense></LayoutWrapper>}/>
+      {Object.entries({FRC:'InternalFRCScout',FTC:'InternalFTCScout',FLL:'InternalFLLDashboard'}).map(([program,page])=><Route key={program} path={`/Internal${program}BI`} element={<LayoutWrapper currentPageName={page}><Suspense fallback={<p className="p-8 text-white">Carregando TERA BI…</p>}><InternalTeraBi program={program}/></Suspense></LayoutWrapper>}/>)}
       <Route path="/InternalDemands" element={<LayoutWrapper currentPageName="InternalDemands"><InternalDemands /></LayoutWrapper>} />
       <Route path="/SafetyCheck" element={<LayoutWrapper currentPageName="SafetyCheck"><SafetyCheck /></LayoutWrapper>} />
       <Route path="/EventGalleryPublic" element={<LayoutWrapper currentPageName="EventGalleryPublic"><EventGalleryPublic /></LayoutWrapper>} />
