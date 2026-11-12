@@ -11,10 +11,12 @@ const snapshot=(modalities=['FTC'])=>({actor:'actor',modalities,pages:{InternalF
 function fixture({tables={},snapshots=[snapshot()],auth=async()=>user,fail='',limit=5000}={}) {
   const calls=[];let rpcIndex=0;
   function client(kind){return {rpc:async()=>{calls.push([kind,'rpc']);return {data:snapshots[Math.min(rpcIndex++,snapshots.length-1)]};},from(table){
+    if(kind==='user'&&table==='fll_round_simulations')throw Error('authenticated_select_denied');
+    if(kind==='rounds-server'&&table!=='fll_round_simulations')throw Error('privileged_source_denied');
     const call={kind,table,filters:[]};calls.push(call);
     const query={select(fields){call.fields=fields;return query;},order(){return query;},eq(key,value){call.filters.push([key,value]);return query;},is(key,value){call.filters.push([key,value]);return query;},abortSignal(){return query;},range(start,end){call.range=[start,end];return query;},then(resolve){let data=tables[table]||[];for(const [key,value]of call.filters)data=data.filter(r=>r[key]===value);return Promise.resolve(table===fail?{error:{message:'sensitive-service-error'}}:{data:data.slice(call.range[0],call.range[1]+1)}).then(resolve);}};return query;
   }};}
-  const handler=createBiHandler({publicClient:client('anon'),scopedClient:token=>{assert.equal(token,'synthetic-token');return client('user');},authenticate:auth,limit});
+  const handler=createBiHandler({publicClient:client('anon'),roundsClient:client('rounds-server'),scopedClient:token=>{assert.equal(token,'synthetic-token');return client('user');},authenticate:auth,limit});
   async function request(query={program:'FTC'},headers={authorization:'Bearer synthetic-token'},method='GET') {
     const response={headers:{},setHeader(key,value){this.headers[key]=value;},status(value){this.code=value;return this;},json(value){this.body=value;return this;}};
     await handler({method,query,headers},response);return response;
@@ -72,7 +74,11 @@ test('FLL preserves own-round privacy, simulator rules and test/trash exclusions
   const f=fixture({snapshots:[snapshot(['FLL'])],tables:{fll_round_simulations:[round,{...round,user_id:'other'},{...round,is_test:true},{...round,deleted_at:'now'},{...round,rules_version:'industria'}]}});
   const response=await f.request({program:'FLL'});assert.equal(response.code,200);assert.equal(response.body.rows.length,1);
   assert.deepEqual(f.calls.find(c=>c.table==='fll_round_simulations').filters,[['rules_version','bioglow-2026-2027-v1'],['is_test',false],['deleted_at',null],['user_id','actor']]);
-  const admin=fixture({snapshots:[{...snapshot(['FLL']),is_admin:true}],tables:{fll_round_simulations:[round,{...round,user_id:'other'}]}});assert.equal((await admin.request({program:'FLL'})).body.rows.length,2);
+  assert.equal(f.calls.find(c=>c.table==='fll_round_simulations').kind,'rounds-server');
+  assert.equal(f.calls.find(c=>c.table==='fll_missions').kind,'user');
+  const adminUser={...user,profile:{...user.profile,is_admin:true}};
+  const admin=fixture({auth:async()=>adminUser,snapshots:[{...snapshot(['FLL']),is_admin:true}],tables:{fll_round_simulations:[round,{...round,user_id:'other'}]}});assert.equal((await admin.request({program:'FLL'})).body.rows.length,2);
+  const revoked=fixture({auth:async()=>adminUser,snapshots:[{...snapshot(['FLL']),is_admin:true},snapshot(['FLL'])],tables:{fll_round_simulations:[round,{...round,user_id:'other'}]}});assert.equal((await revoked.request({program:'FLL'})).code,403);
 });
 test('public requests always use anon client even with an authenticated header; only active projects are queried',async()=>{
   const f=fixture({auth:async()=>{throw Error('must not run');},tables:{projects:[{id:'1',title:'A',status:'Ativo'},{id:'2',title:'B',status:'Planejamento'}]}});

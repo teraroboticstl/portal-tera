@@ -1,5 +1,5 @@
 import {BI_PAGES,canReadBi,scoutingRow,missionRows,publicBi} from '../../src/lib/teraBi.js';
-export function createBiHandler({publicClient,scopedClient,authenticate,limit=5000}) {
+export function createBiHandler({publicClient,scopedClient,roundsClient,authenticate,limit=5000}) {
   async function all(client,table,fields='*',configure=q=>q) {
     const rows=[];
     for(let offset=0;offset<limit;offset+=500) {
@@ -32,10 +32,13 @@ export function createBiHandler({publicClient,scopedClient,authenticate,limit=50
       const access=async()=>{const {data,error}=await client.rpc('portal_page_visibility_snapshot');if(error||!canReadBi(program,user,data))throw new Error('DENIED');return data;};
       const before=await access();
       let records,missions=[];
+      const fllAdmin=before.is_admin===true&&user.profile?.is_admin===true;
       if(program==='FLL') {
-        records=await all(client,'fll_round_simulations','id,created_at,team_name,round_name,score,season_theme,season_year,rules_version',q=>{
+        // This table intentionally grants SELECT only to service_role. Preserve
+        // the existing simulator gateway (own rounds/admin) rather than widening grants.
+        records=await all(roundsClient,'fll_round_simulations','id,created_at,team_name,round_name,score,season_theme,season_year,rules_version',q=>{
           q=q.eq('rules_version','bioglow-2026-2027-v1').eq('is_test',false).is('deleted_at',null);
-          return before.is_admin===true?q:q.eq('user_id',user.id);
+          return fllAdmin?q:q.eq('user_id',user.id);
         });
         const missionSource=await all(client,'fll_missions','id,title,current_score,max_score,status,portal_form_data');
         missions=missionRows(missionSource.rows);records.partial ||= missionSource.partial;
@@ -44,9 +47,10 @@ export function createBiHandler({publicClient,scopedClient,authenticate,limit=50
       const afterUser=await authenticate(req.headers.authorization);
       if(afterUser.id!==user.id)throw new Error('DENIED');
       user=afterUser;const after=await access();
+      if(program==='FLL'&&fllAdmin&&!(after.is_admin===true&&user.profile?.is_admin===true))throw new Error('DENIED');
       const boards=Object.keys(BI_PAGES).filter(p=>canReadBi(p,user,after));
       return res.status(200).json({actor:user.id,program,boards,rows,missions,partial:records.partial,updated_at:new Date().toISOString(),
-        coverage:program==='FLL'?(after.is_admin?'Rounds Bioglow autorizados; testes e lixeira excluídos':'Meus rounds Bioglow; testes e lixeira excluídos'):'Registros de scouting autorizados pela sua sessão'});
+        coverage:program==='FLL'?(fllAdmin?'Rounds Bioglow autorizados; testes e lixeira excluídos':'Meus rounds Bioglow; testes e lixeira excluídos'):'Registros de scouting autorizados pela sua sessão'});
     }catch(error){return res.status(error.message==='DENIED'?403:503).json({error:error.message==='DENIED'?'Seu acesso a esta modalidade ou página não está liberado.':'Não foi possível consultar as fontes. Nenhum indicador parcial foi exibido.'});}
   };
 }
