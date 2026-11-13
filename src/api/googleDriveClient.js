@@ -68,7 +68,7 @@ export async function uploadToGoogleDrive(params = {}) {
   if (!response.ok) {
     const errorMsg = result.message || result.error || 'Falha ao processar upload no servidor.';
     const details = result.details ? ` (${result.details})` : '';
-    throw new Error(`${errorMsg}${details}`);
+    throw Object.assign(new Error(`${errorMsg}${details}`),{code:result.error,status:response.status});
   }
 
   return result.data;

@@ -1,5 +1,6 @@
+import PdiMediaField from '@/components/internal/PdiMediaFields';
 import PortalMedia from '@/components/common/PortalMedia';
-import { toast } from 'sonner';
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -7,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Target, Wrench, BookOpen, Star, MessageSquare,
  ChevronDown, ChevronUp,
-  CheckCircle, Save, X, Upload, Loader2, FileText, ExternalLink
+  CheckCircle, Save, X, FileText, ExternalLink
 } from 'lucide-react';
 import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
@@ -68,93 +69,10 @@ const EMPTY_FORM = {
   season: 'DECODE 2025', status: 'rascunho', certificates: [],
 };
 
-function PhotoUpload({ value, onChange }) {
-  const [uploading, setUploading] = useState(false);
-
-  const handleFile = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'pdi' });
-    onChange(file_url);
-    } catch { toast.error('Não foi possível enviar o arquivo. Tente novamente com um arquivo de até 4 MB.'); }
-    finally { setUploading(false); }
-  };
-
-  return (
-    <div className="flex items-center gap-3">
-      {value && (
-        <PortalMedia src={value} alt="foto" className="w-14 h-14 rounded-full object-cover border-2 border-[#E10600]/50" />
-      )}
-      <label className="cursor-pointer flex items-center gap-2 px-3 py-2 bg-[#111217] border border-[#1F222B] rounded-lg text-xs text-[#B8BDC7] hover:border-[#E10600]/50 hover:text-white transition-colors">
-        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-        {uploading ? 'Enviando...' : (value ? 'Trocar foto' : 'Carregar foto')}
-        <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
-      </label>
-    </div>
-  );
-}
-
-function CertificatesUpload({ value = [], onChange }) {
-  const [uploading, setUploading] = useState(false);
-  const [nameInput, setNameInput] = useState('');
-
-  const handleFile = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-    const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'pdi' });
-    const name = nameInput.trim() || file.name.replace(/\.[^.]+$/, '');
-    onChange([...value, { name, url: file_url }]);
-    setNameInput('');
-    } catch { toast.error('Não foi possível enviar o arquivo. Tente novamente com um arquivo de até 4 MB.'); }
-    finally { setUploading(false); }
-    e.target.value = '';
-  };
-
-  const remove = (i) => onChange(value.filter((_, idx) => idx !== i));
-
-  return (
-    <div className="space-y-3">
-      {value.length > 0 && (
-        <div className="space-y-2">
-          {value.map((cert, i) => (
-            <div key={i} className="flex items-center gap-2 bg-[#111217] border border-[#1F222B] rounded-lg px-3 py-2">
-              <FileText className="w-4 h-4 text-orange-400 flex-shrink-0" />
-              <span className="text-sm text-white flex-1 truncate">{cert.name}</span>
-              <PortalMedia src={cert.url} type="link"
-                className="text-blue-400 hover:text-blue-300 p-1">
-                <ExternalLink className="w-3.5 h-3.5" />
-              </PortalMedia>
-              <button onClick={() => remove(i)} className="text-red-400 hover:text-red-300 p-1">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={nameInput}
-          onChange={e => setNameInput(e.target.value)}
-          placeholder="Nome do certificado (opcional)"
-          className="flex-1 bg-[#111217] border border-[#1F222B] text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-orange-500"
-        />
-        <label className={`cursor-pointer flex items-center gap-2 px-3 py-2 bg-[#111217] border border-[#1F222B] rounded-lg text-xs text-[#B8BDC7] hover:border-orange-500/50 hover:text-white transition-colors whitespace-nowrap ${uploading ? 'opacity-60 pointer-events-none' : ''}`}>
-          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-          {uploading ? 'Enviando...' : 'Adicionar PDF'}
-          <input type="file" accept=".pdf,image/*" className="hidden" onChange={handleFile} disabled={uploading} />
-        </label>
-      </div>
-    </div>
-  );
-}
-
-function PDIForm({ initial, onSave, onCancel, isAdmin }) {
+function PDIForm({ initial, onSave, onCancel, isAdmin, isSaving, error }) {
   const [form, setForm] = useState(initial || EMPTY_FORM);
+  const [uploads, setUploads] = useState({photo:false,files:false});
+  const uploading=uploads.photo||uploads.files;
   const [openSections, setOpenSections] = useState([0, 1, 2, 3, 4, 5]);
 
   const toggle = (i) => setOpenSections(prev =>
@@ -163,7 +81,8 @@ function PDIForm({ initial, onSave, onCancel, isAdmin }) {
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
   return (
-    <div className="space-y-2">
+    <fieldset disabled={isSaving} className="min-w-0 w-full space-y-2"><legend className="sr-only">Editar PDI</legend>
+      {error&&<p role="alert" className="rounded-lg border border-red-500/40 p-3 text-sm text-red-200">Não foi possível salvar o PDI. Suas respostas foram preservadas. Confira sua conexão e suas permissões e tente novamente.</p>}
       {SECTIONS.map((sec, i) => {
         const Icon = sec.icon;
         const isOpen = openSections.includes(i);
@@ -186,19 +105,19 @@ function PDIForm({ initial, onSave, onCancel, isAdmin }) {
                   <div className="px-5 py-4 bg-[#0B0B0D] border-t border-[#1F222B] space-y-4">
                     {sec.fields.map(field => (
                       <div key={field.key}>
-                        <label className="text-xs font-semibold text-[#B8BDC7] mb-1.5 block">
+                        <label htmlFor={field.type==='photo'?undefined:`pdi-${field.key}`} className="text-xs font-semibold text-[#B8BDC7] mb-1.5 block">
                           {field.label} {field.required && <span className="text-[#E10600]">*</span>}
                         </label>
                         {field.type === 'input' && (
-                          <Input value={form[field.key] || ''} onChange={e => set(field.key, e.target.value)}
-                            className="bg-[#111217] border-[#1F222B] text-white text-sm" />
+                          <Input id={`pdi-${field.key}`} value={form[field.key] || ''} onChange={e => set(field.key, e.target.value)}
+                            className="bg-[#111217] border-[#1F222B] text-white text-base sm:text-sm" />
                         )}
                         {field.type === 'textarea' && (
-                          <Textarea value={form[field.key] || ''} onChange={e => set(field.key, e.target.value)}
-                            rows={3} className="bg-[#111217] border-[#1F222B] text-white text-sm resize-none" />
+                          <Textarea id={`pdi-${field.key}`} value={form[field.key] || ''} onChange={e => set(field.key, e.target.value)}
+                            rows={3} className="bg-[#111217] border-[#1F222B] text-white text-base sm:text-sm resize-none" />
                         )}
                         {field.type === 'photo' && (
-                          <PhotoUpload value={form[field.key]} onChange={v => set(field.key, v)} />
+                          <PdiMediaField photo value={form[field.key]} onChange={v => set(field.key,v)} program="FTC" season={form.season} onBusyChange={busy=>setUploads(old=>({...old,photo:busy}))}/>
                         )}
                       </div>
                     ))}
@@ -224,10 +143,7 @@ function PDIForm({ initial, onSave, onCancel, isAdmin }) {
           <label className="text-xs font-semibold text-[#B8BDC7] mb-2 block">
             Adicione PDFs ou imagens de certificados do membro
           </label>
-          <CertificatesUpload
-            value={form.certificates || []}
-            onChange={v => set('certificates', v)}
-          />
+          <PdiMediaField value={form.certificates||[]} onChange={v=>set('certificates',v)} program="FTC" season={form.season} onBusyChange={busy=>setUploads(old=>({...old,files:busy}))}/>
         </div>
       </div>
 
@@ -266,20 +182,22 @@ function PDIForm({ initial, onSave, onCancel, isAdmin }) {
         </div>
       )}
 
-      <div className="flex gap-3 pt-2">
-        <Button onClick={() => onSave({ ...form, status: 'rascunho' })}
-          variant="outline" className="border-[#1F222B] text-[#B8BDC7] hover:text-white">
+      {uploading&&<p role="status" className="p-3 text-sm text-amber-200">Aguarde o envio dos arquivos para salvar o PDI.</p>}
+      {isSaving&&<p role="status" className="p-3 text-sm text-gray-300">Salvando PDI…</p>}
+      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap">
+        <Button disabled={uploading||isSaving} onClick={() => onSave({ ...form, status: 'rascunho' })}
+          variant="outline" className="min-h-11 border-[#1F222B] text-[#B8BDC7] hover:text-white">
           <Save className="w-4 h-4 mr-1" /> Salvar Rascunho
         </Button>
-        <Button onClick={() => onSave({ ...form, status: 'completo' })}
-          className="bg-[#E10600] hover:bg-[#b00500] text-white">
+        <Button disabled={uploading||isSaving} onClick={() => onSave({ ...form, status: 'completo' })}
+          className="min-h-11 bg-[#E10600] hover:bg-[#b00500] text-white">
           <CheckCircle className="w-4 h-4 mr-1" /> Marcar como Completo
         </Button>
-        <Button onClick={onCancel} variant="ghost" className="text-[#B8BDC7] hover:text-white ml-auto">
+        <Button disabled={uploading||isSaving} onClick={onCancel} variant="ghost" className="min-h-11 text-[#B8BDC7] hover:text-white sm:ml-auto">
           <X className="w-4 h-4 mr-1" /> Cancelar
         </Button>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -297,7 +215,7 @@ function extractTags(pdi) {
   return tags.slice(0, 3);
 }
 
-function PDICard({ pdi, onEdit, onDelete, onUpdateProgress, isAdmin }) {
+function PDICard({ pdi, onEdit, onDelete, onUpdateProgress, isAdmin, canUpdate }) {
   const [expanded, setExpanded] = useState(false);
   const tags = extractTags(pdi);
 
@@ -305,9 +223,9 @@ function PDICard({ pdi, onEdit, onDelete, onUpdateProgress, isAdmin }) {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-start gap-2"
+      className={pdi.registration_version ? "flex min-w-0 flex-col gap-2" : "flex min-w-0 items-start gap-2"}
     >
-      <div className="bg-[#111217] rounded-2xl overflow-hidden shadow-sm border border-[#1F222B] flex flex-col flex-1">
+      <div className="bg-[#111217] rounded-2xl overflow-hidden shadow-sm border border-[#1F222B] flex flex-col flex-1 min-w-0 w-full">
       {/* Photo */}
       <div className="flex justify-center pt-6 pb-3">
         {pdi.photo_url ? (
@@ -322,7 +240,7 @@ function PDICard({ pdi, onEdit, onDelete, onUpdateProgress, isAdmin }) {
 
       {/* Info */}
       <div className="px-4 pb-4 flex-1 flex flex-col">
-        <p className="font-bold text-white text-base text-center">{pdi.member_name}</p>
+        <p className="font-bold text-white text-base text-center break-words">{pdi.member_name}</p>
         <p className="text-sm text-[#B8BDC7] text-center mb-3">{pdi.main_role}</p>
 
         {/* Tags */}
@@ -351,13 +269,13 @@ function PDICard({ pdi, onEdit, onDelete, onUpdateProgress, isAdmin }) {
         )}
 
         {/* Actions */}
-        <div className="flex justify-center gap-2 mt-auto">
+        <div className="flex flex-wrap justify-center gap-2 mt-auto">
           <button onClick={() => setExpanded(!expanded)}
             className="text-xs text-[#B8BDC7] hover:text-white underline transition-colors">
             {expanded ? 'Fechar' : 'Ver PDI'}
           </button>
           <span className="text-[#1F222B]">|</span>
-          <button onClick={() => onEdit(pdi)}
+          <button disabled={!canUpdate} onClick={() => onEdit(pdi)}
             className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
             Editar
           </button>
@@ -457,7 +375,7 @@ function InternalFTCPDIContent({ user }) {
 
   return (
     <InternalPageLayout user={user} currentPage="InternalFTCPDI" title="PDI — Membros FTC">
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6 text-white">
         {isError && <p role="alert">Falha ao carregar os PDIs. Atualize a página para tentar novamente.</p>}
         {(updateMutation.isError || deleteMutation.isError) && <p role="alert">Não foi possível salvar a alteração com suas permissões. Nenhum sucesso foi confirmado.</p>}
 
@@ -465,9 +383,9 @@ function InternalFTCPDIContent({ user }) {
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-[#0B0B0D] border border-[#1F222B] rounded-2xl p-6">
+          className="bg-[#0B0B0D] border border-[#1F222B] rounded-2xl p-4 sm:p-6">
           <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
+            <div className="min-w-0 flex-1 w-full">
               <h2 className="text-xl font-black text-white mb-1">PDI — Plano de Desenvolvimento Individual</h2>
               <p className="text-sm text-[#B8BDC7] leading-relaxed">
                 Equipe FTC · Foco no <strong className="text-white">processo e aprendizado</strong>, não em desempenho competitivo. Visível somente ao titular e aos administradores.
@@ -501,12 +419,14 @@ function InternalFTCPDIContent({ user }) {
         <AnimatePresence>
           {editingPDI && (
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              className="bg-[#0B0B0D] border border-[#E10600]/30 rounded-2xl p-6">
+              className="bg-[#0B0B0D] border border-[#E10600]/30 rounded-2xl p-4 sm:p-6">
               <h3 className="font-black text-white mb-4">Editar PDI</h3>
-              <div className="flex gap-4 items-start">
-                <div className="flex-1">
+              <div className="flex min-w-0 flex-col gap-4">
+                <div className="min-w-0 flex-1 w-full">
                   <PDIForm
                     initial={editingPDI}
+                    isSaving={updateMutation.isPending}
+                    error={updateMutation.error}
                     onSave={handleSave}
                     onCancel={() => { setEditingPDI(null); }}
                     isAdmin={isAdmin && !editingPDI?.registration_version}
@@ -532,9 +452,9 @@ function InternalFTCPDIContent({ user }) {
             <p className="text-xs text-[#B8BDC7]/60 mt-1">O PDI é criado ao concluir o cadastro. Se você já concluiu, procure o administrador.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
             {pdis.map(pdi => (
-              <PDICard key={pdi.id} pdi={pdi}
+              <PDICard key={pdi.id} pdi={pdi} canUpdate={isAdmin||user?.portal_can_edit===true}
                 isAdmin={isAdmin}
                 onUpdateProgress={handleUpdateProgress}
                 onEdit={(p) => { setEditingPDI(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
