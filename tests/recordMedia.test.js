@@ -77,7 +77,7 @@ test('actual upload endpoint accepts new private/record contexts without public 
   '/crypto':{default:{createHash:()=>({update:()=>({digest:()=> 'synthetic-digest'})})}},
   '/googleDrive.js':{getDriveErrorInfo:()=>({status:500,code:'failure',message:'Falha'}),getGoogleDriveClient:()=>({files:{get:async()=>({data:{id:'synthetic-file-123',appProperties:{context},mimeType:'image/png',size:1}})}}),resolveTargetFolder:async()=> 'private-folder',sanitizeFileName:name=>name,uploadBufferToDrive:async params=>{upload=params;return {id:'synthetic-file',name:'fixture.png',mimeType:'image/png'};}},
   '/mediaSecurity.js':{verifyMediaAccess:()=>({allowed:true,isPublic:true}),isFileReferencedInDb:()=>{},invalidateFileDbCache:()=>{}},
-  '/supabaseServer.js':{supabaseServer:{},validateUserAuth:async()=>{if(deny)throw Error('unauthorized');return {id:'actor',email:'synthetic@example.invalid',profile:{portal_internal:true,modality_access_enabled:true,allowed_modalities:['FTC']}};},validateUploadPermission:()=>{}},
+  '/supabaseServer.js':{supabaseServer:{},createScopedUserSupabaseClient:()=>{throw Error('Unexpected BI query');},validateUserAuth:async()=>{if(deny)throw Error('unauthorized');return {id:'actor',email:'synthetic@example.invalid',profile:{portal_internal:true,modality_access_enabled:true,allowed_modalities:['FTC']}};},validateUploadPermission:()=>{}},
   '/multipart.js':{parseMultipart:async()=>({fields:{context,program},file:{buffer:new Uint8Array([1]),size:1,mimeType:'image/png',filename:'fixture.png'}})},
   '/fllAudioStorage.js':{cacheAudioBytes:()=>{}}
  });

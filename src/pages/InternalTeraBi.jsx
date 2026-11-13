@@ -7,6 +7,7 @@ import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import {BiKpi,BiChart,biNumber,biButton,biControl} from '@/components/bi/BiVisuals';
 import {readTeraBi} from '@/api/teraBiClient';
 import {BI_METRICS,summarizeScouting,biCsv} from '@/lib/teraBi';
+import BiAnalysisLibrary from '@/components/bi/BiAnalysisLibrary';
 
 function Dashboard({user,program}) {
   const [filters,setFilters]=useState({team:'',event:'',from:'',to:''});
@@ -28,6 +29,7 @@ function Dashboard({user,program}) {
   return <InternalPageLayout user={user} currentPage={`Internal${program}BI`} title={`TERA BI — ${program}`}><div className="space-y-6 text-white pb-20">
     <Link to="/InternalTeraBI" className={biButton}>← Todos os meus painéis TERA BI</Link>
     <header className="relative overflow-hidden rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-950/50 to-[#111217] p-5 sm:p-7"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold tracking-[.2em] text-red-400">INTELIGÊNCIA DA EQUIPE</p><h1 className="mt-2 text-2xl sm:text-3xl font-bold flex items-center gap-3"><BarChart3 aria-hidden="true"/>TERA BI <span className="text-red-400">{program}</span></h1><p className="mt-3 max-w-2xl text-sm text-gray-300">Scouting e evolução com os registros autorizados do Portal. Indicadores de equipe, sem ranking individual ou pontuação de PDI.</p></div><button className={biButton} onClick={()=>query.refetch()} disabled={query.isFetching}><RefreshCw size={17} aria-hidden="true"/>Atualizar</button></div></header>
+    <BiAnalysisLibrary key={program} program={program} user={user}/>
     {query.isFetching&&<p role="status" className="p-6 text-gray-300">Conferindo acesso e carregando as fontes…</p>}
     {query.error&&<div role="alert" className="rounded-xl border border-red-500/50 p-5"><p>{query.error.message}</p><button className={biButton+' mt-3'} onClick={()=>query.refetch()}>Tentar novamente</button></div>}
     {packet&&<>

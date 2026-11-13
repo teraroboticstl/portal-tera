@@ -5,6 +5,8 @@ import { validateUserAuth, validateUploadPermission, supabaseServer } from '../_
 import { canUseProgram } from '../_lib/modalityAccess.js';
 import { parseMultipart } from '../_lib/multipart.js';
 import { cacheAudioBytes } from '../_lib/fllAudioStorage.js';
+import {createScopedUserSupabaseClient} from '../_lib/supabaseServer.js';
+import {authorizeBiFiles,validateBiBytes} from '../_lib/biAnalysisFiles.js';
 
 // Mime types permitidos para upload
 const ALLOWED_MIME_TYPES = new Set([
@@ -36,6 +38,7 @@ const ALLOWED_CONTEXTS = new Set([
   'tir',
   'seasons',
   'pdi',
+  'bi-analysis',
   'attachments',
   'fll-missions',
   'fll-audio',
@@ -128,7 +131,12 @@ export default async function handler(req, res) {
       }
 
       // 5. Validação de MIME type
-      if (!ALLOWED_MIME_TYPES.has(file.mimeType)) {
+      if(context==='bi-analysis') {
+        try {await authorizeBiFiles({header:authHeader,program:fields.program,authenticate:validateUserAuth,scopedClient:createScopedUserSupabaseClient,write:true});}
+        catch(error){return res.status(error.status||403).json({error:'Acesso à análise não autorizado.'});}
+        try {file.mimeType=validateBiBytes(file);}catch(error){return res.status(422).json({error:error.message});}
+      }
+      if (context!=='bi-analysis' && !ALLOWED_MIME_TYPES.has(file.mimeType)) {
         return res.status(400).json({
           error: `Tipo de arquivo "${file.mimeType}" não suportado.`,
           allowed: Array.from(ALLOWED_MIME_TYPES)
@@ -187,7 +195,8 @@ export default async function handler(req, res) {
           folderId: targetFolderId,
           context,
           isPublic,
-          uploaderId: authenticatedUser.id
+          uploaderId: authenticatedUser.id,
+          program: context==='bi-analysis'?fields.program:undefined
         });
       } catch (uploadDriveErr) {
         console.error('[API /api/media upload] Erro no upload para o Google Drive:', getDriveErrorInfo(uploadDriveErr).code);
@@ -208,6 +217,10 @@ export default async function handler(req, res) {
         const isCover = fields.subfolder === 'Capas';
         const {error} = await supabaseServer.rpc('ava_register_media',{p_actor:authenticatedUser.id,p_data:{file_id:uploadedFile.id,name:uploadedFile.name,mime_type:file.mimeType,size:file.size,folder_id:targetFolderId,module_id:isCover ? null : fields.recordId,track_id:isCover ? fields.recordId : null}});
         if (error) { try { await drive.files.delete({fileId:uploadedFile.id}); } catch {} return res.status(503).json({error:'Falha ao registrar material no AVA. Tente novamente.'}); }
+      }
+      if(context==='bi-analysis') {
+        try {const current=await authorizeBiFiles({header:authHeader,program:fields.program,authenticate:validateUserAuth,scopedClient:createScopedUserSupabaseClient,write:true});if(current.id!==authenticatedUser.id)throw Error('Sessão alterada.');}
+        catch{return res.status(403).json({error:'O acesso mudou durante o envio. Nenhum arquivo será exibido sem autorização.'});}
       }
       // 11. Resposta com metadados estruturados (com salvaguarda contra arquivo órfão)
       try {
@@ -307,6 +320,9 @@ export default async function handler(req, res) {
 
       const fileMeta = metaRes.data;
 
+      // Analysis files are catalogued in Drive; removal uses a separate recoverable workflow.
+      if(fileMeta.appProperties?.context==='bi-analysis')return res.status(409).json({error:'Remoção de análises pelo Portal indisponível. Solicite ao administrador o arquivamento no Drive.'});
+
       // 2. Impedir exclusão de arquivos que não pertençam comprovadamente ao Portal Tera
       const accessCheck = await verifyMediaAccess({ drive, fileMeta, req });
       if (!accessCheck.allowed && accessCheck.statusCode === 403) {
@@ -387,6 +403,11 @@ export default async function handler(req, res) {
 
       // 3. Headers de conteúdo e cache adequados
       res.setHeader('Content-Type', fileMeta.mimeType || 'application/octet-stream');
+      if(fileMeta.appProperties?.context==='bi-analysis') {
+        res.setHeader('X-Content-Type-Options','nosniff');
+        res.setHeader('Content-Security-Policy',"sandbox; default-src 'none'");
+        res.setHeader('Content-Disposition',`attachment; filename*=UTF-8''${encodeURIComponent(fileMeta.name||'analise').replace(/'/g,'%27')}`);
+      }
       if (fileMeta.size) {
         res.setHeader('Content-Length', fileMeta.size);
       }

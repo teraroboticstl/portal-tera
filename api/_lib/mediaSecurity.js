@@ -1,5 +1,6 @@
 import { getRootFolderId } from './googleDrive.js';
 import { canUseProgram } from './modalityAccess.js';
+import {authorizeBiFiles} from './biAnalysisFiles.js';
 import { supabaseServer, validateUserAuth, createScopedUserSupabaseClient } from './supabaseServer.js';
 
 // Cache em memória para verificações de pastas e registros públicos (evita sobrecarga no Drive e Supabase)
@@ -379,10 +380,11 @@ export async function verifyMediaAccess({ drive, fileMeta, req }) {
   // 3. Avaliação de privacidade: A CLASSIFICAÇÃO PRIVADA DEVE PREVALECER SOBRE QUALQUER CLASSIFICAÇÃO PÚBLICA
   const visibilityTag = fileMeta.appProperties?.visibility || fileMeta.properties?.visibility;
   const contextTag = fileMeta.appProperties?.context || fileMeta.properties?.context;
+  if(contextTag==='bi-analysis'&&(fileMeta.appProperties?.app!=='portal_tera'||fileMeta.appProperties?.context!=='bi-analysis'||fileMeta.appProperties?.visibility!=='private'))return {allowed:false,statusCode:403,isPublic:false,error:'Análise inválida',message:'Metadados de análise não autorizados.'};
   const isExplicitPublicFlag = fileMeta.appProperties?.isPublic === 'true' || fileMeta.appProperties?.isPublic === true;
   const isExplicitPrivateFlag = fileMeta.appProperties?.isPublic === 'false' || fileMeta.appProperties?.isPublic === false;
 
-  const isPrivateContext = ['pdi', 'ava', 'test', 'seasons', 'admin', 'internal', 'engineering'].includes(contextTag);
+  const isPrivateContext = ['pdi', 'ava', 'test', 'seasons', 'admin', 'internal', 'engineering','bi-analysis'].includes(contextTag);
   const isMarkedPrivate = visibilityTag === 'private' || isExplicitPrivateFlag || isPrivateContext || folderIsPrivate;
 
   // Se o arquivo for classificado como PRIVADO por qualquer um dos critérios, a privacidade prevalece incondicionalmente
@@ -425,6 +427,13 @@ async function handlePrivateAccess({ fileMeta, req }) {
 
   try {
     const authenticatedUser = await validateUserAuth(authHeader);
+
+    if(fileMeta.appProperties?.context==='bi-analysis') {
+      try {
+        await authorizeBiFiles({header:authHeader,program:fileMeta.appProperties.program,authenticate:validateUserAuth,scopedClient:createScopedUserSupabaseClient});
+        return {allowed:true,statusCode:200,isPublic:false,user:authenticatedUser};
+      }catch(error){return {allowed:false,statusCode:error.status||403,isPublic:false,error:'Análise protegida',message:'Acesso restrito à modalidade e página autorizadas.'};}
+    }
 
     if (fileMeta.appProperties?.context === 'ava') {
       const token = authHeader.replace(/^Bearer\s+/i, '');
