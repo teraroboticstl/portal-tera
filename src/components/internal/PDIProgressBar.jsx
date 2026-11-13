@@ -56,7 +56,7 @@ export default function PDIProgressBar({ pdi, isAdmin, onUpdate }) {
     setDragging(false);
   }, []);
 
-  if (pdi.registration_version) return <div className="text-xs text-gray-400 max-w-24" title="O cadastro não concede pontos">0% · Avaliação pendente</div>;
+  if (pdi.registration_version) return <div className="w-full rounded-lg border border-white/10 p-2 text-xs text-gray-400" title="O cadastro não concede pontos">0% · Avaliação pendente</div>;
 
   return (
     <div
