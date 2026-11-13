@@ -264,11 +264,6 @@ export async function resolveTargetFolder(drive, context, extraMeta = {}) {
     'test': ['99. Testes do Sistema']
   };
 
-  if(context==='bi-analysis') {
-    if(!['FRC','FTC','FLL'].includes(extraMeta.program))throw Error('Modalidade inválida.');
-    return ensureFolderPath(drive,rootId,['05. Engenharia & Temporadas','TERA BI',extraMeta.program]);
-  }
-
   if (context === 'fll-missions') {
     const seasonName = (extraMeta.season || extraMeta.season_name || extraMeta.theme || 'BIOGLOW').toString().trim();
     return await ensureFolderPath(drive, rootId, [
@@ -344,8 +339,7 @@ export async function uploadBufferToDrive({
   folderId,
   context = 'test',
   isPublic = false,
-  uploaderId = null,
-  program = null
+  uploaderId = null
 }) {
   const stream = new Readable();
   stream.push(buffer);
@@ -367,10 +361,6 @@ export async function uploadBufferToDrive({
       visibility: context === 'event-assets' ? 'record' : (isPublic ? 'public' : 'private')
     }
   };
-  if(context==='bi-analysis') {
-    if(!['FRC','FTC','FLL'].includes(program)||isPublic)throw Error('Análise privada sem modalidade válida.');
-    fileMetadata.appProperties.program=program;
-  }
 
   const media = {
     mimeType,
