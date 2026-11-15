@@ -39,6 +39,7 @@ function component(file,extra={}) {
     '@/api/memberRegistrationClient':{createMemberRegistrationClient:()=>({})},
     '@/components/ui/button':{Button:button},...extra};
   mocks['@/lib/registrationContext'] ??= {RegistrationProfileContext:React.createContext(null)};
+  mocks['./DemandContact'] ??= {__esModule:true,default:({children})=>children};
   const module={exports:{}};
   vm.runInNewContext(transform(source,{transforms:['jsx','imports']}).code,{module,exports:module.exports,
     require(name){assert.ok(name in mocks,name);return mocks[name];}});

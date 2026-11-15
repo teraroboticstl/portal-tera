@@ -3,6 +3,7 @@ import { supabase } from '@/api/supabaseClient';
 import { createMemberRegistrationClient } from '@/api/memberRegistrationClient';
 import { Button } from '@/components/ui/button';
 import { RegistrationProfileContext } from '@/lib/registrationContext';
+import DemandContactGate from './DemandContact';
 
 const registration = createMemberRegistrationClient(supabase);
 const modalities = ['FLL','FTC','FRC','OBR','OBR Resgate Nível 1','OBR Resgate Nível 2','OBR Artística Nível 1','OBR Artística Nível 2'];
@@ -46,7 +47,7 @@ export function MemberRegistrationForm({ onSubmit, busy, error }) {
 export function MemberRegistrationState({ status, user, children, error, busy, onSubmit, onRetry }) {
   if (status?.actor === user.id && status.required === false) {
     return <RegistrationProfileContext.Provider value={{ actor:user.id, preferred_name:status.preferred_name }}>
-      {React.cloneElement(children, { user:{ ...user, preferred_name:status.preferred_name } })}
+      <DemandContactGate key={user.id} user={user}>{React.cloneElement(children, { user:{ ...user, preferred_name:status.preferred_name } })}</DemandContactGate>
     </RegistrationProfileContext.Provider>;
   }
   if (status?.actor === user.id && status.required === true) return <MemberRegistrationForm onSubmit={onSubmit} busy={busy} error={error} />;
