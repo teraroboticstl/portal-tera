@@ -1,4 +1,5 @@
-import React from 'react';
+import React,{useState} from 'react';
+import DemandNotifications from './DemandNotifications';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
@@ -16,6 +17,7 @@ import Badge from '@/components/common/Badge';
 
 export default function InternalHeader({ user, title, onMenuClick }) {
   const navigate = useNavigate();
+  const [notificationsOpen,setNotificationsOpen]=useState(false);
 
   const handleLogout = async () => {
     await base44.auth.logout('/');
@@ -23,22 +25,23 @@ export default function InternalHeader({ user, title, onMenuClick }) {
 
   return (
     <header className="sticky top-0 z-40 bg-[#0B0B0D]/95 backdrop-blur-md border-b border-[#1F222B]">
-      <div className="flex items-center justify-between px-4 lg:px-8 py-4">
-        <div className="flex items-center gap-4">
+      <div className="flex min-w-0 items-center justify-between gap-2 px-4 lg:px-8 py-4">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
           {onMenuClick && (
             <button
               onClick={onMenuClick}
-              className="lg:hidden p-2 text-[#B8BDC7] hover:text-[#F5F7FA] hover:bg-[#1F222B] rounded-lg transition-colors"
+              aria-label="Abrir menu interno" className="lg:hidden min-h-11 min-w-11 shrink-0 p-2 text-[#B8BDC7] hover:text-[#F5F7FA] hover:bg-[#1F222B] rounded-lg transition-colors"
             >
               <Menu className="w-6 h-6" />
             </button>
           )}
-          <h1 className="text-xl font-bold text-[#F5F7FA]">{title || 'Área Interna'}</h1>
+          <h1 title={title||'Área Interna'} className="min-w-0 truncate text-base sm:text-xl font-bold text-[#F5F7FA]">{title || 'Área Interna'}</h1>
         </div>
 
+        <div className="shrink-0"><DemandNotifications key={user?.id} actor={user?.id} open={notificationsOpen} onOpenChange={setNotificationsOpen}/></div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 text-[#B8BDC7] hover:text-[#F5F7FA] hover:bg-[#1F222B]">
+            <Button aria-label="Abrir meu perfil" variant="ghost" className="flex min-h-11 shrink-0 items-center gap-2 px-2 sm:px-3 text-[#B8BDC7] hover:text-[#F5F7FA] hover:bg-[#1F222B]">
               <UserAvatar user={user} className="w-8 h-8 text-xs" />
               <div className="hidden sm:block text-left">
                 <span className="block text-sm font-medium">{user?.full_name || 'Usuário'}</span>
@@ -87,6 +90,7 @@ export default function InternalHeader({ user, title, onMenuClick }) {
               <Link to="/InternalDemands?board=personal" className="text-[#B8BDC7]">Minhas demandas</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-[#1F222B]" />
+            <DropdownMenuItem onSelect={()=>setNotificationsOpen(true)} className="text-[#B8BDC7]">Minhas notificações e contato</DropdownMenuItem>
             
             <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-[#E10600]">
               <LogOut className="w-4 h-4" />
