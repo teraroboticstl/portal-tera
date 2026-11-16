@@ -2,6 +2,7 @@ BEGIN;
 -- Add metadata without rewriting existing checklist items or their history.
 ALTER TABLE public.portal_demand_cards ADD COLUMN item_meta jsonb NOT NULL DEFAULT '{}' CHECK(jsonb_typeof(item_meta)='object');
 CREATE TABLE public.portal_demand_features(singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton),contact_required boolean NOT NULL DEFAULT false);
+ALTER TABLE public.portal_demand_features ENABLE ROW LEVEL SECURITY;
 INSERT INTO public.portal_demand_features VALUES(true,false);
 CREATE TABLE public.portal_demand_contacts(
  user_id uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE RESTRICT,
@@ -12,6 +13,7 @@ CREATE TABLE public.portal_demand_contacts(
  updated_at timestamptz NOT NULL DEFAULT now(),
  CHECK(NOT whatsapp_opt_in OR (phone IS NOT NULL AND NOT no_phone)),CHECK(NOT manual_whatsapp_opt_in OR (phone IS NOT NULL AND NOT no_phone)),CHECK(NOT no_phone OR phone IS NULL)
 );
+ALTER TABLE public.portal_demand_contacts ENABLE ROW LEVEL SECURITY;
 CREATE TABLE public.portal_demand_notifications(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),card_id uuid NOT NULL REFERENCES public.portal_demand_cards(id) ON DELETE RESTRICT,
  item_id uuid NOT NULL,recipient_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
@@ -19,6 +21,7 @@ CREATE TABLE public.portal_demand_notifications(
  card_revision integer NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),read_at timestamptz,
  UNIQUE(card_id,item_id,recipient_id,card_revision)
 );
+ALTER TABLE public.portal_demand_notifications ENABLE ROW LEVEL SECURITY;
 CREATE INDEX demand_notice_recipient ON public.portal_demand_notifications(recipient_id,created_at DESC,id DESC);
 -- No sender/worker is enabled. This outbox contains references, not phones/emails/content.
 CREATE TABLE public.portal_demand_delivery_outbox(
@@ -26,9 +29,6 @@ CREATE TABLE public.portal_demand_delivery_outbox(
  channel text NOT NULL CHECK(channel IN ('email','whatsapp')),status text NOT NULL DEFAULT 'not_configured' CHECK(status='not_configured'),
  created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(notification_id,channel)
 );
-ALTER TABLE public.portal_demand_contacts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.portal_demand_notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.portal_demand_features ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portal_demand_delivery_outbox ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.portal_demand_contacts,public.portal_demand_notifications,public.portal_demand_features,public.portal_demand_delivery_outbox FROM PUBLIC,anon,authenticated;
 
@@ -191,4 +191,13 @@ REVOKE ALL ON FUNCTION public.portal_demand_recipient(uuid,text),public.portal_d
 REVOKE ALL ON FUNCTION public.portal_demand_whatsapp(uuid,uuid) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.portal_demand_whatsapp(uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.portal_demand_notice_visible(uuid,uuid,uuid),public.portal_demands_write(text,jsonb),public.portal_demands_v2_read(text,boolean,integer,uuid,uuid),public.portal_demand_contact(jsonb),public.portal_demand_contact_required(boolean),public.portal_demand_inbox(timestamptz,uuid),public.portal_demand_notice_read(uuid) TO authenticated;
+-- Fail the entire transaction rather than ever commit a technical table without RLS.
+DO $safety$
+BEGIN
+ IF EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+ WHERE n.nspname='public' AND c.relname IN ('portal_demand_features','portal_demand_contacts','portal_demand_notifications','portal_demand_delivery_outbox') AND NOT c.relrowsecurity)
+ THEN RAISE EXCEPTION 'DEMAND_RLS_REQUIRED'; END IF;
+ IF has_table_privilege('authenticated','public.portal_demand_contacts','SELECT') OR has_table_privilege('anon','public.portal_demand_contacts','SELECT')
+ THEN RAISE EXCEPTION 'DEMAND_CONTACT_PRIVACY_REQUIRED'; END IF;
+END $safety$;
 COMMIT;
