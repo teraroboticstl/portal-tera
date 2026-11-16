@@ -82,3 +82,18 @@ test('manual WhatsApp link uses fixed destination and generic authorized Portal 
  assert.ok(!url.searchParams.get('text').includes(card.title));
  assert.throws(()=>demandWhatsAppLink({...p,board:'personal'}));assert.throws(()=>demandWhatsAppLink({...p,phone:'javascript:alert(1)'}));
 });
+
+
+test('WhatsApp uses a native authorized expiring link without scripted popup or external navigation in tests',async()=>{
+ const state=[];let index=0,now=1000,result={actor,available:true,phone:'+15555550123',board:'FTC',card_id:card.id,item_id:item.id,assignee_id:recipient};
+ const react={...React,useEffect:()=>{},useState:initial=>{const n=index++;if(!(n in state))state[n]=initial;return [state[n],value=>state[n]=value];}};
+ const mocks={react,'@/api/supabaseClient':{supabase:{}},'@/api/demandPlanningClient':{createDemandPlanningClient:()=>({whatsapp:async()=>result})},'@/lib/demandPlanning':{demandWhatsAppLink},'@/components/ui/button':{Button:({children,...props})=>React.createElement('button',props,children)}};
+ const mod={exports:{}};class Clock extends Date{static now(){return now;}}
+ vm.runInNewContext(transform(fs.readFileSync(new URL('../src/components/internal/DemandWhatsApp.jsx',import.meta.url),'utf8'),{transforms:['jsx','imports']}).code,{module:mod,exports:mod.exports,require:n=>mocks[n],Date:Clock});
+ const render=()=>{index=0;return mod.exports.default({actor,card,item});};
+ let tree=render();assert.equal(elements(tree).some(n=>n.type==='a'),false);
+ await elements(tree).find(n=>typeof n.props?.onClick==='function').props.onClick();tree=render();
+ const link=elements(tree).find(n=>n.type==='a');assert.equal(new URL(link.props.href).origin,'https://wa.me');assert.equal(link.props.target,'_blank');assert.equal(link.props.rel,'noopener noreferrer');assert.equal(link.props.referrerPolicy,'no-referrer');assert.ok(!decodeURIComponent(link.props.href).includes(item.text));
+ now=32000;let prevented=false;link.props.onClick({preventDefault(){prevented=true;}});assert.equal(prevented,true);assert.equal(elements(render()).some(n=>n.type==='a'),false);
+ result={actor,available:false};tree=render();await elements(tree).find(n=>typeof n.props?.onClick==='function').props.onClick();tree=render();assert.equal(elements(tree).some(n=>n.type==='a'),false);assert.match(renderToStaticMarkup(tree),/conta selecionada/);
+});
