@@ -8,15 +8,16 @@ import {DEMAND_PRIORITIES,demandMeta,orderDemandItems} from '@/lib/demandPlannin
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
+import DemandWhatsApp from './DemandWhatsApp';
 const api=createDemandPlanningClient(supabase);
 const newItem=()=>({id:crypto.randomUUID(),text:'',done:false});
-export function DemandCard({card,editable,busy,onToggle,onEdit,onArchive,advanced=false,recipients=[]}) {
+export function DemandCard({card,editable,busy,onToggle,onEdit,onArchive,advanced=false,recipients=[],actor}) {
   const ordered=orderDemandItems(card),pending=ordered.filter(i=>!i.done),done=ordered.filter(i=>i.done);
-  const row=item=><label key={item.id} className="flex items-start gap-3 min-h-11 py-2 cursor-pointer">
+  const row=item=><div key={item.id}><label className="flex items-start gap-3 min-h-11 py-2 cursor-pointer">
     <input type="checkbox" aria-label={`${item.done?'Reabrir':'Concluir'}: ${item.text}`} checked={item.done} disabled={!editable||busy||card.archived}
       onChange={e=>onToggle(item,e.target.checked)} className="accent-red-600 w-5 h-5 mt-0.5 shrink-0" />
     <span className="min-w-0 flex-1"><span className={`block whitespace-pre-wrap [overflow-wrap:anywhere] ${item.done?'line-through text-gray-500':'text-gray-100'}`}>{item.text}</span>{advanced&&<span className="mt-2 flex flex-wrap gap-2 text-xs"><span className={`rounded-full border px-2 py-1 ${DEMAND_PRIORITIES[demandMeta(card,item).priority].color}`}>{DEMAND_PRIORITIES[demandMeta(card,item).priority].label}</span><span className="rounded-full border border-white/15 px-2 py-1 text-gray-300">{demandMeta(card,item).assignee_id?(recipients.find(r=>r.id===demandMeta(card,item).assignee_id)?.name||'Responsável sem acesso atual'):'Sem responsável'}</span></span>}</span>
-  </label>;
+  </label>{actor&&advanced&&editable&&!busy&&!card.archived&&!item.done&&card.board!=='personal'&&demandMeta(card,item).assignee_id&&<DemandWhatsApp key={`${actor}:${card.revision}:${item.id}`} actor={actor} card={card} item={item}/>}</div>;
   return <article className="rounded-2xl border border-[#34343d] bg-[#111217] p-4 flex flex-col min-w-0 h-fit" aria-label={card.title}>
     <h3 className="text-lg font-semibold text-white whitespace-pre-wrap [overflow-wrap:anywhere] mb-3">{card.title}</h3>
     <div className="text-sm space-y-1">{pending.map(row)}</div>
@@ -64,7 +65,7 @@ export function DemandEditor({initial,onClose,onSave,busy,saveError,advanced=fal
       </div>)}</div>
       <Button type="button" variant="outline" className="min-h-11" disabled={items.length>=80} onClick={()=>setItems(old=>[...old,newItem()])}><Plus className="w-4 h-4 mr-2" />Adicionar demanda</Button>
       <p className="text-xs text-gray-500">Até 80 demandas por cartão. Linhas vazias são ignoradas.</p>
-      {advanced&&<p className="text-xs text-gray-400">Atribuições em quadros de modalidade notificam o responsável dentro do Portal. WhatsApp e e-mail ainda não estão configurados. A atribuição não muda o nível de acesso do membro.</p>}
+      {advanced&&<p className="text-xs text-gray-400">Atribuições em quadros de modalidade notificam o responsável dentro do Portal. O botão de WhatsApp depende da autorização de contato do responsável; envios automáticos e e-mail estão desativados. A atribuição não muda o nível de acesso do membro.</p>}
       {error&&<p role="alert" className="text-red-300">{error}</p>}
       {saveError&&<p role="alert" className="text-red-300">{saveError}</p>}
       <div className="flex flex-wrap gap-3"><Button type="submit" className="bg-[#E10600] min-h-11">{busy?'Salvando…':'Salvar cartão'}</Button><Button type="button" variant="outline" className="min-h-11" onClick={onClose}>Cancelar</Button></div>
@@ -120,7 +121,7 @@ export default function DemandBoard({actor,board,onBoardChange,focusCard=null,on
       {packet.advanced&&<p className="text-sm text-gray-300">Ordem de execução: <strong className="text-red-200">Urgente</strong> → Alta → Normal → Baixa. Caixas com demandas pendentes prioritárias aparecem primeiro; caixas concluídas ficam no final.</p>}
       {!packet.can_edit&&<p className="text-sm text-amber-200">Seu nível permite consultar este quadro. Para editar demandas da modalidade, peça a liberação ao administrador.</p>}
       {!packet.items.length&&<div className="rounded-2xl border border-dashed border-gray-700 p-8 text-gray-400 text-center">{archived?'Nenhuma caixa na lixeira.':'Nenhuma caixa neste quadro ainda.'}{packet.can_edit&&!archived&&' Use “Nova caixa” para começar.'}</div>}
-      <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 items-start">{packet.items.map(card=><DemandCard key={card.id} card={card} editable={packet.can_edit} busy={busy} advanced={packet.advanced} recipients={packet.recipients}
+      <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 items-start">{packet.items.map(card=><DemandCard key={card.id} actor={actor} card={card} editable={packet.can_edit} busy={busy} advanced={packet.advanced} recipients={packet.recipients}
         onToggle={(item,done)=>write('toggle',{id:card.id,revision:card.revision,item:item.id,done})}
         onEdit={()=>setEditor({id:card.id,initial:card})} onArchive={()=>{if(card.archived)write('archive',{id:card.id,revision:card.revision,archived:false});else{setError('');setRemoval(card);}}} />)}</div>
       <div className="flex gap-3 flex-wrap">{cursors.length>1&&<Button variant="outline" disabled={busy} onClick={()=>setCursors(old=>old.slice(0,-1))}>Página anterior</Button>}{packet.has_more&&<Button variant="outline" disabled={busy} onClick={()=>setCursors(old=>[...old,packet.next_cursor])}>Mais cartões</Button>}</div>

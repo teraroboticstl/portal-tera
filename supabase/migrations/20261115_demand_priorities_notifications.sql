@@ -7,9 +7,10 @@ CREATE TABLE public.portal_demand_contacts(
  user_id uuid PRIMARY KEY REFERENCES public.profiles(id) ON DELETE RESTRICT,
  phone text CHECK(phone IS NULL OR phone ~ '^\+[1-9][0-9]{7,14}$'), no_phone boolean NOT NULL DEFAULT false,
  whatsapp_opt_in boolean NOT NULL DEFAULT false,email_opt_in boolean NOT NULL DEFAULT false,
+ manual_whatsapp_opt_in boolean NOT NULL DEFAULT false,
  completed boolean NOT NULL DEFAULT false,consent_version integer NOT NULL DEFAULT 1,
  updated_at timestamptz NOT NULL DEFAULT now(),
- CHECK(NOT whatsapp_opt_in OR (phone IS NOT NULL AND NOT no_phone)),CHECK(NOT no_phone OR phone IS NULL)
+ CHECK(NOT whatsapp_opt_in OR (phone IS NOT NULL AND NOT no_phone)),CHECK(NOT manual_whatsapp_opt_in OR (phone IS NOT NULL AND NOT no_phone)),CHECK(NOT no_phone OR phone IS NULL)
 );
 CREATE TABLE public.portal_demand_notifications(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),card_id uuid NOT NULL REFERENCES public.portal_demand_cards(id) ON DELETE RESTRICT,
@@ -125,21 +126,38 @@ END $$;
 
 CREATE FUNCTION public.portal_demand_contact(p_data jsonb DEFAULT NULL) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
-DECLARE prefs public.portal_demand_contacts; required boolean; phone_value text; no_number boolean; whatsapp boolean; email_messages boolean;
+DECLARE prefs public.portal_demand_contacts; required boolean; phone_value text; no_number boolean; whatsapp boolean; email_messages boolean; manual_whatsapp boolean;
 BEGIN
  IF auth.uid() IS NULL OR NOT public.portal_internal_access() THEN RAISE EXCEPTION 'DEMAND_ACCESS_DENIED' USING ERRCODE='42501'; END IF;
  IF p_data IS NOT NULL THEN
-  IF jsonb_typeof(p_data)<>'object' OR EXISTS(SELECT 1 FROM jsonb_object_keys(p_data) k WHERE k NOT IN ('phone','no_phone','whatsapp_opt_in','email_opt_in'))
+  IF jsonb_typeof(p_data)<>'object' OR octet_length(p_data::text)>1024 OR EXISTS(SELECT 1 FROM jsonb_object_keys(p_data) k WHERE k NOT IN ('phone','no_phone','whatsapp_opt_in','email_opt_in','manual_whatsapp_opt_in'))
    OR jsonb_typeof(p_data->'no_phone') IS DISTINCT FROM 'boolean' OR jsonb_typeof(p_data->'whatsapp_opt_in') IS DISTINCT FROM 'boolean' OR jsonb_typeof(p_data->'email_opt_in') IS DISTINCT FROM 'boolean' THEN RAISE EXCEPTION 'CONTACT_INVALID'; END IF;
   no_number:=(p_data->>'no_phone')::boolean;phone_value:=nullif(btrim(p_data->>'phone'),'');whatsapp:=(p_data->>'whatsapp_opt_in')::boolean;email_messages:=(p_data->>'email_opt_in')::boolean;
-  IF (NOT no_number AND (phone_value IS NULL OR phone_value !~ '^\+[1-9][0-9]{7,14}$')) OR (no_number AND (phone_value IS NOT NULL OR whatsapp)) THEN RAISE EXCEPTION 'CONTACT_INVALID'; END IF;
-  INSERT INTO public.portal_demand_contacts(user_id,phone,no_phone,whatsapp_opt_in,email_opt_in,completed) VALUES(auth.uid(),phone_value,no_number,whatsapp,email_messages,true)
-  ON CONFLICT(user_id) DO UPDATE SET phone=excluded.phone,no_phone=excluded.no_phone,whatsapp_opt_in=excluded.whatsapp_opt_in,email_opt_in=excluded.email_opt_in,completed=true,updated_at=clock_timestamp();
+  IF p_data ? 'manual_whatsapp_opt_in' AND jsonb_typeof(p_data->'manual_whatsapp_opt_in') IS DISTINCT FROM 'boolean' THEN RAISE EXCEPTION 'CONTACT_INVALID'; END IF;
+  manual_whatsapp:=coalesce((p_data->>'manual_whatsapp_opt_in')::boolean,false);
+  IF (NOT no_number AND (phone_value IS NULL OR phone_value !~ '^\+[1-9][0-9]{7,14}$')) OR (no_number AND (phone_value IS NOT NULL OR whatsapp OR manual_whatsapp)) THEN RAISE EXCEPTION 'CONTACT_INVALID'; END IF;
+  INSERT INTO public.portal_demand_contacts(user_id,phone,no_phone,whatsapp_opt_in,email_opt_in,manual_whatsapp_opt_in,completed) VALUES(auth.uid(),phone_value,no_number,whatsapp,email_messages,manual_whatsapp,true)
+  ON CONFLICT(user_id) DO UPDATE SET phone=excluded.phone,no_phone=excluded.no_phone,whatsapp_opt_in=excluded.whatsapp_opt_in,email_opt_in=excluded.email_opt_in,manual_whatsapp_opt_in=excluded.manual_whatsapp_opt_in,completed=true,updated_at=clock_timestamp();
  END IF;
  SELECT * INTO prefs FROM public.portal_demand_contacts WHERE user_id=auth.uid();
  SELECT contact_required INTO required FROM public.portal_demand_features WHERE singleton;
  RETURN jsonb_build_object('actor',auth.uid(),'required',required AND NOT coalesce(prefs.completed,false),'completed',coalesce(prefs.completed,false),
- 'phone',prefs.phone,'no_phone',coalesce(prefs.no_phone,false),'whatsapp_opt_in',coalesce(prefs.whatsapp_opt_in,false),'email_opt_in',coalesce(prefs.email_opt_in,false),'external_delivery','not_configured');
+ 'phone',prefs.phone,'no_phone',coalesce(prefs.no_phone,false),'whatsapp_opt_in',coalesce(prefs.whatsapp_opt_in,false),'manual_whatsapp_opt_in',coalesce(prefs.manual_whatsapp_opt_in,false),'email_opt_in',coalesce(prefs.email_opt_in,false),'external_delivery','not_configured');
+END $$;
+CREATE FUNCTION public.portal_demand_whatsapp(p_card uuid,p_item uuid) RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog,public AS $$
+DECLARE c public.portal_demand_cards; target uuid; prefs public.portal_demand_contacts;
+BEGIN
+ IF auth.uid() IS NULL OR NOT public.portal_internal_access() THEN RAISE EXCEPTION 'DEMAND_ACCESS_DENIED' USING ERRCODE='42501'; END IF;
+ SELECT * INTO c FROM public.portal_demand_cards WHERE id=p_card;
+ IF NOT FOUND OR c.board='personal' OR c.archived OR NOT public.portal_demand_access(c.board,c.owner_id,true)
+ OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(c.items) i WHERE i->>'id'=p_item::text AND NOT (i->>'done')::boolean)
+ THEN RAISE EXCEPTION 'DEMAND_ACCESS_DENIED' USING ERRCODE='42501'; END IF;
+ target:=(c.item_meta->p_item::text->>'assignee_id')::uuid;
+ IF target IS NULL OR NOT coalesce(public.portal_demand_recipient(target,c.board),false) THEN RAISE EXCEPTION 'DEMAND_RECIPIENT_DENIED' USING ERRCODE='42501'; END IF;
+ SELECT * INTO prefs FROM public.portal_demand_contacts WHERE user_id=target;
+ IF NOT coalesce(prefs.manual_whatsapp_opt_in,false) OR prefs.no_phone OR prefs.phone IS NULL THEN RETURN jsonb_build_object('actor',auth.uid(),'available',false); END IF;
+ RETURN jsonb_build_object('actor',auth.uid(),'available',true,'phone',prefs.phone,'board',c.board,'card_id',c.id,'item_id',p_item,'assignee_id',target);
 END $$;
 CREATE FUNCTION public.portal_demand_contact_required(p_required boolean) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
@@ -170,5 +188,7 @@ BEGIN
  RETURN jsonb_build_object('actor',auth.uid(),'id',p_id);
 END $$;
 REVOKE ALL ON FUNCTION public.portal_demand_recipient(uuid,text),public.portal_demand_notice_visible(uuid,uuid,uuid),public.portal_demand_card_rank(jsonb,jsonb),public.portal_demands_write(text,jsonb),public.portal_demands_v2_read(text,boolean,integer,uuid,uuid),public.portal_demand_contact(jsonb),public.portal_demand_contact_required(boolean),public.portal_demand_inbox(timestamptz,uuid),public.portal_demand_notice_read(uuid) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION public.portal_demand_whatsapp(uuid,uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.portal_demand_whatsapp(uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.portal_demand_notice_visible(uuid,uuid,uuid),public.portal_demands_write(text,jsonb),public.portal_demands_v2_read(text,boolean,integer,uuid,uuid),public.portal_demand_contact(jsonb),public.portal_demand_contact_required(boolean),public.portal_demand_inbox(timestamptz,uuid),public.portal_demand_notice_read(uuid) TO authenticated;
 COMMIT;

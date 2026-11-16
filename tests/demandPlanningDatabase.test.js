@@ -47,6 +47,15 @@ test('isolated PostgreSQL: priorities, member assignment, private contacts, inbo
  await assert.rejects(as(a,'UPDATE portal_demand_cards SET item_meta=$1 WHERE id=$2',['{}',shared.id]),/permission denied/);
  const prefs={phone:'+15555550123',no_phone:false,whatsapp_opt_in:true,email_opt_in:true};
  assert.equal((await contact(b,prefs)).phone,prefs.phone);
+ const wa=async(user,c=shared)=>(await as(user,'SELECT portal_demand_whatsapp($1,$2) p',[c.id,c.items[0].id])).rows[0].p;
+ assert.equal((await wa(a)).available,false,'automated consent does not grant manual sharing');
+ assert.equal((await wa(a)).phone,undefined);
+ await contact(b,{...prefs,manual_whatsapp_opt_in:true});
+ assert.equal((await wa(a)).phone,prefs.phone);
+ for(const user of [frc,trainee,student,pending])await assert.rejects(wa(user),/DENIED/);
+ await assert.rejects(wa(a,old),/DENIED/);
+ await contact(b,{...prefs,manual_whatsapp_opt_in:false});assert.equal((await wa(a)).available,false);
+ await contact(b,{...prefs,manual_whatsapp_opt_in:true});
  assert.equal((await contact(a)).phone,null);for(const user of [a,b,admin])await assert.rejects(as(user,'SELECT * FROM portal_demand_contacts'),/permission denied/);
  await assert.rejects(contact(a,{...prefs,user_id:b}),/CONTACT_INVALID/);await assert.rejects(contact(a,{...prefs,no_phone:true}),/CONTACT_INVALID/);
  assert.equal((await contact(a,{phone:null,no_phone:true,whatsapp_opt_in:false,email_opt_in:false})).no_phone,true);
@@ -58,7 +67,7 @@ test('isolated PostgreSQL: priorities, member assignment, private contacts, inbo
  await assert.rejects(as(b,'SELECT * FROM portal_demand_delivery_outbox'),/permission denied/);
  const notice=(await inbox(b)).items[0];await as(b,'SELECT portal_demand_notice_read($1)',[notice.id]);await assert.rejects(as(a,'SELECT portal_demand_notice_read($1)',[notice.id]),/ACCESS_DENIED/);
  // Old clients can still toggle while metadata survives and CAS prevents stale changes.
- shared=await write(a,'toggle',{id:shared.id,revision:0,item:shared.items[0].id,done:true});assert.equal(shared.item_meta[shared.items[0].id].priority,'urgent');assert.equal(shared.revision,1);
+ shared=await write(a,'toggle',{id:shared.id,revision:0,item:shared.items[0].id,done:true});assert.equal(shared.item_meta[shared.items[0].id].priority,'urgent');assert.equal(shared.revision,1);await assert.rejects(wa(a),/DENIED/);
  await assert.rejects(write(a,'toggle',{id:shared.id,revision:0,item:shared.items[0].id,done:false}),/CONFLICT/);
  for(let n=30;n<85;n++)await write(a,'create',meta(create(n),n===84?'urgent':'low',null));
  const all=[];let cursor=null;do{const p=await read(a,'FTC',cursor);all.push(...p.items);cursor=p.has_more?p.next_cursor:null;}while(cursor);

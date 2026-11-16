@@ -37,7 +37,7 @@ test('actual card UI checks completed rows, strikes text, keeps long text inert 
  const wrapper=({children,...props})=>React.createElement('button',props,children);
  const container=({children})=>React.createElement('div',null,children);
  const mocks={react:React,'@tanstack/react-query':{},'lucide-react':Object.fromEntries(['Plus','Pencil','Trash2','RotateCcw','X'].map(k=>[k,()=>null])),
-  '@/api/supabaseClient':{supabase:{}},'@/api/demandBoardsClient':{createDemandBoardsClient:()=>({})},'@/components/ui/button':{Button:wrapper},'@/components/ui/dialog':Object.fromEntries(['Dialog','DialogContent','DialogHeader','DialogTitle','DialogDescription'].map(k=>[k,container]))};
+  './DemandWhatsApp':{default:()=>null},'@/api/supabaseClient':{supabase:{}},'@/api/demandBoardsClient':{createDemandBoardsClient:()=>({})},'@/components/ui/button':{Button:wrapper},'@/components/ui/dialog':Object.fromEntries(['Dialog','DialogContent','DialogHeader','DialogTitle','DialogDescription'].map(k=>[k,container]))};
  mocks['@/api/demandPlanningClient']={createDemandPlanningClient:()=>({})};mocks['@/lib/demandPlanning']={DEMAND_PRIORITIES,demandMeta,orderDemandItems};
  const module={exports:{}};vm.runInNewContext(transform(source,{transforms:['jsx','imports']}).code,{module,exports:module.exports,require:name=>mocks[name]});
  const html=renderToStaticMarkup(React.createElement(module.exports.DemandCard,{card:{...card,items:[{...item,text:'<script>alert(1)</script>',done:true}]},editable:true}));

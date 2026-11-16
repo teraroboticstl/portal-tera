@@ -6,7 +6,7 @@ import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {transform} from 'sucrase';
 import {createDemandPlanningClient} from '../src/api/demandPlanningClient.js';
-import {DEMAND_PRIORITIES,demandMeta,orderDemandItems,normalizeDemandPhone} from '../src/lib/demandPlanning.js';
+import {DEMAND_PRIORITIES,demandMeta,orderDemandItems,normalizeDemandPhone,demandWhatsAppLink} from '../src/lib/demandPlanning.js';
 const id=n=>`92000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
 const actor=id(1),recipient=id(2),item={id:id(10),text:'Synthetic task',done:false};
 const card={id:id(20),owner_id:actor,board:'FTC',title:'Synthetic card',items:[item],item_meta:{[item.id]:{priority:'urgent',assignee_id:recipient}},revision:0,archived:false};
@@ -33,7 +33,7 @@ function contactHarness(){
  const state=[];let index=0,query={};
  const react={...React,useState:initial=>{const n=index++;if(!(n in state))state[n]=initial;return [state[n],next=>state[n]=typeof next==='function'?next(state[n]):next];}};
  const button=({children,...props})=>React.createElement('button',props,children);
- const mocks={react,'@tanstack/react-query':{useQuery:()=>query,useQueryClient:()=>({})},'@/api/supabaseClient':{supabase:{}},'@/api/demandPlanningClient':{createDemandPlanningClient:()=>({})},'@/lib/demandPlanning':{normalizeDemandPhone},'@/components/ui/button':{Button:button}};
+ const mocks={react,'@tanstack/react-query':{useQuery:()=>query,useQueryClient:()=>({})},'./DemandWhatsApp':{default:()=>null},'@/api/supabaseClient':{supabase:{}},'@/api/demandPlanningClient':{createDemandPlanningClient:()=>({})},'@/lib/demandPlanning':{normalizeDemandPhone},'@/components/ui/button':{Button:button}};
  const mod={exports:{}};vm.runInNewContext(transform(fs.readFileSync(new URL('../src/components/internal/DemandContact.jsx',import.meta.url),'utf8'),{transforms:['jsx','imports']}).code,{module:mod,exports:mod.exports,require:n=>mocks[n]});
  return {api:mod.exports,query:q=>query=q,render(fn,props){index=0;return fn(props);}};
 }
@@ -48,7 +48,7 @@ test('contact gate blocks protected children until own status is confirmed; only
  h.query({error:Object.assign(Error(),{code:'NOT_INSTALLED'})});assert.match(html(),/PROTECTED/);
 });
 test('actual contact form clears WhatsApp consent after changing number and supports no-number without forcing consent',()=>{
- const h=contactHarness();let saved;const props={initial:{phone:'+15555550123',whatsapp_opt_in:true},onSubmit:data=>saved=data};
+ const h=contactHarness();let saved;const props={initial:{phone:'+15555550123',manual_whatsapp_opt_in:true},onSubmit:data=>saved=data};
  const render=()=>h.render(h.api.DemandContactForm,props);
  let tree=render();elements(tree).find(n=>n.type==='input'&&n.props.type==='tel').props.onChange({target:{value:'+15555550124'}});
  tree=render();const checks=elements(tree).filter(n=>n.type==='input'&&n.props.type==='checkbox');assert.equal(checks[1].props.checked,false);
@@ -72,4 +72,13 @@ test('actual notification dialog links only the authorized item and hides stale/
  assert.match(html(),/Urgente/);assert.match(html(),/&lt;script&gt;/);assert.match(html(),new RegExp('board=FTC&amp;card='+card.id));assert.match(html(),/ainda não estão configurados/);
  query={...query,isFetching:true};assert.doesNotMatch(html(),/Synthetic task|Abrir demanda/);
  query={...query,isFetching:false,error:Error('revoked')};assert.doesNotMatch(html(),/Synthetic task|Abrir demanda/);
+});
+
+
+test('manual WhatsApp link uses fixed destination and generic authorized Portal link only',()=>{
+ const p={phone:'+15555550123',board:'FTC',card_id:card.id};const url=new URL(demandWhatsAppLink(p));
+ assert.equal(url.origin,'https://wa.me');assert.equal(url.pathname,'/15555550123');
+ assert.match(url.searchParams.get('text'),/https:\/\/portal-tera.vercel.app\/InternalDemands/);
+ assert.ok(!url.searchParams.get('text').includes(card.title));
+ assert.throws(()=>demandWhatsAppLink({...p,board:'personal'}));assert.throws(()=>demandWhatsAppLink({...p,phone:'javascript:alert(1)'}));
 });

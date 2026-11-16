@@ -31,6 +31,7 @@ export function createDemandPlanningClient(client,{timeoutMs=20000}={}){
   write:legacy.write,
   async contact(actor,data=null){const p=await rpc(actor,'portal_demand_contact',{p_data:data});if(typeof p.required!=='boolean'||typeof p.completed!=='boolean'||(p.phone!==null&&!/^\+[1-9][0-9]{7,14}$/.test(p.phone)))throw Error('Resposta de contato inválida.');return p;},
   async inbox(actor,after=null){const p=await rpc(actor,'portal_demand_inbox',{p_after:after?.date??null,p_after_id:after?.id??null});if(!Array.isArray(p.items)||p.items.length>30||!Number.isSafeInteger(p.unread)||p.unread<0||typeof p.has_more!=='boolean'||p.items.some(n=>!uuid(n.id)||!uuid(n.card_id)||!uuid(n.item_id)||!Object.hasOwn(DEMAND_BOARDS,n.board)||n.board==='personal'||typeof n.title!=='string'||typeof n.item_text!=='string'||!Object.hasOwn(DEMAND_PRIORITIES,n.priority)))throw Error('Notificações inválidas.');return p;},
-  async markRead(actor,id){if(!uuid(id))throw Error('Notificação inválida.');return rpc(actor,'portal_demand_notice_read',{p_id:id});}
+  async markRead(actor,id){if(!uuid(id))throw Error('Notificação inválida.');return rpc(actor,'portal_demand_notice_read',{p_id:id});},
+  async whatsapp(actor,cardId,itemId,board){if(!uuid(cardId)||!uuid(itemId)||!Object.hasOwn(DEMAND_BOARDS,board)||board==='personal')throw Error('Demanda inválida.');const p=await rpc(actor,'portal_demand_whatsapp',{p_card:cardId,p_item:itemId});if(typeof p.available!=='boolean'||p.available&&(p.card_id!==cardId||p.item_id!==itemId||p.board!==board||!uuid(p.assignee_id)||!/^\+[1-9][0-9]{7,14}$/.test(p.phone)))throw Error('Contato não confirmado.');return p;}
  };
 }
