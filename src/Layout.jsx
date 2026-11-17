@@ -93,6 +93,7 @@ const PUBLIC_NAV_ITEMS = [
   },
   { type: 'link', label: 'TIR2026', path: 'TIR2026' },
   { type: 'link', label: 'PATROCINADORES', path: 'Sponsors' },
+  { type: 'link', label: 'LOJA', path: 'TeraShop' },
   { type: 'link', label: 'CONTATO', path: 'Contact' },
 ];
 
@@ -790,6 +791,7 @@ export default function Layout({ children, currentPageName }) {
                     <div className="space-y-1">
                       <Link to={createPageUrl('TIR2026')} className="block text-gray-500 hover:text-[#E10600] transition-colors">TIR 2026</Link>
                       <Link to={createPageUrl('Sponsors')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Patrocinadores</Link>
+                      <Link to={createPageUrl('TeraShop')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Loja TeraShop</Link>
                       <Link to={createPageUrl('Contact')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Contato</Link>
                       <Link to={createPageUrl('SafetyCheck')} className="block text-gray-500 hover:text-[#E10600] transition-colors">Safety Check</Link>
                     </div>

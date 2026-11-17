@@ -143,6 +143,7 @@ export default function ProductsManagement() {
     mutationFn: (data) => base44.entities.Product.create(data),
     onSuccess: (savedData, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       handleSaveSuccess(variables.image_url || savedData?.image_url);
       toast.success('Produto adicionado à TeraShop!');
     },
@@ -156,6 +157,7 @@ export default function ProductsManagement() {
     mutationFn: ({ id, data }) => base44.entities.Product.update(id, data),
     onSuccess: (savedData, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       handleSaveSuccess(variables.data?.image_url || savedData?.image_url);
       toast.success('Produto atualizado com sucesso!');
     },
@@ -169,6 +171,7 @@ export default function ProductsManagement() {
     mutationFn: (id) => base44.entities.Product.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       setDeleteCandidate(null);
       toast.success('Produto removido da TeraShop!');
     },
