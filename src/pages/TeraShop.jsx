@@ -1,213 +1,39 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { motion } from 'framer-motion';
-import { ShoppingBag, MessageCircle, Filter } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import LoadingSpinner from '@/components/common/LoadingSpinner';
+import React,{useState} from 'react';
+import {useQuery} from '@tanstack/react-query';
+import {Link} from 'react-router-dom';
+import {ShoppingBag,Search,ArrowUpRight,Heart,RefreshCw} from 'lucide-react';
+import {base44} from '@/api/base44Client';
+import {Button} from '@/components/ui/button';
+import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/components/ui/dialog';
 import SafeImage from '@/components/common/SafeImage';
+import {shopCatalog,shopCategories,shopFilter,shopPrice,shopWhatsApp} from '@/lib/teraShop';
 
-const WHATSAPP_NUMBER = '5567999999999'; // Substituir pelo número real
-
-export default function TeraShop() {
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedProduct, setSelectedProduct] = useState(null);
-
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => base44.entities.Product.filter({ available: true }),
-  });
-
-  const categories = ['all', 'Camisetas', 'Canecas', 'Bottons', 'Chaveiros', 'Acessórios'];
-
-  const filteredProducts = selectedCategory === 'all' 
-    ? products 
-    : products.filter(p => p.category === selectedCategory);
-
-  const handleWhatsApp = (product = null) => {
-    let message = product 
-      ? `Olá! Tenho interesse no produto: ${product.name} (R$ ${product.price?.toFixed(2)})`
-      : 'Olá! Gostaria de saber mais sobre os produtos da TeraShop.';
-    
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
-  };
-
-  return (
-    <div className="min-h-screen py-12">
-      {/* Hero */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center max-w-3xl mx-auto"
-          >
-            <span className="inline-flex items-center gap-2 px-4 py-2 bg-[#E10600]/10 border border-[#E10600]/30 rounded-full text-[#E10600] text-sm font-medium mb-6">
-              <ShoppingBag className="w-4 h-4" />
-              Loja Oficial
-            </span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-              <span className="text-[#E10600]">Tera</span>Shop
-            </h1>
-            <p className="text-xl text-[#B8BDC7] mb-8">
-              Adquira produtos oficiais da TeraRobotics e apoie nossa equipe! 
-              Cada compra ajuda a financiar nossas atividades e competições.
-            </p>
-            <Button 
-              onClick={() => handleWhatsApp()}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <MessageCircle className="w-5 h-5 mr-2" />
-              Entrar em contato pelo WhatsApp
-            </Button>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Filters */}
-      <section className="sticky top-16 lg:top-20 z-40 bg-[#0B0B0D]/95 backdrop-blur-md border-b border-[#1F222B] py-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4 overflow-x-auto">
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Filter className="w-4 h-4 text-[#B8BDC7]" />
-              <span className="text-sm text-[#B8BDC7]">Categorias:</span>
-            </div>
-            <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-              <TabsList className="bg-[#111217] border border-[#1F222B]">
-                {categories.map((cat) => (
-                  <TabsTrigger 
-                    key={cat} 
-                    value={cat}
-                    className="data-[state=active]:bg-[#E10600] whitespace-nowrap"
-                  >
-                    {cat === 'all' ? 'Todos' : cat}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          </div>
-        </div>
-      </section>
-
-      {/* Products Grid */}
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {isLoading ? (
-            <LoadingSpinner />
-          ) : filteredProducts.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-16"
-            >
-              <ShoppingBag className="w-16 h-16 text-[#1F222B] mx-auto mb-4" />
-              <p className="text-[#B8BDC7]">
-                {selectedCategory === 'all' 
-                  ? 'Nenhum produto disponível no momento.'
-                  : `Nenhum produto na categoria ${selectedCategory}.`}
-              </p>
-            </motion.div>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts.map((product, index) => (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.05 }}
-                  whileHover={{ y: -4 }}
-                  onClick={() => setSelectedProduct(product)}
-                  className="bg-[#111217] border border-[#1F222B] rounded-2xl overflow-hidden cursor-pointer group hover:border-[#E10600]/50 transition-all"
-                >
-                  <div className="aspect-square relative overflow-hidden bg-[#0B0B0D]">
-                    <SafeImage 
-                      src={product.image_url} 
-                      alt={product.name}
-                      fit="contain"
-                      position="center"
-                      allowEnlarge={true}
-                      enlargeTitle="Abrir imagem em tamanho original em nova guia"
-                      containerClassName="w-full h-full p-2"
-                      fallbackIcon={<ShoppingBag className="w-16 h-16 text-[#1F222B]" />}
-                    />
-                    <div className="absolute top-3 left-3 pointer-events-none">
-                      <span className="px-2 py-1 bg-[#111217]/80 backdrop-blur-sm text-xs rounded-full">
-                        {product.category}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <h3 className="font-bold text-lg mb-1 group-hover:text-[#E10600] transition-colors">
-                      {product.name}
-                    </h3>
-                    {product.description && (
-                      <p className="text-[#B8BDC7] text-sm line-clamp-2 mb-3">
-                        {product.description}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-[#E10600]">
-                        R$ {product.price?.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Product Modal */}
-      <Dialog open={!!selectedProduct} onOpenChange={() => setSelectedProduct(null)}>
-        <DialogContent className="bg-[#111217] border-[#1F222B] max-w-2xl">
-          {selectedProduct && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-2xl">{selectedProduct.name}</DialogTitle>
-                <span className="text-sm text-[#B8BDC7]">{selectedProduct.category}</span>
-              </DialogHeader>
-
-              <div className="space-y-6 mt-4">
-                {selectedProduct.image_url && (
-                  <div className="aspect-square rounded-xl overflow-hidden bg-[#0B0B0D] relative border border-[#1F222B]">
-                    <SafeImage 
-                      src={selectedProduct.image_url} 
-                      alt={selectedProduct.name}
-                      fit="contain"
-                      position="center"
-                      allowEnlarge={true}
-                      enlargeTitle="Abrir imagem em tamanho original em nova guia"
-                      containerClassName="w-full h-full p-4"
-                    />
-                  </div>
-                )}
-
-                {selectedProduct.description && (
-                  <p className="text-[#B8BDC7]">{selectedProduct.description}</p>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <span className="text-3xl font-bold text-[#E10600]">
-                    R$ {selectedProduct.price?.toFixed(2)}
-                  </span>
-                </div>
-
-                <Button 
-                  onClick={() => handleWhatsApp(selectedProduct)}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-6"
-                >
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  Comprar pelo WhatsApp
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+const whatsappNumber=import.meta.env.VITE_TERASHOP_WHATSAPP_NUMBER||'';
+function PurchaseLink({product}){
+ const href=shopWhatsApp(whatsappNumber,product);
+ return href?<a href={href} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#E10600] px-5 py-3 font-bold text-white hover:bg-red-700">Comprar pelo WhatsApp<ArrowUpRight className="h-4 w-4"/></a>:<Link to="/Contact" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-600/50 px-5 py-3 font-bold text-white hover:bg-red-600/10">Consultar a equipe<ArrowUpRight className="h-4 w-4"/></Link>;
+}
+export default function TeraShop(){
+ const [category,setCategory]=useState(''),[search,setSearch]=useState(''),[selected,setSelected]=useState(null);
+ const query=useQuery({queryKey:['products','public-shop'],queryFn:()=>base44.entities.Product.filter({available:true},'-created_date',200),retry:1,staleTime:0});
+ const catalog=shopCatalog(query.data),categories=shopCategories(catalog),visible=query.isError?[]:shopFilter(catalog,category,search);
+ const detail=!query.isError&&selected?catalog.find(p=>p.id===selected):null;
+ return <main className="min-h-screen min-w-0 bg-black pb-16 text-white">
+  <section className="relative isolate overflow-hidden border-b border-white/10 px-4 pb-12 pt-14 sm:px-6 sm:pb-16 sm:pt-20">
+   <div aria-hidden="true" className="pointer-events-none absolute -right-28 -top-36 -z-10 h-96 w-96 rounded-full border-[64px] border-red-600/10"/>
+   <div className="mx-auto max-w-7xl"><p className="mb-5 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-red-400"><ShoppingBag className="h-4 w-4"/>Loja oficial da equipe</p>
+    <div className="grid items-end gap-6 lg:grid-cols-[1.4fr_1fr]"><div><h1 className="text-5xl font-black tracking-tight sm:text-7xl"><span className="text-[#E10600]">TERA</span>SHOP<span className="text-red-600">.</span></h1><p className="mt-5 max-w-xl text-base leading-relaxed text-gray-300 sm:text-lg">Leve a Tera com você. Conheça os produtos oficiais e apoie as atividades e competições da nossa equipe.</p></div><div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"><Heart className="mb-3 h-5 w-5 text-red-500"/><h2 className="font-bold">Uma compra que apoia a robótica</h2><p className="mt-2 text-sm leading-relaxed text-gray-400">Escolha seu produto e consulte a equipe sobre disponibilidade, pagamento e entrega antes de concluir o pedido.</p></div></div>
+   </div>
+  </section>
+  <section aria-label="Catálogo da TeraShop" className="mx-auto max-w-7xl space-y-7 px-4 pt-9 sm:px-6">
+   <div className="flex flex-wrap items-end justify-between gap-5"><div><h2 className="text-2xl font-bold">Nossos produtos</h2><p className="mt-2 text-sm text-gray-400">Produtos disponibilizados pela administração da Tera.</p></div><label className="relative block w-full sm:max-w-sm"><span className="sr-only">Buscar produtos</span><Search aria-hidden="true" className="pointer-events-none absolute left-3 top-3.5 h-5 w-5 text-gray-400"/><input type="search" aria-label="Buscar produtos" value={search} onChange={e=>setSearch(e.target.value)} placeholder="O que você procura?" maxLength={160} className="min-h-12 w-full rounded-xl border border-white/15 bg-[#111217] py-3 pl-11 pr-4 text-base text-white focus:border-red-500 focus:outline-none"/></label></div>
+   <div aria-label="Categorias" className="flex flex-wrap gap-2">{['',...categories].map(c=><button key={c} type="button" aria-pressed={category===c} onClick={()=>setCategory(c)} className={`min-h-11 rounded-full border px-4 py-2 text-sm font-medium ${category===c?'border-red-600 bg-red-600 text-white':'border-white/15 bg-[#111217] text-gray-300 hover:border-red-500'}`}>{c||'Todos'}</button>)}</div>
+   {query.isLoading?<p role="status" className="py-16 text-center text-gray-300">Carregando produtos…</p>:query.isError?<div role="alert" className="space-y-4 rounded-2xl border border-red-600/30 p-8 text-center"><h3 className="text-lg font-bold">Não foi possível carregar a loja.</h3><p className="text-gray-400">Tente novamente em instantes.</p><Button variant="outline" className="min-h-11" onClick={()=>query.refetch()}><RefreshCw className="mr-2 h-4 w-4"/>Tentar novamente</Button></div>:!visible.length?<div className="rounded-2xl border border-dashed border-white/20 px-5 py-16 text-center"><ShoppingBag className="mx-auto mb-4 h-10 w-10 text-red-500"/><h3 className="text-xl font-bold">{catalog.length?'Nenhum produto encontrado':'Novidades chegando à TeraShop'}</h3><p className="mt-3 text-gray-400">{catalog.length?'Experimente outra categoria ou outro termo.':'Os produtos aparecerão aqui assim que forem disponibilizados pela equipe.'}</p>{catalog.length>0&&<Button variant="outline" className="mt-5 min-h-11" onClick={()=>{setCategory('');setSearch('');}}>Limpar filtros</Button>}</div>:<>
+    <p aria-live="polite" className="text-sm text-gray-400">{visible.length} {visible.length===1?'produto encontrado':'produtos encontrados'}</p>
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{visible.map(product=><article key={product.id} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#111217]"><button type="button" aria-label={`Ver detalhes de ${product.name}`} onClick={()=>setSelected(product.id)} className="block aspect-square w-full overflow-hidden border-b border-white/5 bg-[#0B0B0D] p-5 focus-visible:outline focus-visible:outline-red-500"><SafeImage src={product.image_url} alt={product.name} fit="contain" containerClassName="h-full w-full" fallbackIcon={<ShoppingBag className="h-12 w-12 text-gray-600"/>}/></button><div className="flex flex-1 flex-col space-y-3 p-5"><p className="text-xs font-bold uppercase tracking-wider text-red-400">{product.category||'TeraShop'}</p><h3 className="break-words text-lg font-bold">{product.name}</h3><p className="line-clamp-2 text-sm leading-relaxed text-gray-400">{product.description||'Produto oficial da Tera Robotics.'}</p><p className="text-2xl font-bold text-white">{shopPrice(product.price)}</p><Button variant="outline" className="mt-auto min-h-11 w-full border-white/20 text-white" onClick={()=>setSelected(product.id)}>Ver produto<ArrowUpRight className="ml-2 h-4 w-4"/></Button></div></article>)}</div>
+    {catalog.length===200&&<p className="text-sm text-gray-400">Exibindo até 200 produtos recentes. Consulte a equipe para outros itens.</p>}
+   </>}
+  </section>
+  <Dialog open={!!detail} onOpenChange={open=>{if(!open)setSelected(null);}}><DialogContent className="ava-shell max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-3xl overflow-y-auto rounded-2xl border-white/15 bg-[#111217] p-5 text-white sm:p-7">{detail&&<><DialogHeader><DialogTitle className="break-words pr-5 text-2xl">{detail.name}</DialogTitle><DialogDescription>{detail.category||'Produto oficial da TeraShop'}</DialogDescription></DialogHeader><div className="grid min-w-0 gap-6 sm:grid-cols-2"><div className="aspect-square max-h-[45dvh] overflow-hidden rounded-xl border border-white/10 bg-black p-4"><SafeImage src={detail.image_url} alt={detail.name} fit="contain" containerClassName="h-full w-full"/></div><div className="min-w-0 space-y-5"><p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-300">{detail.description||'Consulte a equipe para mais informações sobre este produto.'}</p><p className="text-3xl font-bold">{shopPrice(detail.price)}</p><PurchaseLink product={detail}/><p className="text-xs leading-relaxed text-gray-400">O pedido será confirmado pela equipe. Combine as opções disponíveis, pagamento e entrega antes de efetuar qualquer pagamento.</p></div></div></>}</DialogContent></Dialog>
+ </main>;
 }
