@@ -4,10 +4,12 @@ export const ACCESS_LEVELS = [
  ['trainee','Aluno Membro em treinamento','AVA e Área Interna para consulta, sem edição.'],
  ['member','Membro Integrado','AVA e Área Interna, com edição conforme as regras de cada seção.'],
  ['leader','Membro Líder','Acesso completo ao painel administrativo.'],
- ['technician','Técnico','Mesmos poderes do administrador: todas as modalidades, PDIs, usuários, permissões e configurações do portal.']
+ ['technician','Técnico','Mesmos poderes do administrador: todas as modalidades, PDIs, usuários, permissões e configurações do portal.'],
+ ['management_readonly','Gestão-leitura','Consulta de modalidades, registros e PDIs. Sem edição, exclusão, aprovação ou gestão de permissões; dispensado do questionário e de PDI pessoal.']
 ];
 export function accessLevel(user){
  if(!user)return 'public';
+ if(isManagementReadOnly(user))return 'management_readonly';
  if(user.access_level==='technician' || user.access?.access_level==='technician')return 'technician';
  if(user.role==='admin' || user.member_role==='admin')return 'leader';
  if(user.access_level)return user.access_level;
@@ -18,6 +20,8 @@ export function accessLevel(user){
 export const accessLabel=user=>ACCESS_LEVELS.find(([key])=>key===accessLevel(user))?.[1] || 'Público';
 export function canEditInternal(user){
  if(!user)return false;
+ if(isManagementReadOnly(user))return false;
  if(user.portal_can_edit!==undefined)return user.portal_can_edit===true;
  return user.status==='approved' && ['member','leader','technician'].includes(accessLevel(user));
 }
+export const isManagementReadOnly = user => user?.access_level==='management_readonly' || user?.access?.access_level==='management_readonly';

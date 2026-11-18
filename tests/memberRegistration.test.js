@@ -67,7 +67,8 @@ test('existing authorization and public/AVA routes remain; admin and member pass
     'react-router-dom':{useNavigate:()=>()=>{}},'@/lib/AuthContext':{useAuth:()=>auth},
     '@/utils':{createPageUrl:x=>'/'+x},'@/components/common/LoadingSpinner':{__esModule:true,default:()=>null},
     'lucide-react':Object.fromEntries(['Clock','XCircle','Shield','LogIn'].map(x=>[x,()=>null])),
-    '@/lib/accessLevels':{canEditInternal:user=>user.portal_can_edit},
+    '@/lib/accessLevels':{canEditInternal:user=>user.portal_can_edit,isManagementReadOnly:()=>false},
+    './ManagementReadOnly':{__esModule:true,default:()=>React.createElement('p',null,'MANAGEMENT_WORKSPACE')},
     './MemberRegistrationGate':{__esModule:true,default:()=>React.createElement('p',null,'REGISTRATION_GATE')}
   });
   for(const role of ['admin','aluno']) {

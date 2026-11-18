@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
       const effectiveAvatarUrl = googleAvatarUrl || profileAvatarUrl || '';
 
       // Se existir o perfil e houver foto do Google, sincroniza assincronamente com profiles.avatar_url
-      if (profile && googleAvatarUrl && profile.avatar_url !== googleAvatarUrl) {
+      if (!accessError && access?.access_level !== 'management_readonly' && profile && googleAvatarUrl && profile.avatar_url !== googleAvatarUrl) {
         supabase
           .from('profiles')
           .update({ avatar_url: googleAvatarUrl })

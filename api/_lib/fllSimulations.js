@@ -65,7 +65,7 @@ export async function handleFllSimulations(req, res, getSeason) {
     if (req.headers?.authorization) {
       try { user = await validateUserAuth(req.headers.authorization); }
       catch { throw invalid('Sua sessão expirou. Entre novamente.', 401); }
-      if (!user.profile?.is_admin) {
+      if (!user.profile?.is_admin && user.profile?.access_level !== 'management_readonly') {
         const token = req.headers.authorization.replace(/^Bearer\s+/i, '');
         const {data:profile} = await createScopedUserSupabaseClient(token).from('profiles').select('role,member_role').eq('id',user.id).maybeSingle();
         if (profile?.role === 'admin' || profile?.member_role === 'admin') user.profile = {...user.profile,is_admin:true};
@@ -89,6 +89,7 @@ export async function handleFllSimulations(req, res, getSeason) {
       return res.status(200).json({ simulations:data, before, count, hasMore:admin && (page+1)*250<count });
     }
     if (req.method !== 'POST') { res.setHeader('Allow','GET, POST'); throw invalid('Método não permitido.',405); }
+    if (user?.profile?.access_level === 'management_readonly') throw invalid('Gestão-leitura não permite salvar ou alterar registros.',403);
     const raw = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
     if (Buffer.byteLength(raw) > 24000) throw invalid('Simulação muito grande.',413);
     let body;

@@ -79,7 +79,7 @@ export async function validateUserAuth(authHeaderOrToken) {
       role,
       member_role: memberRole,
       status,
-      is_admin: role === 'admin' || memberRole === 'admin' || isSeedAdmin,
+      is_admin: !accessError && access?.access_level === 'management_readonly' ? false : role === 'admin' || memberRole === 'admin' || isSeedAdmin,
       portal_internal: !accessError && access?.portal_internal === true,
       portal_can_edit: !accessError && access?.portal_can_edit === true,
       access_level: access?.access_level || 'public',
@@ -100,6 +100,7 @@ export async function validateUserAuth(authHeaderOrToken) {
  * @param {string} context - Contexto do upload (products, projects, robots, etc.)
  */
 export function validateUploadPermission(user, context) {
+  if (user?.profile?.access_level === 'management_readonly') throw new Error('Gestão-leitura não permite enviar ou alterar arquivos.');
   const isAdmin = user.profile.is_admin;
   if (context === 'ava') {
     if (!isAdmin) throw new Error('Upload restrito à administração do AVA (Membro Líder).');
