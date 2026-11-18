@@ -6,6 +6,7 @@ import ProtectedRoute from '@/components/internal/ProtectedRoute';
 import InternalPageLayout from '@/components/internal/InternalPageLayout';
 import {BiKpi,BiChart,biNumber,biButton,biControl} from '@/components/bi/BiVisuals';
 import {readTeraBi} from '@/api/teraBiClient';
+import BiAnalysisLibrary from '@/components/bi/BiAnalysisLibrary';
 import {BI_METRICS,summarizeScouting,biCsv} from '@/lib/teraBi';
 
 function Dashboard({user,program}) {
@@ -28,6 +29,7 @@ function Dashboard({user,program}) {
   return <InternalPageLayout user={user} currentPage={`Internal${program}BI`} title={`TERA BI — ${program}`}><div className="space-y-6 text-white pb-20">
     <Link to="/InternalTeraBI" className={biButton}>← Todos os meus painéis TERA BI</Link>
     <header className="relative overflow-hidden rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-950/50 to-[#111217] p-5 sm:p-7"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold tracking-[.2em] text-red-400">INTELIGÊNCIA DA EQUIPE</p><h1 className="mt-2 text-2xl sm:text-3xl font-bold flex items-center gap-3"><BarChart3 aria-hidden="true"/>TERA BI <span className="text-red-400">{program}</span></h1><p className="mt-3 max-w-2xl text-sm text-gray-300">Scouting e evolução com os registros autorizados do Portal. Indicadores de equipe, sem ranking individual ou pontuação de PDI.</p></div><button className={biButton} onClick={()=>query.refetch()} disabled={query.isFetching}><RefreshCw size={17} aria-hidden="true"/>Atualizar</button></div></header>
+    <BiAnalysisLibrary key={`${user.id}:${program}`} program={program} user={user}/>
     {query.isFetching&&<p role="status" className="p-6 text-gray-300">Conferindo acesso e carregando as fontes…</p>}
     {query.error&&<div role="alert" className="rounded-xl border border-red-500/50 p-5"><p>{query.error.message}</p><button className={biButton+' mt-3'} onClick={()=>query.refetch()}>Tentar novamente</button></div>}
     {packet&&<>
@@ -39,7 +41,7 @@ function Dashboard({user,program}) {
         <label className="text-sm space-y-2"><span>Evento / temporada</span><select className={biControl} value={filters.event} onChange={e=>set('event',e.target.value)}><option value="">Todos os eventos carregados</option>{[...new Set(rows.map(r=>r.event))].sort().map(value=><option key={value}>{value}</option>)}</select></label>
         <label className="text-sm space-y-2"><span>De (data do registro)</span><input type="date" className={biControl+' [color-scheme:dark]'} value={filters.from} onChange={e=>set('from',e.target.value)}/></label>
         <label className="text-sm space-y-2"><span>Até (data do registro)</span><input type="date" className={biControl+' [color-scheme:dark]'} value={filters.to} onChange={e=>set('to',e.target.value)}/></label>
-        <button className={biButton} onClick={()=>setFilters({team:'',event:'',from:'',to:''})}>Limpar filtros</button><button className={biButton} disabled={exporting||!summary.count} onClick={exportCsv}><Download size={17}/>{exporting?'Conferindo acesso…':'Exportar resumo CSV'}</button>
+        <button className={biButton} onClick={()=>setFilters({team:'',event:'',from:'',to:''})}>Limpar filtros</button><button className={biButton} disabled={exporting||!summary.count} onClick={exportCsv}><Download size={17}/>{exporting?'Conferindo acesso…':'Baixar resumo CSV do Portal'}</button>
       </section>
       {filters.from&&filters.to&&filters.from>filters.to&&<p role="alert" className="text-amber-200">A data inicial é posterior à final. Ajuste o período.</p>}
       {exportError&&<p role="alert" className="text-red-300">{exportError}</p>}
@@ -50,7 +52,7 @@ function Dashboard({user,program}) {
       <section className="min-w-0 rounded-2xl border border-white/10 bg-[#111217] p-4"><h2 className="text-lg font-semibold mb-3">Comparativo de equipes</h2><div className="overflow-x-auto"><table className="w-full text-sm text-left"><caption className="sr-only">Resumo do scouting por equipe no recorte</caption><thead><tr>{['Equipe','Observações','Média','Melhor'].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{summary.teams.map(r=><tr key={r.name} className="border-t border-white/10"><th className="p-3 font-medium break-words">{r.name}</th><td className="p-3">{r.records}</td><td className="p-3">{biNumber(r.average)}</td><td className="p-3">{biNumber(r.best)}</td></tr>)}</tbody></table></div></section>
       {program==='FLL'&&<section className="rounded-2xl border border-white/10 bg-[#111217] p-4"><h2 className="text-lg font-semibold">Missões — fotografia atual</h2><p className="my-2 text-sm text-gray-400">Fonte separada dos rounds e independente dos filtros acima; não representa evolução histórica.</p>{!packet.missions.length?<p>Nenhuma missão autorizada cadastrada.</p>:<ul className="divide-y divide-white/10">{packet.missions.map((m,i)=><li key={i} className="py-3 flex flex-wrap justify-between gap-2"><span className="break-words">{m.name}</span><span className="text-sm text-gray-300">{biNumber(m.score)} / {biNumber(m.maximum)} · {m.status}</span></li>)}</ul>}</section>}
     </>}
-    <p className="text-xs text-gray-400">Painéis nativos do Portal · Integração Microsoft Power BI ainda não configurada. Fontes consultadas em modo somente leitura.</p>
+    <p className="text-xs text-gray-400">Painéis nativos do Portal · Integração Microsoft Power BI ainda não configurada. Scouting consultado em modo somente leitura. Arquivos importados permanecem separados dos registros oficiais.</p>
   </div></InternalPageLayout>;
 }
 export default function InternalTeraBi({program}) {return <ProtectedRoute requireApproved><Dashboard key={program} program={program}/></ProtectedRoute>;}

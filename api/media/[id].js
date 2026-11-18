@@ -307,6 +307,7 @@ export default async function handler(req, res) {
 
       const fileMeta = metaRes.data;
 
+      if(fileMeta.appProperties?.context==='bi-analysis')return res.status(409).json({error:'Arquive a análise na lixeira recuperável do Drive institucional.'});
       // 2. Impedir exclusão de arquivos que não pertençam comprovadamente ao Portal Tera
       const accessCheck = await verifyMediaAccess({ drive, fileMeta, req });
       if (!accessCheck.allowed && accessCheck.statusCode === 403) {
@@ -387,6 +388,7 @@ export default async function handler(req, res) {
 
       // 3. Headers de conteúdo e cache adequados
       res.setHeader('Content-Type', fileMeta.mimeType || 'application/octet-stream');
+      if(fileMeta.appProperties?.context==='bi-analysis'){res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Content-Security-Policy',"sandbox; default-src 'none'");res.setHeader('Content-Disposition',"attachment; filename*=UTF-8''"+encodeURIComponent(fileMeta.name||'analise').replace(/'/g,'%27'));}
       if (fileMeta.size) {
         res.setHeader('Content-Length', fileMeta.size);
       }
