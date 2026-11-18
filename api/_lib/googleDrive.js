@@ -172,29 +172,21 @@ function createLocalDriveFallback() {
  * Cria ou retorna o cliente oficial do Google Drive v3 autenticado com OAuth2 offline
  * (ou fallback seguro para persistência local de bytes caso variáveis não estejam presentes)
  */
-export async function getGoogleDriveClient() {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const refreshToken = await getStoredGoogleRefreshToken();
-
-  if (!clientId || !clientSecret || !refreshToken) {
-    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-      throw new Error('A integração Google Drive não está configurada no servidor.');
-    }
-    return createLocalDriveFallback();
-  }
-
-  const oauth2Client = new google.auth.OAuth2(
-    clientId,
-    clientSecret,
-    process.env.GOOGLE_REDIRECT_URI || 'urn:ietf:wg:oauth:2.0:oob'
-  );
-
-  oauth2Client.setCredentials({
-    refresh_token: refreshToken
-  });
-
-  return google.drive({ version: 'v3', auth: oauth2Client });
+let driveAuthCache=null;
+async function configuredDriveAuth() {
+  const clientId=process.env.GOOGLE_CLIENT_ID,clientSecret=process.env.GOOGLE_CLIENT_SECRET;
+  const refreshToken=await getStoredGoogleRefreshToken();
+  if(!clientId||!clientSecret||!refreshToken)return null;
+  const fingerprint=crypto.createHash('sha256').update(JSON.stringify([clientId,clientSecret,refreshToken])).digest('hex');
+  if(driveAuthCache?.fingerprint===fingerprint)return driveAuthCache.auth;
+  const auth=new google.auth.OAuth2(clientId,clientSecret,process.env.GOOGLE_REDIRECT_URI||'urn:ietf:wg:oauth:2.0:oob');
+  auth.setCredentials({refresh_token:refreshToken});driveAuthCache={fingerprint,auth};return auth;
+}
+export async function getGoogleDriveTransport(){const auth=await configuredDriveAuth();if(!auth)throw Error('DRIVE_NOT_CONFIGURED');return auth;}
+export async function getGoogleDriveClient(){
+  const auth=await configuredDriveAuth();
+  if(!auth){if(process.env.VERCEL||process.env.NODE_ENV==='production')throw Error('A integração Google Drive não está configurada no servidor.');return createLocalDriveFallback();}
+  return google.drive({version:'v3',auth});
 }
 
 /**
@@ -264,6 +256,10 @@ export async function resolveTargetFolder(drive, context, extraMeta = {}) {
     'test': ['99. Testes do Sistema']
   };
 
+  if(context==='bi-analysis') {
+    if(!['FRC','FTC','FLL'].includes(extraMeta.program))throw Error('Modalidade inválida.');
+    return ensureFolderPath(drive,rootId,['05. Engenharia & Temporadas','TERA BI',extraMeta.program]);
+  }
   if (context === 'fll-missions') {
     const seasonName = (extraMeta.season || extraMeta.season_name || extraMeta.theme || 'BIOGLOW').toString().trim();
     return await ensureFolderPath(drive, rootId, [

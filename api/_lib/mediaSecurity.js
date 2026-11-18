@@ -1,5 +1,6 @@
 import { getRootFolderId } from './googleDrive.js';
 import { canUseProgram } from './modalityAccess.js';
+import {authorizeBiFiles} from './biAnalysisFiles.js';
 import { supabaseServer, validateUserAuth, createScopedUserSupabaseClient } from './supabaseServer.js';
 
 // Cache em memória para verificações de pastas e registros públicos (evita sobrecarga no Drive e Supabase)
@@ -379,9 +380,12 @@ export async function verifyMediaAccess({ drive, fileMeta, req }) {
   // 3. Avaliação de privacidade: A CLASSIFICAÇÃO PRIVADA DEVE PREVALECER SOBRE QUALQUER CLASSIFICAÇÃO PÚBLICA
   const visibilityTag = fileMeta.appProperties?.visibility || fileMeta.properties?.visibility;
   const contextTag = fileMeta.appProperties?.context || fileMeta.properties?.context;
-  // The BI file library was withdrawn. Preserve its private files without
-  // falling back to the broader legacy internal-media access rule.
-  if(contextTag==='bi-analysis')return {allowed:false,statusCode:403,isPublic:false,error:'Recurso desativado',message:'A biblioteca de análises foi desativada. O arquivo permanece privado no Drive institucional.'};
+  // BI files never fall back to public references or generic internal access.
+  if(contextTag==='bi-analysis') {
+    if(fileMeta.trashed||fileMeta.appProperties?.app!=='portal_tera'||fileMeta.appProperties?.context!=='bi-analysis'||fileMeta.appProperties?.visibility!=='private')return {allowed:false,statusCode:403,isPublic:false,error:'Análise protegida'};
+    try{const user=await authorizeBiFiles({header:req.headers?.authorization,program:fileMeta.appProperties.program,authenticate:validateUserAuth,scopedClient:createScopedUserSupabaseClient});return {allowed:true,statusCode:200,isPublic:false,user};}
+    catch(error){return {allowed:false,statusCode:error.status||403,isPublic:false,error:'Análise protegida',message:'Acesso restrito à modalidade e página autorizadas.'};}
+  }
   const isExplicitPublicFlag = fileMeta.appProperties?.isPublic === 'true' || fileMeta.appProperties?.isPublic === true;
   const isExplicitPrivateFlag = fileMeta.appProperties?.isPublic === 'false' || fileMeta.appProperties?.isPublic === false;
 

@@ -1,0 +1,42 @@
+import {useEffect,useId,useRef,useState} from 'react';
+import {useQuery,useQueryClient} from '@tanstack/react-query';
+import {Upload,Download,FileText,RefreshCw,BarChart3} from 'lucide-react';
+import {readBiFiles,uploadBiFile,downloadBiFile,readBiCsvSample} from '@/api/biAnalysisClient';
+import {parseBiCsv} from '@/lib/biCsvImport';
+import {biButton} from './BiVisuals';
+import BiCsvAnalysis from './BiCsvAnalysis';
+import PortalMedia from '@/components/common/PortalMedia';
+export default function BiAnalysisLibrary({program,user}){
+ const id=useId(),client=useQueryClient(),lock=useRef(false),alive=useRef(true),transferAbort=useRef(null);
+ const [cursor,setCursor]=useState(null),[history,setHistory]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[preview,setPreview]=useState(null),[downloading,setDownloading]=useState(null),[progress,setProgress]=useState(0),[csv,setCsv]=useState(null);
+ useEffect(()=>{alive.current=true;return()=>{alive.current=false;transferAbort.current?.abort();};},[]);
+ const query=useQuery({queryKey:['bi-analysis',user.id,program,cursor],queryFn:({signal})=>readBiFiles(program,user.id,cursor,signal),retry:false,gcTime:0,staleTime:0,refetchOnMount:'always',refetchOnWindowFocus:false,refetchInterval:busy||downloading?false:30000});
+ const packet=!query.isFetching&&!query.error?query.data:null;
+ async function upload(event){const input=event.currentTarget,file=input.files?.[0];input.value='';if(!file||lock.current)return;lock.current=true;setBusy(true);setError('');setNotice('');setProgress(0);const controller=new AbortController();transferAbort.current=controller;
+  try{await uploadBiFile(file,program,user.id,{signal:controller.signal,onProgress:n=>{if(alive.current)setProgress(n);}});if(alive.current){setCursor(null);setHistory([]);setPreview(null);setCsv(null);setNotice('Arquivo importado para a biblioteca privada da '+program+'.');await client.invalidateQueries({queryKey:['bi-analysis',user.id,program]});}}
+  catch(failure){if(alive.current)setError(controller.signal.aborted?'Envio interrompido. Atualize a lista antes de tentar novamente.':failure.code==='GOOGLE_DRIVE_REAUTH_REQUIRED'?'Solicite a renovação ao administrador em Painel Admin → Google Drive.':failure.message||'Envio não confirmado. Atualize a biblioteca antes de tentar novamente.');}
+  finally{lock.current=false;if(alive.current)setBusy(false);}
+ }
+ async function readFile(file,asCsv=false){if(downloading)return;setDownloading(file.id);setProgress(0);setError('');const controller=new AbortController();transferAbort.current=controller;
+  try{if(asCsv){const sample=await readBiCsvSample(file,user.id,controller.signal);const dataset=parseBiCsv(sample.text,{partial:sample.partial});if(alive.current)setCsv({id:file.id,name:file.name,dataset});}
+   else{const blob=await downloadBiFile(file,user.id,controller.signal,n=>{if(alive.current)setProgress(n);});if(!alive.current)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}}
+  catch(failure){if(alive.current)setError(controller.signal.aborted?'Leitura interrompida.':failure.message||'Não foi possível ler esta análise.');}
+  finally{if(alive.current)setDownloading(null);}
+ }
+ return <section aria-labelledby={id+'-title'} className="min-w-0 space-y-4 rounded-2xl border border-red-500/30 bg-[#111217] p-4 sm:p-6">
+  <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h2 id={id+'-title'} className="text-xl font-bold text-white">Importar análises — {program}</h2><p className="mt-2 max-w-3xl text-sm text-gray-300">Adicione arquivos do Power BI e CSV de scouting à biblioteca privada desta modalidade. Depois escolha um CSV para criar gráficos.</p></div><button type="button" className={biButton} disabled={query.isFetching||busy||!!downloading} onClick={()=>{setPreview(null);setCsv(null);query.refetch();}}><RefreshCw size={17}/>Atualizar arquivos</button></div>
+  <p className="text-sm text-gray-400">PBIX, CSV, PDF, imagens e XLSX · até 1 GB por arquivo, enviado em partes de 2 MB. PBIX é guardado para baixar e abrir no Power BI Desktop; não vira painel interativo no navegador. XLSX é disponibilizado para download.</p>
+  <label htmlFor={id} className={biButton+' w-full cursor-pointer sm:w-auto focus-within:ring-2 focus-within:ring-red-400'}><Upload size={18}/>{busy?'Importando…':'Importar arquivo PBIX / CSV'}<input id={id} className="sr-only" type="file" accept=".pbix,.csv,.pdf,.png,.jpg,.jpeg,.webp,.xlsx" disabled={busy||!!downloading||!packet?.canUpload} aria-label="Importar arquivo PBIX ou CSV" onChange={upload}/></label>
+  {packet&&!packet.canUpload&&<p className="text-sm text-gray-400">Seu nível permite consultar e baixar. O envio exige permissão de edição da Área Interna.</p>}
+  {(busy||downloading)&&<div role="status" className="space-y-2 text-sm text-gray-300"><p>{busy?'Enviando arquivo':'Lendo arquivo'}: {progress}% · mantenha esta página aberta.</p><progress max="100" value={progress} className="h-3 w-full accent-red-600"/><button type="button" className={biButton} onClick={()=>transferAbort.current?.abort()}>Interromper transferência</button></div>}
+  {notice&&<p role="status" className="text-sm text-green-300">{notice}</p>}
+  {(error||query.error)&&<p role="alert" className="rounded-lg border border-red-500/40 p-3 text-sm text-red-200">{error||query.error.message}</p>}
+  {query.isFetching&&<p role="status" className="text-sm text-gray-300">Conferindo acesso aos arquivos…</p>}
+  {packet&&<>{!packet.files.length&&<p className="rounded-xl border border-dashed border-white/20 p-5 text-gray-400">Nenhum arquivo nesta página. Importe a primeira análise ou volte à página anterior.</p>}
+   <ul className="grid min-w-0 gap-4 lg:grid-cols-2">{packet.files.map(file=><li key={file.id} className="min-w-0 rounded-xl border border-white/10 p-4"><h3 className="flex min-w-0 items-start gap-2 text-white"><FileText size={19} className="shrink-0"/><span className="min-w-0 break-all font-semibold">{file.name}</span></h3><p className="mt-2 text-xs text-gray-400">{file.size<1024?`${file.size} bytes`:file.size<1024*1024?`${Math.ceil(file.size/1024)} KB`:`${(file.size/1024/1024).toLocaleString('pt-BR',{maximumFractionDigits:2})} MB`} · {Number.isFinite(Date.parse(file.date))?new Date(file.date).toLocaleDateString('pt-BR'):'Data não informada'}</p><div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap"><button className={biButton} type="button" disabled={busy||downloading!==null} onClick={()=>readFile(file)}><Download size={17}/>{downloading===file.id?'Lendo…':'Baixar arquivo'}</button>{file.name.toLowerCase().endsWith('.csv')&&<button type="button" className={biButton} disabled={busy||downloading!==null} onClick={()=>readFile(file,true)}><BarChart3 size={17}/>Usar CSV nos gráficos</button>}{file.size<=4*1024*1024&&['image/png','image/jpeg','image/webp'].includes(file.type)&&<button type="button" className={biButton} onClick={()=>setPreview(preview===file.id?null:file.id)}>{preview===file.id?'Fechar gráfico':'Ver gráfico'}</button>}</div>{preview===file.id&&<PortalMedia src={file.url} alt={'Gráfico: '+file.name} className="mt-4 h-auto max-h-[32rem] w-full rounded-lg bg-white object-contain"/>}</li>)}</ul>
+   {csv&&packet.files.some(f=>f.id===csv.id)&&<><BiCsvAnalysis key={csv.id} dataset={csv.dataset} name={csv.name} settings={csv.settings} onSettings={settings=>setCsv(old=>old?{...old,settings}:old)}/><button type="button" className={biButton} onClick={()=>setCsv(null)}>Fechar análise CSV</button></>}
+   <p className="text-xs text-gray-400">Arquivos grandes exigem conexão estável, espaço e memória disponíveis para download. Os gráficos de CSV usam até 2 MB / 5.000 linhas completas por análise; o arquivo original fica preservado para baixar integralmente.</p>
+   <nav aria-label="Páginas de arquivos de análise" className="flex flex-wrap gap-3"><button className={biButton} disabled={!history.length||busy||!!downloading} onClick={()=>{setCursor(history.at(-1));setHistory(old=>old.slice(0,-1));setPreview(null);setCsv(null);}}>Anterior</button><button className={biButton} disabled={!packet.nextCursor||busy||!!downloading} onClick={()=>{setHistory(old=>[...old,cursor]);setCursor(packet.nextCursor);setPreview(null);setCsv(null);}}>Próxima página</button></nav>
+  </>}
+ </section>;
+}
