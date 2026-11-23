@@ -10,7 +10,7 @@ function printable(value){return typeof value==='object'?JSON.stringify(value,nu
 export function ManagementReadOnlyView({user,query,source,setSource,previous,next,canPrevious,search,setSearch}){
  const packet=!query.isError&&!query.isFetching&&query.data?.actor===user.id&&query.data?.source===source?query.data:null;
  const items=packet?.items.filter(({record})=>!search||JSON.stringify(record).toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR')))||[];
- return <section className="space-y-5 text-white"><div className="rounded-xl border border-red-500/30 bg-[#111217] p-4"><h1 className="text-2xl font-bold">Gestão-leitura</h1>
+ return <section className="dark space-y-5 text-white"><div className="rounded-xl border border-red-500/30 bg-[#111217] p-4"><h1 className="text-2xl font-bold">Gestão-leitura</h1>
   <p className="mt-2 text-sm text-gray-300">Consulta de todas as modalidades, registros e PDIs. Esta categoria não permite editar, excluir, aprovar usuários ou alterar permissões.</p>
   <p className="mt-2 text-sm text-gray-400">Sem questionário de membro e sem criação de PDI pessoal. As informações dos membros continuam privadas; não compartilhe fora da equipe.</p></div>
   <div className="grid gap-4 sm:grid-cols-2"><label className="min-w-0">Consultar<select value={source} onChange={e=>setSource(e.target.value)} className="mt-2 min-h-11 w-full rounded-lg border border-white/20 bg-[#111217] p-3 text-base">{MANAGEMENT_SOURCES.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
@@ -34,5 +34,5 @@ export function ManagementRecords({user}){
 }
 export default function ManagementReadOnly({user}){
  const {logout}=useAuth();
- return <main className="min-h-screen bg-[#0B0B0D] px-4 py-6 text-white"><div className="mx-auto max-w-5xl"><header className="mb-6 flex flex-wrap items-center justify-between gap-3"><a href="/" className="min-h-11 py-3 text-red-300 underline">Voltar ao site público</a><Button variant="outline" onClick={()=>logout()} className="min-h-11">Sair</Button></header><ManagementRecords key={user.id} user={user}/></div></main>;
+ return <main className="dark min-h-screen bg-[#0B0B0D] px-4 py-6 text-white"><div className="mx-auto max-w-5xl"><header className="mb-6 flex flex-wrap items-center justify-between gap-3"><a href="/" className="min-h-11 py-3 text-red-300 underline">Voltar ao site público</a><Button variant="outline" onClick={()=>logout()} className="min-h-11">Sair</Button></header><ManagementRecords key={user.id} user={user}/></div></main>;
 }
