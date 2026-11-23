@@ -5,7 +5,8 @@ import { createPageUrl } from '@/utils';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { Button } from "@/components/ui/button";
 import { Clock, XCircle, Shield, LogIn } from 'lucide-react';
-import {canEditInternal} from '@/lib/accessLevels';
+import {canEditInternal,isManagementReadOnly} from '@/lib/accessLevels';
+import ManagementReadOnly from './ManagementReadOnly';
 import MemberRegistrationGate from './MemberRegistrationGate';
 
 // E-mails dos admins seed (bootstrap admins) - sempre aprovados automaticamente
@@ -101,6 +102,11 @@ export default function ProtectedRoute({
   }
 
   // 3. Usuário autenticado: verificar se é admin (role, member_role ou seed admin)
+  // Management never mounts member forms, recadastro/PDI gates or administrative editors.
+  // Every consultation is independently authorized by a read-only database RPC.
+  if (isManagementReadOnly(user) && user.status === 'approved') {
+    return <ManagementReadOnly key={user.id} user={user} />;
+  }
   const isSeedAdmin = user.email && SEED_ADMIN_EMAILS.includes(user.email.toLowerCase());
   const userIsAdmin = user.role === 'admin' || user.member_role === 'admin' || isSeedAdmin;
 

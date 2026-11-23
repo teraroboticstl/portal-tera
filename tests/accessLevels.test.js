@@ -1,8 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {ACCESS_LEVELS,accessLevel,canEditInternal} from '../src/lib/accessLevels.js';
-test('Six access levels preserve read-only training and explicit external scope',()=>{
- assert.equal(ACCESS_LEVELS.length,6);
+import {ACCESS_LEVELS,accessLevel,canEditInternal,isManagementReadOnly,accessLabel} from '../src/lib/accessLevels.js';
+test('Seven access levels preserve read-only training and explicit external scope',()=>{
+ assert.equal(ACCESS_LEVELS.length,7);
  assert.equal(accessLevel(null),'public');
  for(const level of ['public','student','trainee'])assert.equal(canEditInternal({access_level:level,status:'approved'}),false);
  for(const level of ['member','leader','technician'])assert.equal(canEditInternal({access_level:level,status:'approved'}),true);
@@ -13,4 +13,21 @@ test('Six access levels preserve read-only training and explicit external scope'
  assert.equal(canEditInternal({access_level:'member',status:'approved',portal_can_edit:false}),false);
  assert.equal(accessLevel({status:'approved',member_role:'user'}),'trainee');
  assert.equal(accessLevel({status:'approved',member_role:'member',access:{portal_internal:false,ava_status:'active'}}),'student');
+});
+
+test('management never inherits write permission from stale flags or administrator profile fields',()=>{
+ for(const user of [
+  {access_level:'management_readonly',status:'approved'},
+  {access:{access_level:'management_readonly'},status:'approved'},
+  {access_level:'management_readonly',portal_can_edit:true,role:'admin',member_role:'admin',status:'approved'},
+  {access_level:'management_readonly',status:'pending'},
+  {access_level:'management_readonly',status:'rejected'}
+ ]){
+  assert.equal(isManagementReadOnly(user),true);
+  assert.equal(accessLevel(user),'management_readonly');
+  assert.equal(accessLabel(user),'Gestão-leitura');
+  assert.equal(canEditInternal(user),false);
+ }
+ assert.equal(isManagementReadOnly(null),false);
+ assert.equal(canEditInternal({access_level:'technician',portal_can_edit:true,status:'approved'}),true);
 });

@@ -22,13 +22,14 @@ import GoogleDriveTestManagement from '@/components/admin/GoogleDriveTestManagem
 import FllSimulatorsManagement from '@/components/admin/FllSimulatorsManagement';
 import MemberPdis from '@/components/internal/MemberPdis';
 import PageVisibilityManagement from '@/components/admin/PageVisibilityManagement';
+import {ManagementRecords} from '@/components/internal/ManagementReadOnly';
 import { Bot } from 'lucide-react';
 
 // E-mail dos admins seed (bootstrap admin) - sempre autorizados
 const SEED_ADMIN_EMAILS = ['teraroboticstl@gmail.com', 'nathannovaes16@gmail.com'];
 
 // Identificadores válidos das guias do Painel Admin
-const VALID_ADMIN_TABS = ['pdis',
+const VALID_ADMIN_TABS = ['pdis','management_readonly',
   'users',
   'tournament',
   'robots',
@@ -175,6 +176,7 @@ export default function AdminPanel() {
           <div className="overflow-x-auto pb-2 mb-8">
             <TabsList className="bg-[#111217] border border-[#1F222B] inline-flex w-auto min-w-full sm:min-w-0 p-1">
               <TabsTrigger value="pdis" className="data-[state=active]:bg-[#E10600]">Todos os PDIs</TabsTrigger>
+              <TabsTrigger value="management_readonly" className="data-[state=active]:bg-[#E10600]">Gestão-leitura</TabsTrigger>
               <TabsTrigger value="page_visibility" className="data-[state=active]:bg-[#E10600] text-xs sm:text-sm py-2">
                 Visibilidade de Páginas
               </TabsTrigger>
@@ -214,6 +216,7 @@ export default function AdminPanel() {
           </div>
 
           <TabsContent value="pdis"><MemberPdis all /></TabsContent>
+          <TabsContent value="management_readonly"><ManagementRecords user={user}/></TabsContent>
           <TabsContent value="page_visibility"><PageVisibilityManagement /></TabsContent>
           <TabsContent value="users">
             <UsersManagement />
