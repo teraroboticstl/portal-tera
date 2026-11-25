@@ -35,6 +35,11 @@ export default function LinkedFrcScouting({user}){
   {(catalogue.isError||details.isError)&&<p role="alert" className="text-red-300">Não foi possível carregar. Confira a migração, o acesso FRC e tente novamente. <button className={button} onClick={()=>{catalogue.refetch();details.refetch();}}>Tentar novamente</button></p>}
   {catalogue.isPending&&<p role="status">Carregando campeonatos…</p>}
   {data&&<>
+   <div className="grid gap-4 sm:grid-cols-2">
+    <label>Temporada (obrigatória)<select aria-label="Temporada" aria-required="true" className={input} disabled={busy} value={season} onChange={e=>{setSeason(e.target.value);setEvent('');setForm(empty);setMessage('');}}><option value="">Selecione</option>{data.seasons.map(s=><option key={s.id} value={s.id}>{s.year} — {s.theme}</option>)}</select></label>
+    <label>Campeonato<select className={input} disabled={!season||busy} value={event} onChange={e=>{setEvent(e.target.value);setForm(empty);setMessage('');}}><option value="">Selecione</option>{data.events.filter(e=>e.scouting_season_id===season||(isAdmin(user)&&!e.scouting_season_id)).map(e=><option key={e.id} value={e.id}>{e.tournament_name}{!e.scouting_season_id?' (sem vínculo)':''}</option>)}</select></label>
+   </div>
+   {isAdmin(user)&&setup.kind==='event'&&!season&&<p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-amber-200">Selecione uma temporada para cadastrar um campeonato.</p>}
    {isAdmin(user)&&<details className="rounded-xl border border-gray-700 p-4"><summary className="cursor-pointer min-h-11">Cadastrar temporada, campeonato ou equipe</summary><form className="space-y-3" onSubmit={e=>{e.preventDefault();run('create');}}>
     <label className="block">Tipo<select className={input} disabled={busy} value={setup.kind} onChange={e=>setSetup({kind:e.target.value,name:'',number:'',date:''})}><option value="event">Campeonato na temporada selecionada</option><option value="season">Temporada</option><option value="team">Equipe FRC</option></select></label>
     {setup.kind==='event'&&<label className="block">Data do campeonato<input required type="date" className={input} disabled={busy} value={setup.date} onChange={e=>setSetup({...setup,date:e.target.value})}/></label>}
@@ -42,10 +47,7 @@ export default function LinkedFrcScouting({user}){
     <label className="block">Nome<input required maxLength={120} className={input} disabled={busy} value={setup.name} onChange={e=>setSetup({...setup,name:e.target.value})}/></label>
     <button className={button} disabled={busy||(setup.kind==='event'&&!season)}>Cadastrar</button>
    </form></details>}
-   <div className="grid gap-4 sm:grid-cols-2">
-    <label>Temporada<select className={input} disabled={busy} value={season} onChange={e=>{setSeason(e.target.value);setEvent('');setForm(empty);setMessage('');}}><option value="">Selecione</option>{data.seasons.map(s=><option key={s.id} value={s.id}>{s.year} — {s.theme}</option>)}</select></label>
-    <label>Campeonato<select className={input} disabled={!season||busy} value={event} onChange={e=>{setEvent(e.target.value);setForm(empty);setMessage('');}}><option value="">Selecione</option>{data.events.filter(e=>e.scouting_season_id===season||(isAdmin(user)&&!e.scouting_season_id)).map(e=><option key={e.id} value={e.id}>{e.tournament_name}{!e.scouting_season_id?' (sem vínculo)':''}</option>)}</select></label>
-   </div>
+
    {isAdmin(user)&&event&&<section className="border border-gray-700 rounded-xl p-4 space-y-3"><h3 className="font-bold">Configurar vínculos</h3>
     {!linked?<button className={button} disabled={busy} onClick={()=>run('configure')}>Vincular campeonato à temporada selecionada</button>:<>
      <label>Inscrever equipe<select className={input} value={team} disabled={busy} onChange={e=>setTeam(e.target.value)}><option value="">Selecione</option>{data.teams.filter(t=>!participants.some(p=>p.id===t.id)).map(t=><option key={t.id} value={t.id}>#{t.number} — {t.name}</option>)}</select></label>
