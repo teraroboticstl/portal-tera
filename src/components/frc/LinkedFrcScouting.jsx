@@ -10,7 +10,7 @@ const button='min-h-11 rounded-lg bg-red-700 px-4 py-3 text-white disabled:opaci
 const empty={team:'',match:'',auto:'',teleop:'',notes:''};
 export default function LinkedFrcScouting({user}){
  const [season,setSeason]=useState(''),[event,setEvent]=useState(''),[team,setTeam]=useState(''),[form,setForm]=useState(empty),[message,setMessage]=useState('');
- const [setup,setSetup]=useState({kind:'event',name:'',number:''});
+ const [setup,setSetup]=useState({kind:'event',name:'',number:'',date:''});
  const submitting=useRef(false);
  const qc=useQueryClient();
  const catalogue=useQuery({queryKey:['frc-linked-catalogue',user.id],queryFn:()=>api.load(user.id),retry:false});
@@ -36,7 +36,8 @@ export default function LinkedFrcScouting({user}){
   {catalogue.isPending&&<p role="status">Carregando campeonatos…</p>}
   {data&&<>
    {isAdmin(user)&&<details className="rounded-xl border border-gray-700 p-4"><summary className="cursor-pointer min-h-11">Cadastrar temporada, campeonato ou equipe</summary><form className="space-y-3" onSubmit={e=>{e.preventDefault();run('create');}}>
-    <label className="block">Tipo<select className={input} disabled={busy} value={setup.kind} onChange={e=>setSetup({kind:e.target.value,name:'',number:''})}><option value="event">Campeonato na temporada selecionada</option><option value="season">Temporada</option><option value="team">Equipe FRC</option></select></label>
+    <label className="block">Tipo<select className={input} disabled={busy} value={setup.kind} onChange={e=>setSetup({kind:e.target.value,name:'',number:'',date:''})}><option value="event">Campeonato na temporada selecionada</option><option value="season">Temporada</option><option value="team">Equipe FRC</option></select></label>
+    {setup.kind==='event'&&<label className="block">Data do campeonato<input required type="date" className={input} disabled={busy} value={setup.date} onChange={e=>setSetup({...setup,date:e.target.value})}/></label>}
     {setup.kind!=='event'&&<label className="block">{setup.kind==='season'?'Ano':'Número oficial'}<input required className={input} disabled={busy} inputMode="numeric" value={setup.number} onChange={e=>setSetup({...setup,number:e.target.value})}/></label>}
     <label className="block">Nome<input required maxLength={120} className={input} disabled={busy} value={setup.name} onChange={e=>setSetup({...setup,name:e.target.value})}/></label>
     <button className={button} disabled={busy||(setup.kind==='event'&&!season)}>Cadastrar</button>

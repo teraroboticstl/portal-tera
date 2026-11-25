@@ -7,7 +7,15 @@ export function createFrcScoutingClient(db) {
  async function result(query,actor) {
   const {data,error}=await query;
   await identity(actor);
-  if(error) throw Error('Não foi possível acessar o scouting. Confira a configuração e suas permissões.');
+  if(error){
+   const message={
+    '23502':'Falta um campo obrigatório. Confira os dados do cadastro.',
+    '23505':'Esse cadastro já existe. Selecione o registro existente.',
+    '23503':'O vínculo selecionado não está mais disponível. Atualize a página.',
+    '42501':'Seu acesso não permite esta operação.'
+   }[error.code];
+   throw Error(message||'Não foi possível concluir a operação. Atualize a página e tente novamente.');
+  }
   return data;
  }
  return {
@@ -20,7 +28,13 @@ export function createFrcScoutingClient(db) {
     table='seasons';payload={year:Number(fields.number),theme:name,program:'FRC'};
    }else if(kind==='event'){
     if(!uuid(fields.season))throw Error('Selecione a temporada.');
-    table='tournament_configs';payload={tournament_name:name,category:'FRC',scouting_season_id:fields.season};
+    const date=fields.date;
+    if(typeof date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Informe a data do campeonato.');
+    // Calendar-only value stored at UTC noon to preserve the Brazilian calendar day.
+    // This technical timestamp does not claim an official starting time.
+    const timestamp=new Date(`${date}T12:00:00.000Z`);
+    if(!Number.isFinite(timestamp.getTime())||timestamp.toISOString().slice(0,10)!==date)throw Error('Informe uma data válida para o campeonato.');
+    table='tournament_configs';payload={tournament_name:name,tournament_date:timestamp.toISOString(),category:'FRC',scouting_season_id:fields.season};
    }else if(kind==='team'){
     if(!/^\d{1,6}$/.test(fields.number)||Number(fields.number)===0)throw Error('Informe o número oficial da equipe.');
     table='teams';payload={number:String(Number(fields.number)),name,program:'FRC'};

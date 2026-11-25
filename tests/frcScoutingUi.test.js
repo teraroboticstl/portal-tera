@@ -13,6 +13,6 @@ test('actual linked UI keeps contexts explicit and configuration admin-only',()=
  const module={exports:{}};vm.runInNewContext(transform(source,{transforms:['jsx','imports']}).code,{module,exports:module.exports,require:key=>mocks[key]});
  const html=()=>renderToStaticMarkup(React.createElement(module.exports.default,{user:{id:'actor'}}));
  assert.match(html(),/Tera Scouting/);assert.match(html(),/Temporada/);assert.match(html(),/&lt;script&gt;/);assert.doesNotMatch(html(),/Cadastrar temporada|Salvar registro/);
- admin=true;assert.match(html(),/Cadastrar temporada/);
+ admin=true;assert.match(html(),/Cadastrar temporada/);assert.match(html(),/Data do campeonato/);assert.match(html(),/required="" type="date"/);
  packetActor='other';assert.doesNotMatch(html(),/unsafe|Cadastrar temporada/);
 });
