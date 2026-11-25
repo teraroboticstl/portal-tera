@@ -1,0 +1,389 @@
+# PROJETO: TERA SCOUTING — SISTEMA COMPLETO DE FRC SCOUTING
+
+Quero desenvolver, atualizar e aperfeiçoar um sistema profissional de scouting para equipes de FIRST Robotics Competition (FRC), chamado **Tera Scouting**.
+
+O objetivo é criar uma plataforma completa, confiável, moderna e intuitiva para coleta, organização, validação e análise de dados das equipes e partidas de FRC.
+
+**INSTRUÇÃO PRINCIPAL:** Antes de modificar qualquer coisa, analise toda a estrutura do projeto existente, incluindo frontend, backend, banco de dados, autenticação, componentes, páginas e funcionalidades. Preserve o que já funciona e implemente as alterações sem apagar dados ou reconstruir desnecessariamente o sistema.
+
+---
+
+# 1. IDENTIDADE VISUAL E MARCA
+
+O nome oficial do sistema deve ser:
+
+**Tera Scouting**
+
+Utilize uma identidade visual tecnológica, profissional e competitiva, inspirada na identidade da equipe Tera Robotics.
+
+### Cores
+- Preto: fundos e áreas principais.
+- Vermelho: cor principal de destaque.
+- Branco: textos e elementos de contraste.
+- Cinza: elementos secundários.
+
+Mantenha o tema escuro, com aparência moderna e organizada.
+
+### Aplicação da logo
+
+Utilize a imagem original da logo da Tera Robotics que será fornecida como arquivo de referência.
+
+A logo deve aparecer exclusivamente nos seguintes locais:
+
+1. **Barra lateral:** substituir a letra "S" que aparece dentro do quadrado vermelho, ao lado do nome Tera Scouting.
+2. **Tela de Login:** posicionar a logo próxima ao nome Tera Scouting.
+3. **Tela de Sign up:** utilizar exatamente a mesma logo, com o mesmo padrão visual da tela de Login.
+
+Regras:
+- Não distorcer ou redesenhar a logo.
+- Preservar suas cores e proporções.
+- Não colocar a logo no dashboard ou em outras páginas.
+- Não alterar o favicon.
+- Manter o nome Tera Scouting ao lado da logo na barra lateral.
+- Manter o subtítulo "FRC Strategy Suite".
+
+O layout deve funcionar em computadores, tablets e celulares.
+
+---
+
+# 2. ESTRUTURA DE TEMPORADAS E CAMPEONATOS
+
+O sistema deve possuir uma estrutura organizada por temporadas e campeonatos.
+
+Exemplo:
+
+- Temporada 2026
+  - Regional 1
+  - Regional 2
+  - Campeonato Nacional
+
+- Temporada 2027
+  - Regional 1
+  - Regional 2
+  - Campeonato Nacional
+
+Cada temporada pode possuir vários campeonatos.
+
+### Funcionalidades
+- Criar temporadas.
+- Editar temporadas.
+- Criar vários campeonatos dentro de uma temporada.
+- Editar o nome dos campeonatos.
+- Excluir campeonatos somente mediante confirmação e regras de segurança.
+- Selecionar a temporada e o campeonato ativo.
+- Visualizar os dados separadamente por campeonato.
+- Comparar resultados entre campeonatos da mesma temporada.
+- Consultar o histórico de temporadas anteriores.
+
+### Edição do nome do campeonato
+
+Adicione um botão de edição, representado por um ícone de lápis, ao lado do nome de cada campeonato.
+
+Exemplo:
+- Nome atual: Regional 1
+- Novo nome: Regional 2026
+
+Ao salvar:
+- Atualize o nome em todas as páginas.
+- Preserve o identificador único do campeonato.
+- Preserve todas as partidas, equipes, estatísticas e registros relacionados.
+- Não crie outro campeonato.
+- Não apague dados existentes.
+
+Impeça nomes vazios e avise sobre nomes duplicados dentro da mesma temporada.
+
+---
+
+# 3. GERENCIAMENTO DE EQUIPES
+
+Crie uma seção para cadastrar, consultar, pesquisar e administrar equipes.
+
+Cada equipe deve possuir:
+- Número oficial.
+- Nome.
+- Nome alternativo, quando necessário.
+- Temporadas em que participou.
+- Campeonatos disputados.
+- Histórico de partidas.
+- Estatísticas.
+- Informações de Pit Scouting.
+- Histórico de alterações.
+
+Inclua inicialmente estas equipes:
+
+- Tera Robotics — #10343
+- Tek Vikings — #9164
+- Capi Tec — #10356
+
+Permita pesquisar por nome ou número.
+
+Não crie equipes duplicadas. Utilize o número oficial como identificador principal da equipe.
+
+---
+
+# 4. DASHBOARD PRINCIPAL
+
+Crie um dashboard com informações atualizadas automaticamente conforme os registros são inseridos.
+
+Exiba:
+
+- Temporada selecionada.
+- Campeonato selecionado.
+- Quantidade de partidas registradas.
+- Quantidade de equipes analisadas.
+- Pontuação média das equipes.
+- Melhores desempenhos.
+- Ranking das equipes.
+- Últimas partidas registradas.
+- Gráficos de desempenho.
+- Indicadores de consistência.
+- Indicadores de confiabilidade dos dados.
+
+Os gráficos devem respeitar a temporada e o campeonato selecionados.
+
+Não misture dados de campeonatos diferentes sem que o usuário solicite uma comparação.
+
+---
+
+# 5. MATCH SCOUTING — REGISTRO DE PARTIDAS
+
+Crie uma página de registro de partidas com formulário rápido, intuitivo e confiável.
+
+Cada registro deve conter:
+
+### Identificação
+- Número da partida.
+- Temporada.
+- Campeonato.
+- Equipe observada.
+- Aliança: Vermelha ou Azul.
+- Posição inicial.
+- Identificação do scout responsável.
+
+### Períodos da partida
+Organize as perguntas em:
+
+1. Autonomous.
+2. Teleoperated.
+3. Endgame.
+
+As ações e perguntas devem ser configuráveis de acordo com a temporada e o manual oficial do jogo.
+
+**Não invente critérios de pontuação, ações ou valores oficiais de uma temporada.** Utilize as configurações fornecidas pelo administrador ou dados oficiais disponíveis.
+
+### Interface de registro
+- Utilize botões grandes.
+- Utilize contadores para ações quantitativas.
+- Utilize seletores para respostas.
+- Facilite o preenchimento rápido.
+- Mostre claramente as respostas selecionadas.
+- Evite formulários excessivamente longos.
+
+### Correção das respostas positivas e negativas
+
+Corrija o comportamento visual dos botões de respostas positivas e negativas.
+
+Regras obrigatórias:
+
+- Resposta positiva: fundo verde.
+- Resposta negativa: fundo vermelho.
+- Nenhuma resposta: aparência original do botão.
+- Ao trocar de positiva para negativa, a cor deve mudar imediatamente.
+- Ao trocar de negativa para positiva, a cor deve mudar imediatamente.
+- Após salvar e abrir novamente o registro, as cores devem representar corretamente os valores armazenados.
+
+Não utilize apenas variações de brilho ou tons mais escuros da cor original.
+
+Verifique regras CSS, estados dos componentes e estilos que possam sobrescrever as cores.
+
+Aplique essa correção em todas as perguntas de resposta positiva/negativa da seção Match Scouting.
+
+### Finalização
+- Campo de observações.
+- Resumo do registro.
+- Validação antes de salvar.
+- Opção de editar registros.
+- Histórico de alterações.
+
+---
+
+# 6. PIT SCOUTING
+
+Crie uma seção para registrar informações físicas e técnicas dos robôs.
+
+Campos:
+
+- Número da equipe.
+- Nome da equipe.
+- Fotografias do robô.
+- Largura.
+- Comprimento.
+- Peso.
+- Mecanismos utilizados.
+- Capacidade de Autonomous.
+- Estratégias.
+- Pontos fortes.
+- Limitações.
+- Mobilidade.
+- Confiabilidade.
+- Observações.
+
+**IMPORTANTE: não deve existir nenhum campo, configuração, filtro, cálculo ou exibição relacionado à altura do robô.**
+
+Remova qualquer referência à altura de formulários, tabelas, relatórios, gráficos e telas de detalhes.
+
+Não remova largura, comprimento, peso ou outras características físicas.
+
+Os dados de Pit Scouting devem ser editáveis e vinculados à equipe e ao campeonato correspondente.
+
+---
+
+# 7. PÁGINAS INDIVIDUAIS DAS EQUIPES
+
+Cada equipe deve possuir uma página própria com:
+
+- Histórico de partidas.
+- Pontuação média.
+- Melhor pontuação.
+- Desempenho em Autonomous.
+- Desempenho em Teleoperated.
+- Desempenho em Endgame.
+- Consistência.
+- Confiabilidade.
+- Frequência de realização das ações.
+- Informações de Pit Scouting.
+- Pontos fortes.
+- Limitações.
+- Gráficos de desempenho.
+
+Permita filtrar os dados por temporada e campeonato.
+
+---
+
+# 8. COMPARAÇÃO DE EQUIPES
+
+Crie uma ferramenta para comparar duas ou mais equipes.
+
+Compare:
+
+- Pontuação média.
+- Melhor pontuação.
+- Autonomous.
+- Teleoperated.
+- Endgame.
+- Consistência.
+- Frequência de ações.
+- Confiabilidade.
+- Desempenho por partida.
+
+Utilize gráficos e tabelas para facilitar a análise.
+
+Não considere somente a média de pontos para determinar qual equipe é melhor.
+
+---
+
+# 9. ALLIANCE SELECTION
+
+Crie uma seção específica para auxiliar na seleção de alianças.
+
+Funcionalidades:
+
+- Ranking das equipes.
+- Comparação de equipes.
+- Filtros por desempenho.
+- Indicadores de consistência.
+- Compatibilidade entre equipes.
+- Favoritos.
+- Anotações estratégicas.
+- Comparação de combinações de alianças.
+
+Considere:
+- Pontuação.
+- Desempenho autônomo.
+- Desempenho em teleoperado.
+- Endgame.
+- Confiabilidade.
+- Consistência.
+- Complementaridade de mecanismos.
+- Histórico de desempenho.
+
+Não escolha uma equipe somente pela média de pontuação.
+
+---
+
+# 10. CENTRAL DE INTELIGÊNCIA ESTRATÉGICA
+
+Crie uma seção chamada **Strategy Center**.
+
+Ela deve possuir:
+
+### Team Intelligence
+Análise detalhada de cada equipe, com indicadores de desempenho e confiabilidade.
+
+### Alliance Simulator
+Permita selecionar equipes e comparar diferentes combinações de alianças.
+
+### Match Prediction
+Crie estimativas de desempenho com base nos dados históricos disponíveis.
+
+As previsões devem apresentar suas limitações e não podem ser tratadas como resultados garantidos.
+
+### Competition Insights
+Identifique padrões, tendências, equipes em destaque e possíveis oportunidades estratégicas.
+
+Todas as análises devem utilizar dados reais registrados ou fontes oficiais identificadas.
+
+---
+
+# 11. LIVE COMPETITION CENTER
+
+Crie uma central de acompanhamento da competição.
+
+Exiba:
+
+- Partida atual ou próxima partida, quando disponível.
+- Partidas já registradas.
+- Equipes participantes.
+- Scouts responsáveis.
+- Resultados oficiais disponíveis.
+- Ranking atualizado.
+- Alertas de dados incompletos.
+- Partidas que ainda precisam de scouting.
+
+Inclua filtros por temporada, campeonato, equipe e partida.
+
+---
+
+# 12. MELHORIAS NO PROCESSO DE SCOUTING
+
+Implemente recursos para melhorar a qualidade da coleta de dados.
+
+### Quick Scouting
+Interface simplificada para registrar informações rapidamente durante a competição.
+
+### Scout Assignment
+Permita atribuir scouts a partidas e equipes.
+
+### Scout Accuracy
+Crie indicadores para avaliar a consistência dos registros de cada scout, sem transformar divergências isoladas em julgamentos automáticos.
+
+### Robot Change History
+Permita registrar mudanças realizadas no robô ao longo da competição.
+
+### Alerts
+Gere alertas quando:
+- Uma partida estiver sem registro.
+- Uma equipe possuir poucos dados.
+- Existirem registros duplicados.
+- Houver divergências entre observações.
+- A sincronização apresentar problemas.
+
+### Field Map
+Permita visualizar posições e informações estratégicas do campo, quando houver dados suficientes e uma configuração adequada da arena.
+
+### Video Analysis
+Permita associar vídeos ou links de partidas aos respectivos registros, quando disponível.
+
+---
+
+# 13. CONFIABILIDADE E QUAL
