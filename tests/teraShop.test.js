@@ -20,7 +20,7 @@ function pageHarness(){
  let query={},state=[],index=0,requests=[];
  const react={...React,useState:initial=>{const n=index++;if(!(n in state))state[n]=initial;return [state[n],v=>state[n]=v];}};
  const noop=()=>null,wrap=({children})=>React.createElement('div',null,children);
- const mocks={react,'@tanstack/react-query':{useQuery:opts=>{requests.push(opts);return query;}},'react-router-dom':{Link:({to,children,...props})=>React.createElement('a',{href:to,...props},children)},'lucide-react':new Proxy({},{get:()=>noop}),'@/api/base44Client':{base44:{entities:{Product:{filter:async(...args)=>{requests.push(args);return [];}}}}},'@/components/ui/button':{Button:({children,...props})=>React.createElement('button',props,children)},'@/components/ui/dialog':{Dialog:({open,children})=>open?React.createElement('div',{role:'dialog'},children):null,DialogContent:wrap,DialogHeader:wrap,DialogTitle:wrap,DialogDescription:wrap},'@/components/common/SafeImage':{__esModule:true,default:({alt})=>React.createElement('span',null,alt)},'@/lib/teraShop':shop};
+ const mocks={react,'@tanstack/react-query':{useQuery:opts=>{requests.push(opts);return query;}},'react-router-dom':{Link:({to,children,...props})=>React.createElement('a',{href:to,...props},children)},'lucide-react':new Proxy({},{get:()=>noop}),'@/api/base44Client':{base44:{entities:{Product:{filter:async(...args)=>{requests.push(args);return [];}}}}},'@/components/ui/button':{Button:({children,...props})=>React.createElement('button',props,children)},'@/components/ui/dialog':{Dialog:({open,children})=>open?React.createElement('div',{role:'dialog'},children):null,DialogContent:wrap,DialogHeader:wrap,DialogTitle:wrap,DialogDescription:wrap},'@/components/common/SafeImage':{__esModule:true,default:({alt,src,loading,decoding})=>React.createElement('img',{alt,src,loading,decoding})},'@/lib/teraShop':shop};
  const mod={exports:{}};const source=fs.readFileSync(new URL('../src/pages/TeraShop.jsx',import.meta.url),'utf8').replace('import.meta.env.VITE_TERASHOP_WHATSAPP_NUMBER',"''");
  vm.runInNewContext(transform(source,{transforms:['jsx','imports']}).code,{module:mod,exports:mod.exports,require:n=>mocks[n]});
  return {requests,set:q=>query=q,select:id=>state[2]=id,render(){index=0;return renderToStaticMarkup(mod.exports.default());}};
@@ -31,4 +31,16 @@ test('actual public storefront queries available products, handles load/error/em
  h.set({data:[]});assert.match(h.render(),/Novidades chegando/);
  h.set({data:[{id:'a',name:'Camiseta <script>',description:'Descrição & detalhes',price:'35.90',category:'Vestuário'},{id:'b',name:'HIDDEN PRODUCT',available:false}]});let html=h.render();assert.match(html,/35,90/);assert.match(html,/Camiseta &lt;script&gt;/);assert.doesNotMatch(html,/HIDDEN PRODUCT|<script>/);assert.match(html,/Ver produto/);
  h.select('a');html=h.render();assert.match(html,/role="dialog"/);assert.match(html,/Consultar a equipe/);assert.doesNotMatch(html,/5567999999999|window.open/);
+});
+test('storefront starts first four product images eagerly and detail immediately; remaining cards stay lazy',()=>{
+ const h=pageHarness();h.set({data:Array.from({length:6},(_,i)=>({id:String(i),name:'Produto '+i,image_url:'/api/media/public-product-'+i}))});
+ const html=h.render();assert.equal((html.match(/loading="eager"/g)||[]).length,4);assert.equal((html.match(/loading="lazy"/g)||[]).length,2);
+ h.select('5');const detail=h.render();assert.match(detail,/src="\/api\/media\/public-product-5" loading="eager" decoding="async"/);
+});
+test('real SafeImage preserves lazy default while forwarding shop eager/async policy',()=>{
+ const source=fs.readFileSync(new URL('../src/components/common/SafeImage.jsx',import.meta.url),'utf8');const mod={exports:{}};
+ vm.runInNewContext(transform(source,{transforms:['jsx','imports']}).code,{module:mod,exports:mod.exports,require:key=>key==='react'?React:{ExternalLink:()=>null,ImageOff:()=>null}});
+ const render=props=>renderToStaticMarkup(React.createElement(mod.exports.default,{src:'/api/media/public-product',alt:'Produto',...props}));
+ assert.match(render({}),/loading="lazy"/);assert.match(render({loading:'eager',decoding:'async'}),/loading="eager" decoding="async"/);
+ assert.doesNotMatch(render({}),/Authorization|token=/);
 });

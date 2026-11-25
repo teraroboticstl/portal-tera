@@ -10,6 +10,8 @@ import { ExternalLink, ImageOff } from 'lucide-react';
  */
 export default function SafeImage({
   src,
+  loading = 'lazy',
+  decoding = 'auto',
   alt = 'Imagem',
   fit = 'contain',
   position = 'center',
@@ -63,7 +65,8 @@ export default function SafeImage({
       <img
         src={src}
         alt={alt}
-        loading="lazy"
+        loading={loading}
+        decoding={decoding}
         onError={() => setHasError(true)}
         onLoad={() => setIsLoaded(true)}
         className={`w-full h-full ${fitClass} ${positionClass} ${padding} transition-transform duration-300 ${allowEnlarge ? 'group-hover/safeimg:scale-[1.02]' : ''} ${className}`}
