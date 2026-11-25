@@ -1,0 +1,564 @@
+13. CONFIABILIDADE E QUALIDADE DOS DADOS
+
+Esta é uma das partes mais importantes do sistema.
+
+A coleta deve ser precisa, verificável e organizada.
+
+Validações automáticas
+
+Impedir contadores negativos.
+
+Identificar partidas duplicadas.
+
+Verificar se a equipe participou do campeonato.
+
+Validar campos obrigatórios.
+
+Identificar registros incompletos.
+
+Identificar informações inconsistentes.
+
+Estados dos registros
+
+Utilize os estados:
+
+Pendente.
+
+Validado.
+
+Com divergência.
+
+Nunca exclua automaticamente registros divergentes.
+
+Dupla verificação
+
+Permita que dois scouts registrem observações da mesma equipe e partida.
+
+Compare os registros e destaque diferenças para revisão humana.
+
+Data Quality Score
+
+Crie um indicador de qualidade dos dados, considerando fatores como:
+
+Completude dos campos.
+
+Identificação correta da partida.
+
+Consistência dos dados.
+
+Verificação por outros scouts.
+
+Tempo entre a partida e o registro.
+
+Utilize pesos configuráveis e apresente a metodologia do indicador.
+
+Não confunda dados ausentes com valores iguais a zero.
+
+Utilize estados como:
+
+Não observado.
+
+Não aplicável.
+
+Não informado.
+
+Comparação com resultados oficiais
+
+Permita comparar dados de scouting com resultados oficiais do campeonato.
+
+Não considere que a pontuação oficial da equipe valida automaticamente todas as ações individuais observadas.
+
+14. INTEGRAÇÃO COM THE BLUE ALLIANCE E FIRST
+
+Prepare integração com:
+
+The Blue Alliance API v3
+
+Utilize a documentação oficial:
+https://www.thebluealliance.com/apidocs/v3
+
+Possibilidades:
+
+Consultar temporadas.
+
+Consultar campeonatos.
+
+Consultar equipes.
+
+Consultar partidas.
+
+Consultar rankings.
+
+Consultar resultados disponíveis.
+
+Utilize autenticação adequada e respeite limites de requisições.
+
+Também prepare integração com a API oficial da FIRST quando houver credenciais e documentação disponíveis.
+
+Regras:
+
+Nunca inventar dados oficiais.
+
+Identificar a origem dos dados.
+
+Permitir preenchimento manual quando a API não fornecer informações.
+
+Evitar substituir registros manuais sem autorização.
+
+Tratar falhas de integração sem perder dados.
+
+Manter atribuição e referência ao The Blue Alliance quando seus dados forem utilizados.
+
+15. BANCO DE DADOS E SUPABASE
+
+Utilize uma arquitetura organizada, segura e escalável.
+
+Se o projeto já utiliza Supabase, preserve a estrutura existente e faça as migrações necessárias.
+
+Se ainda não utiliza, avalie a integração com:
+
+Supabase Database.
+
+Supabase Authentication.
+
+Supabase Storage.
+
+Row Level Security (RLS).
+
+Estruture os dados de maneira relacionada.
+
+Tabelas sugeridas:
+
+seasons.
+
+events.
+
+teams.
+
+event_teams.
+
+matches.
+
+scouting_records.
+
+pit_records.
+
+scout_users.
+
+record_reviews.
+
+audit_logs.
+
+sync_queue.
+
+Todos os registros devem estar vinculados corretamente à temporada, campeonato, partida, equipe e usuário responsável, conforme aplicável.
+
+Não misture informações entre temporadas ou campeonatos.
+
+16. SISTEMA DE USUÁRIOS E PERMISSÕES
+
+Crie um sistema completo de gerenciamento de usuários.
+
+Adicione uma página chamada Gerenciar Usuários.
+
+Permita:
+
+Convidar pessoas por e-mail.
+
+Visualizar usuários cadastrados.
+
+Consultar nome, e-mail, função e status.
+
+Alterar permissões.
+
+Desativar usuários.
+
+Remover acessos.
+
+Níveis de acesso
+
+Administrador
+
+Acesso completo.
+
+Configura todas as funcionalidades.
+
+Gerencia usuários e permissões.
+
+Gerencia temporadas, campeonatos e equipes.
+
+Visualiza, edita e exclui registros.
+
+Configurador
+
+Configura o site.
+
+Gerencia temporadas e campeonatos.
+
+Gerencia equipes.
+
+Configura perguntas e formulários.
+
+Não pode remover administradores nem alterar as permissões do administrador principal.
+
+Scout
+
+Registra partidas.
+
+Preenche formulários.
+
+Consulta informações necessárias para seu trabalho.
+
+Não altera configurações gerais nem gerencia usuários.
+
+Visualizador
+
+Visualiza dashboards.
+
+Consulta estatísticas.
+
+Visualiza equipes, campeonatos e relatórios.
+
+Não pode registrar, editar ou excluir informações.
+
+Nível padrão de novos usuários
+
+Todo usuário novo deve receber automaticamente a função Visualizador.
+
+Isso vale para:
+
+Novas contas.
+
+Usuários convidados.
+
+Primeiro acesso ao sistema.
+
+Nenhum usuário novo deve receber automaticamente permissões de Scout, Configurador ou Administrador.
+
+Somente um Administrador autorizado pode promover um usuário para outra função.
+
+Preserve as permissões dos usuários atuais que já possuem funções definidas.
+
+Segurança obrigatória
+
+Cada pessoa deve ter sua própria conta.
+
+Não compartilhe senhas.
+
+Valide permissões no backend e no banco de dados.
+
+Utilize políticas de segurança adequadas.
+
+Não permita que um Visualizador execute ações administrativas acessando diretamente URLs ou endpoints.
+
+Proteja o sistema contra alterações não autorizadas.
+
+Apenas esconder botões na interface não é suficiente.
+
+17. AUDITORIA E HISTÓRICO DE ALTERAÇÕES
+
+Registre alterações importantes.
+
+Cada evento de auditoria deve conter:
+
+Usuário responsável.
+
+Data e horário.
+
+Tipo de alteração.
+
+Registro afetado.
+
+Valor anterior.
+
+Novo valor.
+
+Justificativa, quando aplicável.
+
+Permita consultar o histórico para identificar quem realizou cada alteração.
+
+18. ARMAZENAMENTO, BACKUP E SINCRONIZAÇÃO
+
+O sistema deve possuir:
+
+Persistência confiável.
+
+Edição e exclusão controladas.
+
+Importação de CSV.
+
+Exportação de CSV.
+
+Exportação para Excel.
+
+Backup dos dados.
+
+Detecção de duplicidades.
+
+Sincronização entre dispositivos.
+
+Funcionamento offline quando possível.
+
+Sincronização offline
+
+Quando estiver sem internet:
+
+Permita salvar registros localmente.
+
+Mantenha uma fila de sincronização.
+
+Sincronize quando a conexão voltar.
+
+Não apague os registros locais antes da confirmação do servidor.
+
+Evite duplicar registros durante a sincronização.
+
+Identifique conflitos para revisão.
+
+Utilize identificadores únicos e operações idempotentes.
+
+19. CENTRAL DE CONTROLE DO SCOUTING
+
+Crie uma seção chamada Scouting Control Center.
+
+Exiba:
+
+Total de partidas observadas.
+
+Registros pendentes.
+
+Registros validados.
+
+Registros com divergências.
+
+Scouts ativos.
+
+Partidas sem scouting.
+
+Equipes com poucos dados.
+
+Problemas de sincronização.
+
+Indicadores de qualidade dos dados.
+
+Permita filtrar por temporada e campeonato.
+
+20. TECNOLOGIA E ORGANIZAÇÃO DO PROJETO
+
+Priorize uma arquitetura moderna e sustentável.
+
+Tecnologias sugeridas, respeitando a estrutura já existente:
+
+React ou Next.js.
+
+TypeScript.
+
+Tailwind CSS.
+
+Supabase.
+
+PostgreSQL.
+
+Bibliotecas de gráficos.
+
+PWA para suporte offline.
+
+Organize o projeto em componentes reutilizáveis.
+
+Evite duplicação de código.
+
+Mantenha separação entre:
+
+Interface.
+
+Regras de negócio.
+
+Validação.
+
+Autenticação.
+
+Banco de dados.
+
+Integrações externas.
+
+Análises e estatísticas.
+
+21. REGRAS GERAIS DE IMPLEMENTAÇÃO
+
+Estas regras devem ser respeitadas em todas as alterações:
+
+Não apague dados existentes.
+
+Não recrie o banco de dados sem necessidade.
+
+Não altere funcionalidades que já estão funcionando corretamente.
+
+Não invente dados de equipes, partidas ou pontuações.
+
+Não misture temporadas e campeonatos.
+
+Não confunda informações não observadas com zero.
+
+Não permita acesso não autorizado.
+
+Não altere a identidade visual sem necessidade.
+
+Preserve a responsividade.
+
+Faça validações antes de salvar dados.
+
+Registre alterações importantes.
+
+Teste as funcionalidades após cada implementação.
+
+22. ORDEM DE IMPLEMENTAÇÃO
+
+Não tente implementar tudo de uma vez sem verificar dependências.
+
+Siga esta ordem:
+
+ETAPA 1 — Estrutura e segurança
+
+Analisar o projeto existente.
+
+Verificar banco de dados.
+
+Verificar autenticação.
+
+Verificar permissões.
+
+Corrigir possíveis problemas estruturais.
+
+ETAPA 2 — Identidade visual
+
+Nome Tera Scouting.
+
+Logo na barra lateral.
+
+Logo no Login.
+
+Logo no Sign up.
+
+Manutenção do tema escuro e identidade visual.
+
+ETAPA 3 — Organização de dados
+
+Temporadas.
+
+Campeonatos.
+
+Edição de nomes.
+
+Equipes.
+
+Relacionamentos.
+
+ETAPA 4 — Scouting
+
+Match Scouting.
+
+Correção das respostas positivas e negativas.
+
+Pit Scouting.
+
+Validações.
+
+Edição de registros.
+
+ETAPA 5 — Inteligência e estatísticas
+
+Dashboard.
+
+Páginas das equipes.
+
+Comparações.
+
+Alliance Selection.
+
+Strategy Center.
+
+ETAPA 6 — Confiabilidade
+
+Dupla verificação.
+
+Data Quality Score.
+
+Auditoria.
+
+Central de Controle.
+
+ETAPA 7 — Integrações
+
+The Blue Alliance.
+
+FIRST API.
+
+Importação e exportação.
+
+Sincronização offline.
+
+ETAPA 8 — Melhorias
+
+Live Competition Center.
+
+Scout Assignment.
+
+Scout Accuracy.
+
+Robot Change History.
+
+Match Prediction.
+
+Video Analysis.
+
+Field Map.
+
+23. TESTES E ENTREGA
+
+Após implementar cada etapa:
+
+Teste as funcionalidades.
+
+Teste os diferentes níveis de acesso.
+
+Teste a criação de usuários.
+
+Confirme que novos usuários começam como Visualizadores.
+
+Teste a edição de nomes de campeonatos.
+
+Confirme que os dados permanecem vinculados.
+
+Teste as respostas verdes e vermelhas.
+
+Confirme que não existe mais nenhum campo de altura.
+
+Teste Login e Sign up com a logo.
+
+Teste o funcionamento em diferentes dispositivos.
+
+Verifique a integridade dos dados.
+
+Verifique erros no console e no backend.
+
+Ao concluir, apresente um relatório contendo:
+
+O que foi implementado.
+
+O que foi corrigido.
+
+Quais arquivos foram alterados.
+
+Quais mudanças foram feitas no banco de dados.
+
+Quais testes foram realizados.
+
+O que ainda depende de configuração externa, como chaves de API.
+
+Quais funcionalidades ainda não foram implementadas.
+
+OBJETIVO FINAL:
+
+Entregar um sistema profissional chamado Tera Scouting, capaz de coletar dados de FRC com alta confiabilidade, organizar temporadas e campeonatos, analisar equipes, auxiliar na seleção de alianças e fornecer informações estratégicas para a equipe Tera Robotics.
+
+A prioridade deve ser sempre a integridade dos dados, a segurança, a facilidade de utilização e a confiabilidade das análises.
