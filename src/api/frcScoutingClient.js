@@ -12,6 +12,8 @@ export function createFrcScoutingClient(db) {
     '23502':'Falta um campo obrigatório. Confira os dados do cadastro.',
     '23505':'Esse cadastro já existe. Selecione o registro existente.',
     '23503':'O vínculo selecionado não está mais disponível. Atualize a página.',
+    '23514':'O cadastro selecionado está arquivado ou não é compatível com este contexto.',
+    '40001':'Esse cadastro mudou em outro acesso. Atualize antes de editar.',
     '42501':'Seu acesso não permite esta operação.'
    }[error.code];
    throw Error(message||'Não foi possível concluir a operação. Atualize a página e tente novamente.');
@@ -19,6 +21,16 @@ export function createFrcScoutingClient(db) {
   return data;
  }
  return {
+  async manage(actor,request){
+   const {kind,id,action,name,expectedName,expectedArchived}=request;
+   if(!['season','event','team'].includes(kind)||!uuid(id)||!['rename','archive','restore'].includes(action)||typeof expectedName!=='string'||typeof expectedArchived!=='boolean')throw Error('Selecione um cadastro válido.');
+   const title=String(name||'').trim();
+   if(action==='rename'&&(!title||title.length>120))throw Error('Informe um nome de até 120 caracteres.');
+   await identity(actor);
+   const packet=await result(db.rpc('frc_scouting_manage',{p_kind:kind,p_id:id,p_action:action,p_name:action==='rename'?title:null,p_expected_name:expectedName,p_expected_archived:expectedArchived}),actor);
+   if(packet?.actor!==actor||packet.id!==id||packet.action!==action)throw Error('Não foi possível confirmar a alteração. Atualize o cadastro.');
+   return packet;
+  },
   async create(actor,kind,fields){
    await identity(actor);let table,payload;
    const name=String(fields.name||'').trim();
@@ -44,9 +56,9 @@ export function createFrcScoutingClient(db) {
   async load(actor){
    await identity(actor);
    const [seasons,events,teams]=await Promise.all([
-    result(db.from('seasons').select('id,year,theme').eq('program','FRC').order('year',{ascending:false}).limit(200),actor),
-    result(db.from('tournament_configs').select('id,tournament_name,scouting_season_id').eq('category','FRC').order('created_at',{ascending:false}).limit(200),actor),
-    result(db.from('teams').select('id,number,name').eq('program','FRC').order('number').limit(1000),actor)]);
+    result(db.from('seasons').select('id,year,theme,scouting_archived_at').eq('program','FRC').order('year',{ascending:false}).limit(200),actor),
+    result(db.from('tournament_configs').select('id,tournament_name,scouting_season_id,scouting_archived_at').eq('category','FRC').order('created_at',{ascending:false}).limit(200),actor),
+    result(db.from('teams').select('id,number,name,scouting_archived_at').eq('program','FRC').order('number').limit(1000),actor)]);
    return {actor,seasons,events,teams};
   },
   async event(actor,event){
