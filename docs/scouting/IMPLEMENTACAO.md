@@ -166,3 +166,35 @@ Nenhuma alteração de banco, RLS, registros ou variável de ambiente é necess�
 Os testes agora exercitam o payload do cliente real em PostgreSQL isolado com
 tournament_date NOT NULL, além de datas impossíveis/ausentes e campo obrigatório
 na UI. O cenário que passou despercebido na primeira release foi reproduzido.
+
+## Gestão dos cadastros e troca rápida — 25/11
+
+- Barra superior de seleção de temporada/campeonato, antes dos cadastros,
+  responsiva e com atalho Novo registro quando houver contexto válido.
+  Trocar temporada limpa o campeonato anterior. O aviso orienta a seleção
+  obrigatória antes de cadastrar campeonato e desaparece quando ela é escolhida.
+- O formulário existente continua criando temporadas, equipes e campeonatos.
+  FrcScoutingManagement acrescenta renomear, remover por arquivamento e restaurar.
+  Renomeações conservam UUID, ano, número oficial e relações. Remoção não é
+  exclusão física: exige confirmação e afeta a seleção do scouting, preservando
+  o histórico e o uso dessas entidades pelas outras áreas do Portal.
+- Migração 20261125_frc_scouting_management.sql acrescenta apenas três timestamps
+  opcionais de arquivo às tabelas existentes, guardas, duas políticas restritivas
+  de INSERT e RPC com lista explícita de ações/entidades. Não cria diretórios
+  paralelos. Não altera papéis, contas ou as políticas antigas.
+- RPC usa auth.uid(), exige administrador com modalidade FRC, compara nome/estado
+  esperados para rejeitar edição obsoleta, bloqueia duplicação de nome de campeonato
+  ativo na mesma temporada e registra antes/depois no audit_logs existente, na
+  mesma transação. Nenhum e-mail/token é necessário para a chamada.
+- Arquivados não recebem novas observações/inscrições; seus registros existentes
+  continuam preservados. Restaurar campeonato exige temporada ativa. O rollback
+  revoga a execução da RPC, sem apagar registros nem relaxar guardas de integridade.
+- Testes isolados cobrem renomeação de todas as entidades, UUID/número preservados,
+  confirmação de arquivo/restauração, estado obsoleto, duplicidade, auditoria,
+  acesso negado anônimo/membro, RLS de INSERT, rollback e seleção sem temporada.
+  Não são testes autenticados com cinco contas reais de produção.
+- Fotos TeraShop: o erro GOOGLE_DRIVE_REAUTH_REQUIRED foi resolvido pelo fluxo de
+  consentimento institucional existente. Treze imagens carregadas foram verificadas
+  no navegador após a renovação. O frontend passa loading=eager para quatro fotos
+  iniciais e para o detalhe, decoding=async; demais imagens continuam lazy.
+  Nenhum prazo de carregamento instantâneo ou de disponibilidade do Google é garantido.
