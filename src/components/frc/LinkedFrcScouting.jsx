@@ -31,7 +31,7 @@ export default function LinkedFrcScouting({user}){
   if(kind==='create')await api.create(user.id,snapshot.setup.kind,{...snapshot.setup,season:snapshot.season});
   if(kind==='manage')await api.manage(user.id,snapshot.management);
   return {kind,management:snapshot.management};
- },onSuccess:async ({kind,management:changed})=>{if(kind==='manage'&&changed.action==='archive'){setForm(empty);if(changed.kind==='season'&&changed.id===season){setSeason('');setEvent('');}if(changed.kind==='event'&&changed.id===event)setEvent('');}if(kind==='save')setForm(empty);setMessage(kind==='save'?'Registro salvo com autoria da sessão.':'Configuração salva.');await refresh();},onError:error=>setMessage(error.message),onSettled:()=>{submitting.current=false;}});
+ },onSuccess:async ({kind,management:changed})=>{if(kind==='manage'&&['archive','delete'].includes(changed.action)){setForm(empty);if(changed.kind==='season'&&changed.id===season){setSeason('');setEvent('');}if(changed.kind==='event'&&changed.id===event)setEvent('');}if(kind==='save')setForm(empty);setMessage(kind==='manage'&&changed.action==='delete'?'Campeonato excluído definitivamente.':kind==='save'?'Registro salvo com autoria da sessão.':'Configuração salva.');await refresh();},onError:error=>setMessage(error.message),onSettled:()=>{submitting.current=false;}});
  const run=(kind,change=management)=>{if(submitting.current)return;submitting.current=true;setMessage('');action.mutate({kind,snapshot:{event,season,team,form:{...form},setup:{...setup},management:change}});};
  const busy=action.isPending;
  return <div className="space-y-5 text-white min-w-0">
