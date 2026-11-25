@@ -39,7 +39,7 @@ export default function LinkedFrcScouting({user}){
   {(catalogue.isError||details.isError)&&<p role="alert" className="text-red-300">Não foi possível carregar. Confira a migração, o acesso FRC e tente novamente. <button className={button} onClick={()=>{catalogue.refetch();details.refetch();}}>Tentar novamente</button></p>}
   {catalogue.isPending&&<p role="status">Carregando campeonatos…</p>}
   {data&&<>
-   <nav aria-label="Troca rápida de temporada e campeonato" className="sticky top-0 z-10 flex flex-wrap items-end gap-3 rounded-xl border border-gray-700 bg-[#0B0B0D] p-3">
+   <nav aria-label="Troca rápida de temporada e campeonato" className="sticky top-20 z-10 flex flex-wrap items-end gap-3 rounded-xl border border-gray-700 bg-[#0B0B0D] p-3">
     <label className="min-w-0 flex-1 basis-48">Temporada (obrigatória)<select aria-label="Temporada" aria-required="true" className={input} disabled={busy} value={season} onChange={e=>{setSeason(e.target.value);setEvent('');setForm(empty);setMessage('');}}><option value="">Selecione</option>{data.seasons.filter(s=>!s.scouting_archived_at).map(s=><option key={s.id} value={s.id}>{s.year} — {s.theme}</option>)}</select></label>
     <label className="min-w-0 flex-1 basis-48">Campeonato<select className={input} disabled={!season||busy} value={event} onChange={e=>{setEvent(e.target.value);setForm(empty);setMessage('');}}><option value="">Selecione</option>{data.events.filter(e=>!e.scouting_archived_at&&(e.scouting_season_id===season||(isAdmin(user)&&!e.scouting_season_id))).map(e=><option key={e.id} value={e.id}>{e.tournament_name}{!e.scouting_season_id?' (sem vínculo)':''}</option>)}</select></label>
     {linked&&packet&&canEdit(user)&&<a href="#frc-scouting-record" className={button}>+ Novo registro</a>}
