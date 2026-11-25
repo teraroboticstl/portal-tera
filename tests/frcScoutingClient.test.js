@@ -35,3 +35,19 @@ test('service errors are sanitized and account mismatch stops mutation',async()=
  await assert.rejects(api.configure(actor,event,season),e=>!e.message.includes('SECRET'));
  state.actor='other';state.calls=[];await assert.rejects(api.enroll(actor,event,season));assert.equal(state.calls.length,0);
 });
+test('event creation includes mandatory tournament_date and rejects missing/impossible calendar dates',async()=>{
+ const {state,api}=fixture();
+ for(const date of ['',undefined,'2026-02-30','2026-13-01','03/12/2026']){
+  await assert.rejects(api.create(actor,'event',{name:'Regional',season,date}),/data/);assert.equal(state.calls.length,0);
+ }
+ await api.create(actor,'event',{name:'Regional',season,date:'2026-12-03'});
+ const payload=state.calls[0].operations.find(([key])=>key==='insert')[1];
+ assert.equal(payload.tournament_date,'2026-12-03T12:00:00.000Z');
+ assert.equal(payload.scouting_season_id,season);
+});
+test('database constraint failures have specific safe messages',async()=>{
+ for(const [code,pattern] of [['23502',/obrigatório/],['23505',/já existe/],['23503',/vínculo/],['42501',/acesso/]]){
+  const {state,api}=fixture();state.error={code,message:'SECRET_DATABASE_DETAIL'};
+  await assert.rejects(api.configure(actor,event,season),e=>pattern.test(e.message)&&!e.message.includes('SECRET'));
+ }
+});

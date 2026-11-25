@@ -154,3 +154,15 @@ Não é entrega completa dos 23 itens: faltam formulário configurável oficial,
 Pit, edição/revisão, auditoria de negócio, quatro papéis específicos, dashboards,
 integrações externas, importação/offline e centrais avançadas. A tela nova ainda
 precisa validação autenticada ponta a ponta e teste visual móvel antes de release.
+
+## Correção do cadastro de campeonato — 25/11
+
+O schema efetivo exige tournament_date NOT NULL e sem default. O primeiro
+formulário não coletava nem enviava esse campo. Corrigido com input date
+obrigatório e validação de calendário no cliente. A data é armazenada às 12:00 UTC
+como convenção técnica para preservar o dia no Brasil, não como horário oficial.
+Erros 23502/23505/23503/42501 recebem mensagens específicas sem detalhes privados.
+Nenhuma alteração de banco, RLS, registros ou variável de ambiente é necessária.
+Os testes agora exercitam o payload do cliente real em PostgreSQL isolado com
+tournament_date NOT NULL, além de datas impossíveis/ausentes e campo obrigatório
+na UI. O cenário que passou despercebido na primeira release foi reproduzido.

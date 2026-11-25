@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
+import {createFrcScoutingClient} from '../src/api/frcScoutingClient.js';
 
 test('additive FRC links preserve legacy rows and enforce session/context in isolated PostgreSQL',async()=>{
  const modulePath=process.env.PDI_TEST_PGLITE_MODULE;
@@ -18,13 +19,13 @@ test('additive FRC links preserve legacy rows and enforce session/context in iso
  CREATE FUNCTION public.portal_can_edit() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT coalesce(current_setting('test.edit',true),'')='yes' $$;
  GRANT USAGE ON SCHEMA auth TO authenticated; GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
  CREATE TABLE public.seasons(id uuid PRIMARY KEY,program text);
- CREATE TABLE public.tournament_configs(id uuid PRIMARY KEY,category text,tournament_name text);
+ CREATE TABLE public.tournament_configs(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),category text,tournament_name text,tournament_date timestamptz NOT NULL);
  CREATE TABLE public.teams(id uuid PRIMARY KEY,number text UNIQUE,program text);
  CREATE TABLE public.frc_scouts(id uuid PRIMARY KEY,team_number text,match_number text,scout_name text,notes text);
  INSERT INTO auth.users VALUES('${admin}'),('${scout}'),('${other}');
  INSERT INTO seasons VALUES('${season}','FRC');
  INSERT INTO teams VALUES('${team}','10343','FRC');
- INSERT INTO tournament_configs VALUES('${event}','FRC','Regional 1');
+ INSERT INTO tournament_configs VALUES('${event}','FRC','Regional 1','2026-12-03T12:00:00Z');
  INSERT INTO frc_scouts VALUES('50000000-0000-0000-0000-000000000000','10343','Q0','legacy','preserve');
  GRANT SELECT,INSERT,UPDATE,DELETE ON seasons,teams,tournament_configs,frc_scouts TO authenticated;
  SELECT set_config('test.actor','${admin}',false),set_config('test.frc','yes',false),set_config('test.edit','yes',false);`);
@@ -32,6 +33,13 @@ test('additive FRC links preserve legacy rows and enforce session/context in iso
  assert.equal((await db.query('SELECT notes FROM frc_scouts')).rows[0].notes,'preserve');
  assert.equal((await db.query('SELECT scouting_user_id FROM frc_scouts')).rows[0].scouting_user_id,null);
  await db.exec(`SET ROLE authenticated; UPDATE tournament_configs SET scouting_season_id='${season}' WHERE id='${event}'; INSERT INTO frc_scouting_event_teams VALUES('${event}','${team}');`);
+ // Exercise the actual browser client's event payload against the real NOT NULL constraint.
+ const sqlClient=createFrcScoutingClient({auth:{getUser:async()=>({data:{user:{id:admin}}})},from:table=>({insert:payload=>({select:()=>({single:async()=>{
+  const keys=Object.keys(payload);try{return {data:(await db.query(`INSERT INTO ${table}(${keys.join(',')}) VALUES(${keys.map((_,i)=>'$'+(i+1)).join(',')}) RETURNING id`,Object.values(payload))).rows[0],error:null};}catch(error){return {data:null,error};}
+ }})})})});
+ await assert.rejects(db.query("INSERT INTO tournament_configs(category,tournament_name) VALUES('FRC','Missing date')"),/null value/);
+ await sqlClient.create(admin,'event',{name:'Client integration fixture',season,date:'2026-12-03'});
+ assert.equal((await db.query("SELECT tournament_date::date::text AS date FROM tournament_configs WHERE tournament_name='Client integration fixture'")).rows[0].date,'2026-12-03');
  await db.exec(`SELECT set_config('test.actor','${scout}',false);`);
  const insert=(id,extra='')=>`INSERT INTO frc_scouts(id,team_number,match_number,scouting_season_id,scouting_event_id${extra?',scouting_user_id':''}) VALUES('50000000-0000-0000-0000-${id}','10343','Q1','${season}','${event}'${extra?`,'${extra}'`:''})`;
  await assert.rejects(db.exec(insert('000000000001',other)),/FRC_AUTHOR_MISMATCH/);
