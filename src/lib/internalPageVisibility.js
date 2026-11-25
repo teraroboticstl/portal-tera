@@ -10,7 +10,8 @@ export const INTERNAL_PAGES = [
   ['InternalOBR', 'Área OBR'], ['InternalFRC', 'FRC — Visão Geral'],
   ['InternalFRCMatchHistory', 'FRC — Histórico de Partidas'], ['InternalFRCMatches', 'FRC — Partidas'],
   ['InternalFRCPDI', 'FRC — PDI'], ['InternalFRCPicklist', 'FRC — Picklist'],
-  ['InternalFRCScout', 'FRC — Scout'], ['InternalFRCTeams', 'FRC — Equipes'],
+  // Preserve the existing backend key and grants used by TERA BI.
+  ['InternalFRCScout', 'FRC — TERA BI'], ['InternalFRCTeams', 'FRC — Equipes'],
   ['InternalFRCTeamsRegister', 'FRC — Cadastro de Equipes'],
   ['InternalFTC', 'FTC — Visão Geral'], ['InternalFTCMatches', 'FTC — Partidas'],
   ['InternalFTCPDI', 'FTC — PDI'], ['InternalFTCQualifiersScout', 'FTC — Scout Classificatórias'],

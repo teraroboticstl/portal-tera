@@ -6,6 +6,16 @@ import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {transform} from 'sucrase';
 
+test('retired scouting route redirects to FRC without importing scouting or querying data',()=>{
+ const source=readFileSync(new URL('../src/pages/InternalFRCScout.jsx',import.meta.url),'utf8');
+ const Navigate=()=>null,module={exports:{}};
+ vm.runInNewContext(transform(source,{transforms:['jsx','imports']}).code,{module,exports:module.exports,require:key=>{
+  if(key==='react')return React;if(key==='react-router-dom')return {Navigate};
+  throw Error('Retired route must not load '+key);
+ }});
+ const result=module.exports.default();assert.equal(result.type,Navigate);assert.equal(result.props.to,'/InternalFRC');assert.equal(result.props.replace,true);
+});
+
 test('actual linked UI keeps contexts explicit and configuration admin-only',()=>{
  const source=readFileSync(new URL('../src/components/frc/LinkedFrcScouting.jsx',import.meta.url),'utf8');
  let admin=false,packetActor='actor',chosenSeason='',stateIndex=0;

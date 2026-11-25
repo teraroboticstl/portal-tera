@@ -157,7 +157,7 @@ function MatchHistoryContent({ user }) {
           <div className="bg-[#111217] border border-[#1F222B] rounded-xl p-12 text-center">
             <Users className="w-14 h-14 mx-auto mb-4 text-[#333]" />
             <p className="text-[#555] font-bold">Nenhuma partida scouted ainda</p>
-            <p className="text-[#444] text-sm mt-2">Registre scouts via "Scout Rápido"</p>
+            <p className="text-gray-400 text-sm mt-2">Os registros históricos disponíveis aparecem nesta área.</p>
           </div>
         )}
 

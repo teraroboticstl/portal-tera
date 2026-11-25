@@ -108,6 +108,11 @@ test('real sidebar removes hidden links; admin tab renders Show/Hide and denies 
   assert.doesNotMatch(render(Nav),/href="\/InternalFRC"|href="\/InternalFLLDashboard"|href="\/InternalOBR"/);
   data.modalities=['FRC','OBR'];
   assert.match(render(Nav),/href="\/InternalFRC"/);
+  assert.match(render(Nav),/href="\/InternalFRCBI"/);
+  assert.doesNotMatch(render(Nav),/href="\/InternalFRCScout"|Scout Rápido/);
+  data.pages.InternalFRCScout.visible=false;
+  assert.doesNotMatch(render(Nav),/href="\/InternalFRCBI"/);
+  data.pages.InternalFRCScout.visible=true;
   assert.match(render(Nav),/href="\/InternalOBR"/);
   assert.doesNotMatch(render(Nav),/href="\/InternalFTC"/);
   data.is_admin=true;
