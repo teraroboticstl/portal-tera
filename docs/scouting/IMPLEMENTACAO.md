@@ -198,3 +198,18 @@ na UI. O cenário que passou despercebido na primeira release foi reproduzido.
   no navegador após a renovação. O frontend passa loading=eager para quatro fotos
   iniciais e para o detalhe, decoding=async; demais imagens continuam lazy.
   Nenhum prazo de carregamento instantâneo ou de disponibilidade do Google é garantido.
+
+## Exclusão definitiva de campeonatos — 25/11
+
+- Administradores podem escolher Excluir definitivamente, inclusive em campeonatos
+  arquivados, identificando o campeonato e digitando EXCLUIR antes da chamada.
+- A RPC frc_scouting_delete_event exige sessão, administrador/FRC e nome/estado
+  esperados; remove o campeonato e suas inscrições em uma transação auditada.
+  Nunca apaga equipes, temporadas ou resultados. Havendo scouting vinculado ou
+  novas referências não revisadas no schema, a exclusão é recusada.
+- A migração só cria a função e seus grants; não exclui cadastros existentes.
+  O rollback revoga a função para impedir novas exclusões. Não restaura exclusões
+  já confirmadas: seria necessário um backup para recuperar esses campeonatos.
+- Testes de banco isolado verificam remoção física, preservação das entidades,
+  confirmação, acesso negado, concorrência, registros vinculados e atomicidade
+  quando a auditoria falha. Nenhum campeonato real é excluído durante a validação.

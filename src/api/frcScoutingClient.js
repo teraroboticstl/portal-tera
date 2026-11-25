@@ -14,6 +14,8 @@ export function createFrcScoutingClient(db) {
     '23503':'O vínculo selecionado não está mais disponível. Atualize a página.',
     '23514':'O cadastro selecionado está arquivado ou não é compatível com este contexto.',
     '40001':'Esse cadastro mudou em outro acesso. Atualize antes de editar.',
+    '55006':'Este campeonato possui registros de scouting. A exclusão foi bloqueada para preservar os resultados. Você pode arquivá-lo.',
+    '0A000':'Este campeonato tem vínculos que precisam ser revisados antes de permitir a exclusão.',
     '42501':'Seu acesso não permite esta operação.'
    }[error.code];
    throw Error(message||'Não foi possível concluir a operação. Atualize a página e tente novamente.');
@@ -22,12 +24,14 @@ export function createFrcScoutingClient(db) {
  }
  return {
   async manage(actor,request){
-   const {kind,id,action,name,expectedName,expectedArchived}=request;
-   if(!['season','event','team'].includes(kind)||!uuid(id)||!['rename','archive','restore'].includes(action)||typeof expectedName!=='string'||typeof expectedArchived!=='boolean')throw Error('Selecione um cadastro válido.');
+   const {kind,id,action,name,expectedName,expectedArchived,confirmation}=request;
+   if(!['season','event','team'].includes(kind)||!uuid(id)||!['rename','archive','restore','delete'].includes(action)||typeof expectedName!=='string'||typeof expectedArchived!=='boolean')throw Error('Selecione um cadastro válido.');
+   if(action==='delete'&&(kind!=='event'||confirmation!=='EXCLUIR'))throw Error('Confirme a exclusão definitiva do campeonato digitando EXCLUIR.');
    const title=String(name||'').trim();
    if(action==='rename'&&(!title||title.length>120))throw Error('Informe um nome de até 120 caracteres.');
    await identity(actor);
-   const packet=await result(db.rpc('frc_scouting_manage',{p_kind:kind,p_id:id,p_action:action,p_name:action==='rename'?title:null,p_expected_name:expectedName,p_expected_archived:expectedArchived}),actor);
+   const query=action==='delete'?db.rpc('frc_scouting_delete_event',{p_event:id,p_expected_name:expectedName,p_expected_archived:expectedArchived,p_confirmation:confirmation}):db.rpc('frc_scouting_manage',{p_kind:kind,p_id:id,p_action:action,p_name:action==='rename'?title:null,p_expected_name:expectedName,p_expected_archived:expectedArchived});
+   const packet=await result(query,actor);
    if(packet?.actor!==actor||packet.id!==id||packet.action!==action)throw Error('Não foi possível confirmar a alteração. Atualize o cadastro.');
    return packet;
   },
