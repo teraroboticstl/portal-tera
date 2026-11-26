@@ -1,21 +1,8 @@
 import React from 'react';
-import ProtectedRoute from '@/components/internal/ProtectedRoute';
-import InternalPageLayout from '@/components/internal/InternalPageLayout';
-import LinkedFrcScouting from '@/components/frc/LinkedFrcScouting';
+import {Navigate} from 'react-router-dom';
 
-function FRCScoutContent({ user }) {
-
-  return (
-    <InternalPageLayout user={user} currentPage="InternalFRCScout" title="Tera Scouting — FRC">
-      <LinkedFrcScouting user={user}/>
-    </InternalPageLayout>
-  );
-}
-
+// Old bookmarks no longer mount scouting or load its data. The destination
+// retains the existing authentication and FRC modality checks.
 export default function InternalFRCScout() {
-  return (
-    <ProtectedRoute requireApproved={true}>
-      <FRCScoutContent />
-    </ProtectedRoute>
-  );
+  return <Navigate to="/InternalFRC" replace />;
 }

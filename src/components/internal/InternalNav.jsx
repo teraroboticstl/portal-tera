@@ -38,7 +38,6 @@ const menuItems = [
     items: [
       { name: 'Visão Geral', icon: Target, path: 'InternalFRC' },
       { name: 'Demandas FRC', icon: ListTodo, path: 'InternalDemands', board:'FRC' },
-      { name: 'Scout Rápido', icon: Cpu, path: 'InternalFRCScout' },
       { name: 'TERA BI — FRC', icon: BarChart3, path: 'InternalFRCBI', visibilityPage:'InternalFRCScout' },
       { name: 'PDI Membros', icon: FileText, path: 'InternalFRCPDI' },
       { name: 'Diário de Bordo', icon: BookOpen, path: 'InternalBoardDiary' },

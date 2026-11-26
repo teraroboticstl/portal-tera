@@ -213,3 +213,17 @@ na UI. O cenário que passou despercebido na primeira release foi reproduzido.
 - Testes de banco isolado verificam remoção física, preservação das entidades,
   confirmação, acesso negado, concorrência, registros vinculados e atomicidade
   quando a auditoria falha. Nenhum campeonato real é excluído durante a validação.
+
+## Retirada do módulo integrado — 25/11
+
+A pedido do usuário, o Tera Scouting integrado foi retirado do Portal. O menu
+não oferece mais Scout Rápido e a rota antiga InternalFRCScout redireciona para
+a visão geral FRC, sem montar o formulário ou consultar os dados do scouting.
+O atalho externo ScoutOS também deixa de ser exibido dentro do TERA BI.
+
+TERA BI, arquivos de análise, histórico e permissões existentes são preservados.
+A chave de visibilidade InternalFRCScout continua sendo usada pelo backend do
+TERA BI FRC, agora identificada como FRC — TERA BI no catálogo administrativo.
+Não há migração, exclusão de dados, revogação de permissões ou alteração no
+sistema externo Base44. Os arquivos do módulo e migrações ficam no histórico
+para recuperação; não há interface ativa de scouting nessa rota.
