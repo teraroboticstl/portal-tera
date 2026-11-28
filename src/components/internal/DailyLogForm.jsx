@@ -1,6 +1,7 @@
 import { usePageVisibility } from '@/lib/usePageVisibility';
 import { format } from 'date-fns';
 import { requestDeadline } from '@/api/requestDeadline';
+import { recordUploadError } from '@/lib/recordUploadErrors';
 import PortalMedia from '@/components/common/PortalMedia';
 import { RECORD_PROGRAMS } from '@/lib/modalities';
 import React, { useState } from 'react';
@@ -126,7 +127,9 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+    const input=e.target;
+    const file = input.files[0];
+    input.value='';
     if (!file) return;
 
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
@@ -139,14 +142,13 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
       return;
     }
 
-    const input=e.target;
     setUploading(true);
     setFormError('');
     try {
     const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'seasons', program: currentForm.program });
     setCurrentForm(previous => ({ ...previous, evidence_images: [...(previous.evidence_images || []), file_url] }));
     toast.success('Imagem enviada!');
-    } catch { setFormError('Falha no envio. O arquivo não foi anexado; você pode salvar o texto sem ele ou tentar novamente. Limite: 4 MB por arquivo.'); }
+    } catch (error) { setFormError(recordUploadError(error)); }
     finally { setUploading(false); input.value=''; }
   };
 
@@ -166,24 +168,25 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
   };
 
   const handleVideoUpload = async (e) => {
-    const file = e.target.files[0];
+    const input=e.target;
+    const file = input.files[0];
+    input.value='';
     if (!file) return;
-    if (!file.type.startsWith('video/')) {
-      toast.error('Apenas arquivos de vídeo são permitidos.');
+    if (!['video/mp4','video/webm','video/quicktime'].includes(file.type)) {
+      toast.error('Use vídeos MP4, WebM ou MOV.');
       return;
     }
     if (file.size > 4 * 1024 * 1024) {
       toast.error('Vídeo deve ter no máximo 4 MB; para maiores, use um link do Drive.');
       return;
     }
-    const input=e.target;
     setUploadingVideo(true);
     setFormError('');
     try {
     const { file_url } = await base44.integrations.Core.UploadFile({ file, context: 'seasons', program: currentForm.program });
     setCurrentForm(previous => ({ ...previous, video_urls: [...(previous.video_urls || []), file_url] }));
     toast.success('Vídeo enviado!');
-    } catch { setFormError('Falha no envio. O arquivo não foi anexado; você pode salvar o texto sem ele ou tentar novamente. Limite: 4 MB por arquivo.'); }
+    } catch (error) { setFormError(recordUploadError(error)); }
     finally { setUploadingVideo(false); input.value=''; }
   };
 
@@ -362,10 +365,10 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
         <div className="flex gap-2 mb-4">
           <Input
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/webp"
             onChange={handleImageUpload}
             className="bg-[#1F222B] border-[#2A2D36] text-white"
-            disabled={uploading}
+            disabled={uploading || uploadingVideo}
           />
           {uploading && <span className="text-[#B8BDC7] text-sm">Enviando...</span>}
         </div>
@@ -404,7 +407,7 @@ export default function DailyLogForm({ log = null, onClose, onSuccess, initialPr
           <label className="flex items-center gap-2 cursor-pointer px-3 py-1.5 bg-[#1F222B] border border-[#2A2D36] rounded-md text-sm text-gray-300 hover:border-[#E10600] transition-colors">
             <Film className="w-4 h-4 text-[#E10600]" />
             {uploadingVideo ? 'Enviando...' : 'Enviar arquivo de vídeo'}
-            <input type="file" accept="video/*" onChange={handleVideoUpload} disabled={uploadingVideo} className="hidden" />
+            <input type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" onChange={handleVideoUpload} disabled={uploadingVideo || uploading} className="hidden" />
           </label>
         </div>
         <div className="space-y-3">

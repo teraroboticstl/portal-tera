@@ -60,7 +60,10 @@ export async function validateUserAuth(authHeaderOrToken) {
   }
 
   // 2. Consulta do perfil associado
-  const { data: profile } = await supabaseServer
+  // Resolve the member through their verified session and existing RLS. An
+  // unscoped client can see no profile when running with a public server key.
+  const scopedUserClient = createScopedUserSupabaseClient(token);
+  const { data: profile } = await scopedUserClient
     .from('profiles')
     .select('*')
     .eq('id', user.id)
@@ -71,7 +74,7 @@ export async function validateUserAuth(authHeaderOrToken) {
   const memberRole = profile?.member_role || (role === 'admin' || isSeedAdmin ? 'admin' : role === 'mentor' ? 'member' : 'user');
   const status = profile?.status || (role === 'admin' || isSeedAdmin ? 'approved' : 'pending');
 
-  const { data: access, error: accessError } = await createScopedUserSupabaseClient(token).rpc('ava_identity');
+  const { data: access, error: accessError } = await scopedUserClient.rpc('ava_identity');
   const fullUser = {
     ...user,
     profile: {
